@@ -21,7 +21,7 @@
   - Integrate scanner with AST parser for batch processing
   - _Requirements: 1.1, 1.2, 1.3, 1.4_
 
-- [ ] 4. Create basic dependency graph
+- [x] 4. Create basic dependency graph
   - Implement DependencyGraphBuilder using NetworkX
   - Build simple graph from import relationships
   - Calculate basic metrics (file count, import count)

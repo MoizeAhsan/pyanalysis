@@ -12,6 +12,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from models.core import ProjectInfo, CodeElement, AnalysisSession, current_session
 from parsers.python_ast_parser import PythonASTParser
 from analysis_engine.file_scanner import FileSystemScanner
+from graph.dependency_graph_builder import DependencyGraphBuilder
 
 logger = logging.getLogger(__name__)
 
@@ -70,6 +71,7 @@ class ProjectAnalyzer:
         """
         self.file_scanner = FileSystemScanner()
         self.ast_parser = PythonASTParser()
+        self.graph_builder = DependencyGraphBuilder()
         self.max_workers = max_workers
         self.current_progress: Optional[AnalysisProgress] = None
 
@@ -131,10 +133,18 @@ class ProjectAnalyzer:
             for element in all_elements:
                 current_session.add_element(element)
 
+            # Step 7: Build dependency graph
+            logger.info("Building dependency graph...")
+            dependency_graph = self.graph_builder.build_graph(all_elements)
+            current_session.dependency_graph = dependency_graph
+
             logger.info(
-                "Analysis complete. Processed %d files, extracted %d elements",
+                "Analysis complete. Processed %d files, extracted %d elements, "
+                "built graph with %d nodes and %d edges",
                 len(python_files),
                 len(all_elements),
+                dependency_graph.metrics.node_count if dependency_graph.metrics else 0,
+                dependency_graph.metrics.edge_count if dependency_graph.metrics else 0,
             )
 
             return current_session
