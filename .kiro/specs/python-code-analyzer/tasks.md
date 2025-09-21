@@ -8,7 +8,7 @@
   - Set up FastAPI application with basic configuration
   - _Requirements: 1.1, 1.2_
 
-- [ ] 2. Implement basic AST parser
+- [x] 2. Implement basic AST parser
   - Create PythonASTParser class with file parsing capabilities
   - Implement CodeElement extraction from AST nodes (classes, functions, imports)
   - Add basic error handling with logging for syntax errors
