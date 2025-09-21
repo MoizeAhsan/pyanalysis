@@ -8,7 +8,11 @@ import {
   Card,
   CardContent,
   Alert,
-  Chip
+  Chip,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem
 } from '@mui/material';
 import { AccountTree, BubbleChart, Hub, Description, Class, Functions } from '@mui/icons-material';
 import CytoscapeGraph from './CytoscapeGraph';
@@ -29,10 +33,102 @@ const ForceGraphComponent = React.lazy(() =>
 const MindMapViewer = ({ data = null }) => {
   const [graphType, setGraphType] = useState('cytoscape');
   const [selectedNode, setSelectedNode] = useState(null);
+  const [layoutType, setLayoutType] = useState('cose-bilkent');
 
   const handleGraphTypeChange = (event, newType) => {
     if (newType !== null) {
       setGraphType(newType);
+    }
+  };
+
+
+
+  // Get layout configuration based on selected layout type
+  const getLayoutConfig = (layoutName) => {
+    const baseConfig = {
+      animate: true,
+      animationDuration: 800,
+      fit: true,
+      padding: 60
+    };
+
+    switch (layoutName) {
+      case 'cose-bilkent':
+        return {
+          ...baseConfig,
+          name: 'cose-bilkent',
+          nodeRepulsion: 8000,
+          idealEdgeLength: 120,
+          edgeElasticity: 0.3,
+          nestingFactor: 0.2,
+          gravity: 0.4,
+          numIter: 3000,
+          tile: true,
+          tilingPaddingVertical: 15,
+          tilingPaddingHorizontal: 15,
+          quality: 'proof',
+          randomize: false,
+          nodeDimensionsIncludeLabels: true,
+          uniformNodeDimensions: false,
+          packComponents: true,
+          stepSize: 30
+        };
+      case 'dagre':
+        return {
+          ...baseConfig,
+          name: 'dagre',
+          rankDir: 'TB', // Top to bottom
+          nodeSep: 80,
+          edgeSep: 20,
+          rankSep: 100,
+          spacingFactor: 1.2
+        };
+      case 'breadthfirst':
+        return {
+          ...baseConfig,
+          name: 'breadthfirst',
+          directed: true,
+          spacingFactor: 1.5,
+          avoidOverlap: true,
+          nodeDimensionsIncludeLabels: true
+        };
+      case 'circle':
+        return {
+          ...baseConfig,
+          name: 'circle',
+          radius: 200,
+          spacingFactor: 1.2,
+          avoidOverlap: true
+        };
+      case 'grid':
+        return {
+          ...baseConfig,
+          name: 'grid',
+          avoidOverlap: true,
+          condense: true,
+          rows: undefined,
+          cols: undefined,
+          spacingFactor: 1.2
+        };
+      case 'concentric':
+        return {
+          ...baseConfig,
+          name: 'concentric',
+          concentric: (node) => {
+            // Arrange by node type - modules in center, then classes, then functions
+            const type = node.data('type');
+            if (type === 'module') return 3;
+            if (type === 'class') return 2;
+            if (type === 'function') return 1;
+            return 0;
+          },
+          levelWidth: () => 2,
+          spacingFactor: 1.5,
+          avoidOverlap: true,
+          minNodeSpacing: 80
+        };
+      default:
+        return baseConfig;
     }
   };
 
@@ -281,23 +377,8 @@ const MindMapViewer = ({ data = null }) => {
             elements={graphData.cytoscape}
             onNodeClick={handleNodeClick}
             onEdgeClick={handleEdgeClick}
-            style={{ width: '100%', height: '500px' }}
-            layout={{
-              name: 'cose-bilkent',
-              animate: true,
-              animationDuration: 1000,
-              fit: true,
-              padding: 50,
-              nodeRepulsion: 4500,
-              idealEdgeLength: 100,
-              edgeElasticity: 0.45,
-              nestingFactor: 0.1,
-              gravity: 0.25,
-              numIter: 2500,
-              tile: true,
-              tilingPaddingVertical: 10,
-              tilingPaddingHorizontal: 10
-            }}
+            style={{ width: '100%', height: '600px' }}
+            layout={getLayoutConfig(layoutType)}
           />
         );
       case 'force':
@@ -330,41 +411,62 @@ const MindMapViewer = ({ data = null }) => {
   return (
     <Box sx={{ mt: 4 }}>
       <Paper elevation={3} sx={{ p: 3 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, flexWrap: 'wrap', gap: 2 }}>
           <Typography variant="h5" component="h2">
             Project Mind Map
           </Typography>
 
-          <ToggleButtonGroup
-            value={graphType}
-            exclusive
-            onChange={handleGraphTypeChange}
-            aria-label="graph type"
-          >
-            <ToggleButton value="cytoscape" aria-label="cytoscape">
-              <AccountTree sx={{ mr: 1 }} />
-              Cytoscape
-            </ToggleButton>
-            <ToggleButton value="force" aria-label="force graph" disabled>
-              <BubbleChart sx={{ mr: 1 }} />
-              Force Graph (Disabled)
-            </ToggleButton>
-            <ToggleButton value="vis" aria-label="vis network">
-              <Hub sx={{ mr: 1 }} />
-              Vis Network
-            </ToggleButton>
-          </ToggleButtonGroup>
+          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
+            {graphType === 'cytoscape' && (
+              <FormControl size="small" sx={{ minWidth: 150 }}>
+                <InputLabel>Layout</InputLabel>
+                <Select
+                  value={layoutType}
+                  label="Layout"
+                  onChange={(e) => setLayoutType(e.target.value)}
+                >
+                  <MenuItem value="cose-bilkent">Hierarchical (CoSE)</MenuItem>
+                  <MenuItem value="dagre">Tree (Dagre)</MenuItem>
+                  <MenuItem value="breadthfirst">Breadth First</MenuItem>
+                  <MenuItem value="circle">Circular</MenuItem>
+                  <MenuItem value="grid">Grid</MenuItem>
+                  <MenuItem value="concentric">Concentric</MenuItem>
+                </Select>
+              </FormControl>
+            )}
+
+            <ToggleButtonGroup
+              value={graphType}
+              exclusive
+              onChange={handleGraphTypeChange}
+              aria-label="graph type"
+              size="small"
+            >
+              <ToggleButton value="cytoscape" aria-label="cytoscape">
+                <AccountTree sx={{ mr: 1 }} />
+                Cytoscape
+              </ToggleButton>
+              <ToggleButton value="force" aria-label="force graph" disabled>
+                <BubbleChart sx={{ mr: 1 }} />
+                Force Graph (Disabled)
+              </ToggleButton>
+              <ToggleButton value="vis" aria-label="vis network">
+                <Hub sx={{ mr: 1 }} />
+                Vis Network
+              </ToggleButton>
+            </ToggleButtonGroup>
+          </Box>
         </Box>
 
-        {/* Legend */}
+        {/* Enhanced Legend and Controls */}
         <Box sx={{ mb: 2, p: 2, backgroundColor: '#f5f5f5', borderRadius: 1 }}>
           <Typography variant="subtitle2" gutterBottom>
-            Legend:
+            Legend & Controls:
           </Typography>
-          <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
+          <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap', alignItems: 'center' }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <Box sx={{ 
-                width: 16, 
+                width: 20, 
                 height: 12, 
                 backgroundColor: '#1976d2', 
                 borderRadius: '2px' 
@@ -390,7 +492,31 @@ const MindMapViewer = ({ data = null }) => {
               }} />
               <Typography variant="body2">Functions</Typography>
             </Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 2 }}>
+              <Box sx={{ 
+                width: 16, 
+                height: 16, 
+                backgroundColor: '#1976d2', 
+                borderRadius: '2px',
+                border: '2px dashed #ff5722'
+              }} />
+              <Typography variant="body2">Expandable</Typography>
+            </Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Box sx={{ 
+                width: 16, 
+                height: 16, 
+                backgroundColor: '#0d47a1', 
+                borderRadius: '2px',
+                border: '2px double #ff5722'
+              }} />
+              <Typography variant="body2">Collapsed</Typography>
+            </Box>
           </Box>
+          <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+            💡 <strong>Tip:</strong> Single-click to select and view details • Double-click expandable nodes to collapse/expand • 
+            Hover to highlight connections • Click background to clear selection
+          </Typography>
         </Box>
 
         <Box sx={{ display: 'flex', gap: 2 }}>
