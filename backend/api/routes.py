@@ -3,7 +3,7 @@ API routes for Python Code Analyzer
 """
 
 import logging
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from pathlib import Path
 
 from fastapi import APIRouter, HTTPException
@@ -188,6 +188,118 @@ async def reset_analysis() -> AnalyzeResponse:
     except Exception as e:
         logger.error("Failed to reset analysis session: %s", e)
         raise HTTPException(status_code=500, detail=f"Reset failed: {e}") from e
+
+
+@router.get("/architecture", response_model=AnalyzeResponse)
+async def get_architectural_data() -> AnalyzeResponse:
+    """Get architectural overview data for current session"""
+    try:
+        # Check if there's any analysis data
+        if not current_session.project_info:
+            return AnalyzeResponse(
+                success=True,
+                message="No analysis data available. Please analyze a project first.",
+                data={"has_data": False},
+            )
+
+        # Focus on architectural data - modules and their relationships
+        architectural_data = {
+            "has_data": True,
+            "project_info": {
+                "name": current_session.project_info.name,
+                "path": current_session.project_info.path,
+                "total_files": current_session.project_info.total_files,
+                "total_lines": current_session.project_info.total_lines,
+            },
+            "modules": [
+                _serialize_code_element(element)
+                for element in current_session.modules.values()
+            ],
+            "dependency_graph": _serialize_dependency_graph(
+                current_session.dependency_graph
+            ),
+            "architectural_patterns": [
+                {
+                    "name": pattern.name,
+                    "type": pattern.type.value,
+                    "confidence": pattern.confidence,
+                    "elements": pattern.elements,
+                    "description": pattern.description,
+                }
+                for pattern in current_session.architectural_patterns
+            ],
+            "circular_dependencies": _detect_circular_dependencies(),
+            "statistics": {
+                "modules_count": len(current_session.modules),
+                "classes_count": len(current_session.classes),
+                "functions_count": len(current_session.functions),
+                "patterns_count": len(current_session.architectural_patterns),
+            },
+        }
+
+        logger.info(
+            "Retrieved architectural data for project: %s", current_session.project_info.name
+        )
+
+        return AnalyzeResponse(
+            success=True,
+            message="Architectural data retrieved successfully",
+            data=architectural_data
+        )
+    except Exception as e:
+        logger.error("Failed to retrieve architectural data: %s", e)
+        raise HTTPException(
+            status_code=500, detail=f"Failed to retrieve architectural data: {e}"
+        ) from e
+
+
+def _detect_circular_dependencies() -> List[List[str]]:
+    """Detect circular dependencies in the current dependency graph"""
+    if not current_session.dependency_graph:
+        return []
+
+    # Simple cycle detection using DFS
+    graph: Dict[str, List[str]] = {}
+    for node_id in current_session.dependency_graph.nodes:
+        graph[node_id] = []
+
+    for edge in current_session.dependency_graph.edges:
+        if edge.source in graph:
+            graph[edge.source].append(edge.target)
+
+    visited = set()
+    recursion_stack = set()
+    cycles = []
+
+    def dfs(node, path):
+        if node in recursion_stack:
+            # Found a cycle
+            cycle_start = path.index(node)
+            cycle = path[cycle_start:] + [node]
+            cycles.append(cycle)
+            return True
+
+        if node in visited:
+            return False
+
+        visited.add(node)
+        recursion_stack.add(node)
+        path.append(node)
+
+        for neighbor in graph.get(node, []):
+            if dfs(neighbor, path):
+                return True
+
+        recursion_stack.remove(node)
+        path.pop()
+        return False
+
+    # Check for cycles from each unvisited node
+    for node in graph:
+        if node not in visited:
+            dfs(node, [])
+
+    return cycles
 
 
 @router.get("/data", response_model=AnalyzeResponse)

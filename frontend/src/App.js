@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
-import { Container, AppBar, Toolbar, Typography, Box, Alert, Snackbar } from '@mui/material';
+import { useState } from 'react';
+import { Container, AppBar, Toolbar, Typography, Box, Alert, Snackbar, Tabs, Tab } from '@mui/material';
 import ProjectInput from './components/ProjectInput';
 import AnalysisResults from './components/AnalysisResults';
 import MindMapViewer from './components/MindMapViewer';
+import ArchitectureViewer from './components/ArchitectureViewer';
 
 function App() {
   const [analysisTriggered, setAnalysisTriggered] = useState(false);
@@ -10,6 +11,7 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [activeTab, setActiveTab] = useState(0);
 
   const handleAnalysisStart = () => {
     setLoading(true);
@@ -38,6 +40,7 @@ function App() {
     setError('');
     setSuccess('');
     setLoading(false);
+    setActiveTab(0);
   };
 
   const handleDataLoaded = (data) => {
@@ -47,6 +50,10 @@ function App() {
   const handleCloseSnackbar = () => {
     setError('');
     setSuccess('');
+  };
+
+  const handleTabChange = (event, newValue) => {
+    setActiveTab(newValue);
   };
 
   return (
@@ -87,7 +94,22 @@ function App() {
         )}
         
         {analysisData && (
-          <MindMapViewer data={analysisData} />
+          <Box sx={{ mt: 4 }}>
+            <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+              <Tabs value={activeTab} onChange={handleTabChange} aria-label="analysis views">
+                <Tab label="Mind Map" />
+                <Tab label="Architecture Overview" />
+              </Tabs>
+            </Box>
+            
+            {activeTab === 0 && (
+              <MindMapViewer data={analysisData} />
+            )}
+            
+            {activeTab === 1 && (
+              <ArchitectureViewer data={analysisData} />
+            )}
+          </Box>
         )}
 
         {/* Global notifications */}

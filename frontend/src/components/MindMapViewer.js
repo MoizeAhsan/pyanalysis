@@ -35,7 +35,7 @@ const MindMapViewer = ({ data = null }) => {
   const [selectedNode, setSelectedNode] = useState(null);
   const [layoutType, setLayoutType] = useState('cose-bilkent');
 
-  const handleGraphTypeChange = (event, newType) => {
+  const handleGraphTypeChange = (_, newType) => {
     if (newType !== null) {
       setGraphType(newType);
     }
