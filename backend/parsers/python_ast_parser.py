@@ -73,7 +73,9 @@ class PythonASTParser:
             )
 
         except SyntaxError as e:
-            logger.error("Syntax error in %s at line %s: %s", file_path, e.lineno, e.msg)
+            logger.error(
+                "Syntax error in %s at line %s: %s", file_path, e.lineno, e.msg
+            )
             return None
         except UnicodeDecodeError as e:
             logger.error("Encoding error in %s: %s", file_path, e)

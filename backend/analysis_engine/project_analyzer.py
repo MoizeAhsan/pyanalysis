@@ -1,0 +1,236 @@
+"""
+Project analyzer that orchestrates the analysis pipeline
+"""
+
+import logging
+from pathlib import Path
+from typing import List, Optional, Dict, Any
+from datetime import datetime
+import threading
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
+from models.core import ProjectInfo, CodeElement, AnalysisSession, current_session
+from parsers.python_ast_parser import PythonASTParser
+from analysis_engine.file_scanner import FileSystemScanner
+
+logger = logging.getLogger(__name__)
+
+
+class AnalysisProgress:
+    """Track progress of analysis operations"""
+
+    def __init__(self, total_files: int = 0):
+        self.total_files = total_files
+        self.processed_files = 0
+        self.failed_files = 0
+        self.current_file = ""
+        self.start_time = datetime.now()
+        self.lock = threading.Lock()
+
+    def update(self, current_file: str, success: bool = True) -> None:
+        """Update progress with current file being processed"""
+        with self.lock:
+            self.current_file = current_file
+            self.processed_files += 1
+            if not success:
+                self.failed_files += 1
+
+    def get_progress_info(self) -> Dict[str, Any]:
+        """Get current progress information"""
+        with self.lock:
+            elapsed = (datetime.now() - self.start_time).total_seconds()
+            progress_percent = (
+                (self.processed_files / self.total_files * 100)
+                if self.total_files > 0
+                else 0
+            )
+
+            return {
+                "total_files": self.total_files,
+                "processed_files": self.processed_files,
+                "failed_files": self.failed_files,
+                "current_file": self.current_file,
+                "progress_percent": progress_percent,
+                "elapsed_seconds": elapsed,
+                "is_complete": self.processed_files >= self.total_files,
+            }
+
+
+class ProjectAnalyzer:
+    """
+    Main analyzer class that orchestrates the analysis pipeline
+    """
+
+    def __init__(self, max_workers: int = 4):
+        """
+        Initialize the project analyzer
+
+        Args:
+            max_workers: Maximum number of worker threads for parallel processing
+        """
+        self.file_scanner = FileSystemScanner()
+        self.ast_parser = PythonASTParser()
+        self.max_workers = max_workers
+        self.current_progress: Optional[AnalysisProgress] = None
+
+    def analyze_project(self, project_path: str) -> AnalysisSession:
+        """
+        Analyze a Python project and return analysis results
+
+        Args:
+            project_path: Path to the project directory
+
+        Returns:
+            AnalysisSession containing all analysis results
+
+        Raises:
+            ValueError: If project path is invalid
+            PermissionError: If project is not accessible
+        """
+        logger.info("Starting analysis of project: %s", project_path)
+
+        # Reset current session for new analysis
+        current_session.reset()
+
+        # Validate project path
+        path = Path(project_path)
+        if not path.exists():
+            raise ValueError(f"Project path does not exist: {project_path}")
+        if not path.is_dir():
+            raise ValueError(f"Project path is not a directory: {project_path}")
+
+        try:
+            # Step 1: Scan for Python files
+            logger.info("Scanning for Python files...")
+            python_files = self.file_scanner.scan_project(project_path)
+
+            if not python_files:
+                logger.warning("No Python files found in project: %s", project_path)
+
+            # Step 2: Get project statistics
+            project_stats = self.file_scanner.get_project_stats(project_path)
+
+            # Step 3: Create project info
+            project_info = ProjectInfo(
+                name=path.name,
+                path=str(path.absolute()),
+                total_files=project_stats["total_files"],
+                total_lines=project_stats["total_lines"],
+                analysis_timestamp=datetime.now(),
+            )
+            current_session.project_info = project_info
+
+            # Step 4: Initialize progress tracking
+            self.current_progress = AnalysisProgress(len(python_files))
+
+            # Step 5: Parse files and extract code elements
+            logger.info("Parsing %d Python files...", len(python_files))
+            all_elements = self._parse_files_batch(python_files)
+
+            # Step 6: Store elements in session
+            for element in all_elements:
+                current_session.add_element(element)
+
+            logger.info(
+                "Analysis complete. Processed %d files, extracted %d elements",
+                len(python_files),
+                len(all_elements),
+            )
+
+            return current_session
+
+        except Exception as e:
+            logger.error("Analysis failed: %s", e)
+            current_session.reset()
+            raise
+
+    def _parse_files_batch(self, file_paths: List[str]) -> List[CodeElement]:
+        """
+        Parse multiple files in parallel and extract code elements
+
+        Args:
+            file_paths: List of Python file paths to parse
+
+        Returns:
+            List of all extracted code elements
+        """
+        all_elements = []
+
+        if self.max_workers == 1:
+            # Single-threaded processing
+            for file_path in file_paths:
+                elements = self._parse_single_file(file_path)
+                all_elements.extend(elements)
+        else:
+            # Multi-threaded processing
+            with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
+                # Submit all parsing tasks
+                future_to_file = {
+                    executor.submit(self._parse_single_file, file_path): file_path
+                    for file_path in file_paths
+                }
+
+                # Collect results as they complete
+                for future in as_completed(future_to_file):
+                    file_path = future_to_file[future]
+                    try:
+                        elements = future.result()
+                        all_elements.extend(elements)
+                    except (OSError, UnicodeDecodeError, SyntaxError) as e:
+                        logger.error("Failed to parse file %s: %s", file_path, e)
+                        if self.current_progress:
+                            self.current_progress.update(file_path, success=False)
+
+        return all_elements
+
+    def _parse_single_file(self, file_path: str) -> List[CodeElement]:
+        """
+        Parse a single file and extract code elements
+
+        Args:
+            file_path: Path to Python file
+
+        Returns:
+            List of code elements from the file
+        """
+        elements = []
+
+        try:
+            # Update progress
+            if self.current_progress:
+                self.current_progress.update(file_path, success=True)
+
+            # Parse the file
+            file_ast = self.ast_parser.parse_file(file_path)
+            if file_ast:
+                # Extract elements from AST
+                elements = self.ast_parser.extract_elements(file_ast)
+                logger.debug("Extracted %d elements from %s", len(elements), file_path)
+            else:
+                logger.warning("Failed to parse file: %s", file_path)
+
+        except (OSError, UnicodeDecodeError, SyntaxError) as e:
+            logger.error("Error parsing file %s: %s", file_path, e)
+            if self.current_progress:
+                self.current_progress.update(file_path, success=False)
+
+        return elements
+
+    def get_analysis_progress(self) -> Optional[Dict[str, Any]]:
+        """
+        Get current analysis progress information
+
+        Returns:
+            Progress information dictionary or None if no analysis in progress
+        """
+        if self.current_progress:
+            return self.current_progress.get_progress_info()
+        return None
+
+    def reset_analysis(self) -> None:
+        """
+        Reset current analysis and clear all data
+        """
+        logger.info("Resetting analysis session")
+        current_session.reset()
+        self.current_progress = None

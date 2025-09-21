@@ -14,11 +14,13 @@ router = APIRouter()
 
 class AnalyzeRequest(BaseModel):
     """Request model for project analysis."""
+
     project_path: str
 
 
 class AnalyzeResponse(BaseModel):
     """Response model for API endpoints."""
+
     success: bool
     message: str
     data: Dict[str, Any] = {}
