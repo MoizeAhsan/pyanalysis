@@ -1,6 +1,7 @@
 import React from 'react';
 import { Container, AppBar, Toolbar, Typography, Box } from '@mui/material';
 import ProjectInput from './components/ProjectInput';
+import MindMapViewer from './components/MindMapViewer';
 
 function App() {
   return (
@@ -24,6 +25,7 @@ function App() {
         </Box>
         
         <ProjectInput />
+        <MindMapViewer />
       </Container>
     </div>
   );

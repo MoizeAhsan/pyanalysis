@@ -34,6 +34,8 @@ The API will be available at `http://localhost:8000`
 
 ```bash
 cd frontend
+# Remove existing node_modules if you had issues
+rm -rf node_modules package-lock.json
 npm install
 npm start
 ```
