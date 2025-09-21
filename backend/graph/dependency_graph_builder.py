@@ -182,9 +182,9 @@ class DependencyGraphBuilder:
                 metadata={
                     "file_path": node_data.get("file_path", ""),
                     "line_number": node_data.get("line_number", 0),
-                    "degree": self.graph.degree(node_id),
-                    "in_degree": self.graph.in_degree(node_id),
-                    "out_degree": self.graph.out_degree(node_id),
+                    "degree": int(self.graph.degree(node_id)),  # type: ignore
+                    "in_degree": int(self.graph.in_degree(node_id)),  # type: ignore
+                    "out_degree": int(self.graph.out_degree(node_id)),  # type: ignore
                 },
             )
             nodes[node_id] = graph_node
@@ -216,7 +216,8 @@ class DependencyGraphBuilder:
         # Calculate average degree
         avg_degree = 0.0
         if node_count > 0:
-            total_degree = sum(dict(self.graph.degree()).values())
+            degree_dict = dict(self.graph.degree())  # type: ignore
+            total_degree = sum(degree_dict.values())
             avg_degree = total_degree / node_count
 
         return GraphMetrics(
