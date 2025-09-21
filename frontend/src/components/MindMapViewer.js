@@ -6,12 +6,24 @@ import {
   ToggleButton,
   ToggleButtonGroup,
   Card,
-  CardContent
+  CardContent,
+  Alert
 } from '@mui/material';
 import { AccountTree, BubbleChart, Hub } from '@mui/icons-material';
 import CytoscapeGraph from './CytoscapeGraph';
-import ForceGraphComponent from './ForceGraph';
 import VisNetworkComponent from './VisNetwork';
+
+// Lazy load ForceGraph to handle dependency issues
+const ForceGraphComponent = React.lazy(() =>
+  import('./ForceGraph').catch(() => ({
+    default: () => (
+      <Alert severity="warning">
+        Force Graph visualization is temporarily unavailable due to dependency issues.
+        Please use Cytoscape or Vis Network instead.
+      </Alert>
+    )
+  }))
+);
 
 const MindMapViewer = ({ data = null }) => {
   const [graphType, setGraphType] = useState('cytoscape');
@@ -31,7 +43,76 @@ const MindMapViewer = ({ data = null }) => {
     console.log('Edge clicked:', edgeData);
   };
 
-  // Sample data for testing
+  // Convert analysis data to graph format
+  const convertDataToGraphFormat = (analysisData) => {
+    if (!analysisData) return null;
+
+    const { modules = [], classes = [], functions = [], imports = [] } = analysisData;
+
+    // Create nodes from modules, classes, and functions
+    const nodes = [];
+    const edges = [];
+
+    // Add modules
+    modules.forEach(module => {
+      nodes.push({
+        id: module.name || module.file_path,
+        label: module.name || module.file_path,
+        name: module.name || module.file_path,
+        type: 'module'
+      });
+    });
+
+    // Add classes
+    classes.forEach(cls => {
+      nodes.push({
+        id: cls.name,
+        label: cls.name,
+        name: cls.name,
+        type: 'class'
+      });
+    });
+
+    // Add functions
+    functions.forEach(func => {
+      nodes.push({
+        id: func.name,
+        label: func.name,
+        name: func.name,
+        type: 'function'
+      });
+    });
+
+    // Add edges from imports
+    imports.forEach((imp, index) => {
+      if (imp.source && imp.target) {
+        edges.push({
+          id: `e${index}`,
+          source: imp.source,
+          target: imp.target,
+          from: imp.source,
+          to: imp.target
+        });
+      }
+    });
+
+    return {
+      cytoscape: [
+        ...nodes.map(node => ({ data: node })),
+        ...edges.map(edge => ({ data: edge }))
+      ],
+      forceGraph: {
+        nodes: nodes,
+        links: edges.map(edge => ({ source: edge.source, target: edge.target }))
+      },
+      visNetwork: {
+        nodes: nodes,
+        edges: edges
+      }
+    };
+  };
+
+  // Sample data for testing when no real data is available
   const sampleData = {
     cytoscape: [
       { data: { id: 'main', label: 'main.py', type: 'module' } },
@@ -71,7 +152,21 @@ const MindMapViewer = ({ data = null }) => {
   };
 
   const renderGraph = () => {
-    const graphData = data || sampleData;
+    const convertedData = convertDataToGraphFormat(data);
+    const graphData = convertedData || sampleData;
+
+    if (!graphData) {
+      return (
+        <Box sx={{ textAlign: 'center', py: 8 }}>
+          <Typography variant="h6" color="text.secondary">
+            No analysis data available
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Run an analysis to see the mind map visualization
+          </Typography>
+        </Box>
+      );
+    }
 
     switch (graphType) {
       case 'cytoscape':
@@ -85,13 +180,15 @@ const MindMapViewer = ({ data = null }) => {
         );
       case 'force':
         return (
-          <ForceGraphComponent
-            graphData={graphData.forceGraph}
-            onNodeClick={handleNodeClick}
-            onLinkClick={handleEdgeClick}
-            width={800}
-            height={500}
-          />
+          <React.Suspense fallback={<Typography>Loading Force Graph...</Typography>}>
+            <ForceGraphComponent
+              graphData={graphData.forceGraph}
+              onNodeClick={handleNodeClick}
+              onLinkClick={handleEdgeClick}
+              width={800}
+              height={500}
+            />
+          </React.Suspense>
         );
       case 'vis':
         return (
@@ -115,7 +212,7 @@ const MindMapViewer = ({ data = null }) => {
           <Typography variant="h5" component="h2">
             Project Mind Map
           </Typography>
-          
+
           <ToggleButtonGroup
             value={graphType}
             exclusive
@@ -126,9 +223,9 @@ const MindMapViewer = ({ data = null }) => {
               <AccountTree sx={{ mr: 1 }} />
               Cytoscape
             </ToggleButton>
-            <ToggleButton value="force" aria-label="force graph">
+            <ToggleButton value="force" aria-label="force graph" disabled>
               <BubbleChart sx={{ mr: 1 }} />
-              Force Graph
+              Force Graph (Disabled)
             </ToggleButton>
             <ToggleButton value="vis" aria-label="vis network">
               <Hub sx={{ mr: 1 }} />
@@ -141,7 +238,7 @@ const MindMapViewer = ({ data = null }) => {
           <Box sx={{ flex: 1 }}>
             {renderGraph()}
           </Box>
-          
+
           {selectedNode && (
             <Card sx={{ width: 300 }}>
               <CardContent>

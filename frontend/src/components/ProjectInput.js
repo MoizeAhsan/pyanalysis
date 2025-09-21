@@ -9,7 +9,7 @@ import {
 } from '@mui/material';
 import { FolderOpen, Refresh } from '@mui/icons-material';
 
-const ProjectInput = () => {
+const ProjectInput = ({ onAnalysisComplete, onReset }) => {
   const [projectPath, setProjectPath] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -37,12 +37,16 @@ const ProjectInput = () => {
       const data = await response.json();
 
       if (data.success) {
-        setSuccess(data.message);
+        setSuccess(data.message || 'Analysis completed successfully');
+        if (onAnalysisComplete) {
+          onAnalysisComplete();
+        }
       } else {
-        setError('Analysis failed');
+        setError(data.message || 'Analysis failed');
       }
     } catch (err) {
       setError('Failed to connect to analysis service');
+      console.error('Analysis error:', err);
     } finally {
       setLoading(false);
     }
@@ -61,13 +65,17 @@ const ProjectInput = () => {
       const data = await response.json();
 
       if (data.success) {
-        setSuccess(data.message);
+        setSuccess(data.message || 'Analysis reset successfully');
         setProjectPath('');
+        if (onReset) {
+          onReset();
+        }
       } else {
-        setError('Reset failed');
+        setError(data.message || 'Reset failed');
       }
     } catch (err) {
       setError('Failed to reset analysis');
+      console.error('Reset error:', err);
     } finally {
       setLoading(false);
     }
