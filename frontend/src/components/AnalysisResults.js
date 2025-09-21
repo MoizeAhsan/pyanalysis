@@ -25,7 +25,7 @@ import {
 } from '@mui/icons-material';
 import apiService from '../services/api';
 
-const AnalysisResults = ({ analysisTriggered, onDataLoaded }) => {
+const AnalysisResults = ({ analysisTriggered, onDataLoaded, loading: parentLoading = false }) => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -55,12 +55,15 @@ const AnalysisResults = ({ analysisTriggered, onDataLoaded }) => {
     }
   };
 
-  if (loading) {
+  if (loading || parentLoading) {
     return (
       <Paper elevation={3} sx={{ p: 4, textAlign: 'center' }}>
         <CircularProgress />
         <Typography variant="h6" sx={{ mt: 2 }}>
-          Loading analysis results...
+          {parentLoading ? 'Analyzing project...' : 'Loading analysis results...'}
+        </Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+          This may take a few moments for large projects
         </Typography>
       </Paper>
     );

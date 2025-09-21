@@ -9,21 +9,23 @@ import {
 } from '@mui/material';
 import { FolderOpen, Refresh } from '@mui/icons-material';
 
-const ProjectInput = ({ onAnalysisComplete, onReset }) => {
+const ProjectInput = ({ onAnalysisStart, onAnalysisComplete, onAnalysisError, onReset, loading = false }) => {
   const [projectPath, setProjectPath] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [localError, setLocalError] = useState('');
+  const [localSuccess, setLocalSuccess] = useState('');
 
   const handleAnalyze = async () => {
     if (!projectPath.trim()) {
-      setError('Please enter a project path');
+      setLocalError('Please enter a project path');
       return;
     }
 
-    setLoading(true);
-    setError('');
-    setSuccess('');
+    setLocalError('');
+    setLocalSuccess('');
+    
+    if (onAnalysisStart) {
+      onAnalysisStart();
+    }
 
     try {
       const response = await fetch('/api/analyze', {
@@ -36,26 +38,31 @@ const ProjectInput = ({ onAnalysisComplete, onReset }) => {
 
       const data = await response.json();
 
-      if (data.success) {
-        setSuccess(data.message || 'Analysis completed successfully');
+      if (response.ok && data.success) {
+        setLocalSuccess(data.message || 'Analysis completed successfully');
         if (onAnalysisComplete) {
-          onAnalysisComplete();
+          onAnalysisComplete(data.message);
         }
       } else {
-        setError(data.message || 'Analysis failed');
+        const errorMessage = data.detail || data.message || 'Analysis failed';
+        setLocalError(errorMessage);
+        if (onAnalysisError) {
+          onAnalysisError(errorMessage);
+        }
       }
     } catch (err) {
-      setError('Failed to connect to analysis service');
+      const errorMessage = 'Failed to connect to analysis service. Make sure the backend is running.';
+      setLocalError(errorMessage);
+      if (onAnalysisError) {
+        onAnalysisError(errorMessage);
+      }
       console.error('Analysis error:', err);
-    } finally {
-      setLoading(false);
     }
   };
 
   const handleReset = async () => {
-    setLoading(true);
-    setError('');
-    setSuccess('');
+    setLocalError('');
+    setLocalSuccess('');
 
     try {
       const response = await fetch('/api/reset', {
@@ -64,20 +71,20 @@ const ProjectInput = ({ onAnalysisComplete, onReset }) => {
 
       const data = await response.json();
 
-      if (data.success) {
-        setSuccess(data.message || 'Analysis reset successfully');
+      if (response.ok && data.success) {
+        setLocalSuccess(data.message || 'Analysis reset successfully');
         setProjectPath('');
         if (onReset) {
           onReset();
         }
       } else {
-        setError(data.message || 'Reset failed');
+        const errorMessage = data.detail || data.message || 'Reset failed';
+        setLocalError(errorMessage);
       }
     } catch (err) {
-      setError('Failed to reset analysis');
+      const errorMessage = 'Failed to reset analysis. Make sure the backend is running.';
+      setLocalError(errorMessage);
       console.error('Reset error:', err);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -121,15 +128,15 @@ const ProjectInput = ({ onAnalysisComplete, onReset }) => {
         </Box>
       </Box>
 
-      {error && (
+      {localError && (
         <Alert severity="error" sx={{ mb: 2 }}>
-          {error}
+          {localError}
         </Alert>
       )}
 
-      {success && (
+      {localSuccess && (
         <Alert severity="success" sx={{ mb: 2 }}>
-          {success}
+          {localSuccess}
         </Alert>
       )}
     </Paper>

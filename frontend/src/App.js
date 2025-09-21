@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Container, AppBar, Toolbar, Typography, Box } from '@mui/material';
+import { Container, AppBar, Toolbar, Typography, Box, Alert, Snackbar } from '@mui/material';
 import ProjectInput from './components/ProjectInput';
 import AnalysisResults from './components/AnalysisResults';
 import MindMapViewer from './components/MindMapViewer';
@@ -7,18 +7,46 @@ import MindMapViewer from './components/MindMapViewer';
 function App() {
   const [analysisTriggered, setAnalysisTriggered] = useState(false);
   const [analysisData, setAnalysisData] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
 
-  const handleAnalysisComplete = () => {
+  const handleAnalysisStart = () => {
+    setLoading(true);
+    setError('');
+    setSuccess('');
+    setAnalysisTriggered(false);
+    setAnalysisData(null);
+  };
+
+  const handleAnalysisComplete = (message = 'Analysis completed successfully') => {
+    setLoading(false);
     setAnalysisTriggered(true);
+    setSuccess(message);
+  };
+
+  const handleAnalysisError = (errorMessage) => {
+    setLoading(false);
+    setError(errorMessage);
+    setAnalysisTriggered(false);
+    setAnalysisData(null);
   };
 
   const handleReset = () => {
     setAnalysisTriggered(false);
     setAnalysisData(null);
+    setError('');
+    setSuccess('');
+    setLoading(false);
   };
 
   const handleDataLoaded = (data) => {
     setAnalysisData(data);
+  };
+
+  const handleCloseSnackbar = () => {
+    setError('');
+    setSuccess('');
   };
 
   return (
@@ -43,16 +71,47 @@ function App() {
         </Box>
         
         <ProjectInput 
+          onAnalysisStart={handleAnalysisStart}
           onAnalysisComplete={handleAnalysisComplete}
+          onAnalysisError={handleAnalysisError}
           onReset={handleReset}
+          loading={loading}
         />
         
-        <AnalysisResults 
-          analysisTriggered={analysisTriggered}
-          onDataLoaded={handleDataLoaded}
-        />
+        {analysisTriggered && (
+          <AnalysisResults 
+            analysisTriggered={analysisTriggered}
+            onDataLoaded={handleDataLoaded}
+            loading={loading}
+          />
+        )}
         
-        <MindMapViewer data={analysisData} />
+        {analysisData && (
+          <MindMapViewer data={analysisData} />
+        )}
+
+        {/* Global notifications */}
+        <Snackbar
+          open={!!error}
+          autoHideDuration={6000}
+          onClose={handleCloseSnackbar}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        >
+          <Alert onClose={handleCloseSnackbar} severity="error" sx={{ width: '100%' }}>
+            {error}
+          </Alert>
+        </Snackbar>
+
+        <Snackbar
+          open={!!success}
+          autoHideDuration={4000}
+          onClose={handleCloseSnackbar}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        >
+          <Alert onClose={handleCloseSnackbar} severity="success" sx={{ width: '100%' }}>
+            {success}
+          </Alert>
+        </Snackbar>
       </Container>
     </div>
   );
