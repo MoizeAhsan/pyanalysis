@@ -1,6 +1,7 @@
 """
 Core data models for the Python Code Analyzer
 """
+
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Any
 from datetime import datetime
@@ -119,8 +120,8 @@ class DependencyGraph:
 
 class AnalysisSession:
     """Session-based storage for current analysis"""
-    
-    def __init__(self):
+
+    def __init__(self) -> None:
         self.project_info: Optional[ProjectInfo] = None
         self.modules: Dict[str, CodeElement] = {}
         self.classes: Dict[str, CodeElement] = {}
@@ -128,7 +129,7 @@ class AnalysisSession:
         self.dependency_graph: Optional[DependencyGraph] = None
         self.architectural_patterns: List[ArchitecturalPattern] = []
         self.all_elements: Dict[str, CodeElement] = {}
-    
+
     def reset(self) -> None:
         """Clear all analysis data and return to clean state"""
         self.project_info = None
@@ -138,11 +139,11 @@ class AnalysisSession:
         self.dependency_graph = None
         self.architectural_patterns.clear()
         self.all_elements.clear()
-    
+
     def add_element(self, element: CodeElement) -> None:
         """Add a code element to the appropriate collection"""
         self.all_elements[element.id] = element
-        
+
         if element.type == ElementType.MODULE:
             self.modules[element.id] = element
         elif element.type == ElementType.CLASS:

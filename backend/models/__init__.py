@@ -1,6 +1,7 @@
 """
 Models package for Python Code Analyzer
 """
+
 from .core import (
     ElementType,
     UsageType,
@@ -16,12 +17,12 @@ from .core import (
     GraphMetrics,
     DependencyGraph,
     AnalysisSession,
-    current_session
+    current_session,
 )
 
 __all__ = [
     "ElementType",
-    "UsageType", 
+    "UsageType",
     "PatternType",
     "SourceLocation",
     "Parameter",
@@ -34,5 +35,5 @@ __all__ = [
     "GraphMetrics",
     "DependencyGraph",
     "AnalysisSession",
-    "current_session"
+    "current_session",
 ]

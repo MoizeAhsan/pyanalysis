@@ -1,6 +1,7 @@
 """
 API routes for Python Code Analyzer
 """
+
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Dict, Any
@@ -20,34 +21,33 @@ class AnalyzeResponse(BaseModel):
 
 
 @router.post("/analyze", response_model=AnalyzeResponse)
-async def analyze_project(request: AnalyzeRequest):
+async def analyze_project(request: AnalyzeRequest) -> AnalyzeResponse:
     """Analyze a Python project and return results"""
     try:
         # TODO: Implement actual analysis logic
         return AnalyzeResponse(
             success=True,
             message=f"Analysis started for project: {request.project_path}",
-            data={"project_path": request.project_path}
+            data={"project_path": request.project_path},
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post("/reset", response_model=AnalyzeResponse)
-async def reset_analysis():
+async def reset_analysis() -> AnalyzeResponse:
     """Clear current analysis and reset to clean state"""
     try:
         current_session.reset()
         return AnalyzeResponse(
-            success=True,
-            message="Analysis session reset successfully"
+            success=True, message="Analysis session reset successfully"
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/data", response_model=AnalyzeResponse)
-async def get_analysis_data():
+async def get_analysis_data() -> AnalyzeResponse:
     """Get all analysis results for current session"""
     try:
         data = {
@@ -56,13 +56,11 @@ async def get_analysis_data():
             "classes": list(current_session.classes.values()),
             "functions": list(current_session.functions.values()),
             "dependency_graph": current_session.dependency_graph,
-            "architectural_patterns": current_session.architectural_patterns
+            "architectural_patterns": current_session.architectural_patterns,
         }
-        
+
         return AnalyzeResponse(
-            success=True,
-            message="Analysis data retrieved successfully",
-            data=data
+            success=True, message="Analysis data retrieved successfully", data=data
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
