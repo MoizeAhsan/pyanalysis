@@ -90,7 +90,9 @@ def _serialize_code_element(element: CodeElement) -> Dict[str, Any]:
     }
 
 
-def _serialize_dependency_graph(graph: Optional[DependencyGraph]) -> Optional[Dict[str, Any]]:
+def _serialize_dependency_graph(
+    graph: Optional[DependencyGraph],
+) -> Optional[Dict[str, Any]]:
     """Convert DependencyGraph to serializable dictionary"""
     if not graph:
         return None
@@ -119,7 +121,9 @@ def _serialize_dependency_graph(graph: Optional[DependencyGraph]) -> Optional[Di
             "edge_count": graph.metrics.edge_count,
             "density": graph.metrics.density,
             "avg_degree": graph.metrics.avg_degree,
-        } if graph.metrics else None,
+        }
+        if graph.metrics
+        else None,
     }
 
 
@@ -134,16 +138,24 @@ async def analyze_project(request: AnalyzeRequest) -> AnalyzeResponse:
 
         # Get basic statistics for response
         stats = {
-            "project_name": session.project_info.name if session.project_info else "Unknown",
-            "total_files": session.project_info.total_files if session.project_info else 0,
-            "total_lines": session.project_info.total_lines if session.project_info else 0,
+            "project_name": session.project_info.name
+            if session.project_info
+            else "Unknown",
+            "total_files": session.project_info.total_files
+            if session.project_info
+            else 0,
+            "total_lines": session.project_info.total_lines
+            if session.project_info
+            else 0,
             "modules_count": len(session.modules),
             "classes_count": len(session.classes),
             "functions_count": len(session.functions),
             "total_elements": len(session.all_elements),
         }
 
-        logger.info("Analysis completed successfully for project: %s", request.project_path)
+        logger.info(
+            "Analysis completed successfully for project: %s", request.project_path
+        )
 
         return AnalyzeResponse(
             success=True,
@@ -171,7 +183,7 @@ async def reset_analysis() -> AnalyzeResponse:
         return AnalyzeResponse(
             success=True,
             message="Analysis session reset successfully",
-            data={"session_cleared": True}
+            data={"session_cleared": True},
         )
     except Exception as e:
         logger.error("Failed to reset analysis session: %s", e)
@@ -187,7 +199,7 @@ async def get_analysis_data() -> AnalyzeResponse:
             return AnalyzeResponse(
                 success=True,
                 message="No analysis data available. Please analyze a project first.",
-                data={"has_data": False}
+                data={"has_data": False},
             )
 
         # Serialize all data for JSON response
@@ -213,7 +225,9 @@ async def get_analysis_data() -> AnalyzeResponse:
                 _serialize_code_element(element)
                 for element in current_session.functions.values()
             ],
-            "dependency_graph": _serialize_dependency_graph(current_session.dependency_graph),
+            "dependency_graph": _serialize_dependency_graph(
+                current_session.dependency_graph
+            ),
             "architectural_patterns": [
                 {
                     "name": pattern.name,
@@ -230,16 +244,18 @@ async def get_analysis_data() -> AnalyzeResponse:
                 "classes_count": len(current_session.classes),
                 "functions_count": len(current_session.functions),
                 "patterns_count": len(current_session.architectural_patterns),
-            }
+            },
         }
 
-        logger.info("Retrieved analysis data for project: %s", current_session.project_info.name)
+        logger.info(
+            "Retrieved analysis data for project: %s", current_session.project_info.name
+        )
 
         return AnalyzeResponse(
-            success=True,
-            message="Analysis data retrieved successfully",
-            data=data
+            success=True, message="Analysis data retrieved successfully", data=data
         )
     except Exception as e:
         logger.error("Failed to retrieve analysis data: %s", e)
-        raise HTTPException(status_code=500, detail=f"Failed to retrieve data: {e}") from e
+        raise HTTPException(
+            status_code=500, detail=f"Failed to retrieve data: {e}"
+        ) from e

@@ -37,7 +37,9 @@ class DependencyGraphBuilder:
         Returns:
             DependencyGraph with nodes, edges, and metrics
         """
-        logger.info("Building dependency graph from %d code elements", len(code_elements))
+        logger.info(
+            "Building dependency graph from %d code elements", len(code_elements)
+        )
 
         # Reset graph for new analysis
         self.graph.clear()
@@ -113,8 +115,10 @@ class DependencyGraphBuilder:
     def _find_module_for_file(self, file_path: str) -> Optional[str]:
         """Find the module ID for a given file path"""
         for element_id, element in self.element_map.items():
-            if (element.type == ElementType.MODULE and
-                element.location.file_path == file_path):
+            if (
+                element.type == ElementType.MODULE
+                and element.location.file_path == file_path
+            ):
                 return element_id
         return None
 
@@ -133,12 +137,16 @@ class DependencyGraphBuilder:
         if not targets:
             for element_id, element in self.element_map.items():
                 if element.type in [ElementType.CLASS, ElementType.FUNCTION]:
-                    if element.name == dependency or dependency.endswith(f".{element.name}"):
+                    if element.name == dependency or dependency.endswith(
+                        f".{element.name}"
+                    ):
                         targets.append(element_id)
 
         return targets
 
-    def _module_matches_dependency(self, module_element: CodeElement, dependency: str) -> bool:
+    def _module_matches_dependency(
+        self, module_element: CodeElement, dependency: str
+    ) -> bool:
         """Check if a module element matches a dependency string"""
         module_name = module_element.name
         file_path = module_element.location.file_path
@@ -177,7 +185,7 @@ class DependencyGraphBuilder:
                     "degree": self.graph.degree(node_id),
                     "in_degree": self.graph.in_degree(node_id),
                     "out_degree": self.graph.out_degree(node_id),
-                }
+                },
             )
             nodes[node_id] = graph_node
 
@@ -247,13 +255,17 @@ class DependencyGraphBuilder:
             components = list(nx.strongly_connected_components(self.graph))
             # Filter out single-node components (not interesting for dependencies)
             multi_node_components = [list(comp) for comp in components if len(comp) > 1]
-            logger.info("Found %d strongly connected components", len(multi_node_components))
+            logger.info(
+                "Found %d strongly connected components", len(multi_node_components)
+            )
             return multi_node_components
         except nx.NetworkXError as e:
             logger.error("NetworkX error finding strongly connected components: %s", e)
             return []
         except Exception as e:
-            logger.error("Unexpected error finding strongly connected components: %s", e)
+            logger.error(
+                "Unexpected error finding strongly connected components: %s", e
+            )
             return []
 
     def get_node_centrality(self) -> Dict[str, float]:

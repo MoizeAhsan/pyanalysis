@@ -13,10 +13,11 @@ import time
 import subprocess
 from pathlib import Path
 
+
 def create_sample_project():
     """Create a sample Python project for testing"""
     temp_dir = tempfile.mkdtemp(prefix="test_python_project_")
-    
+
     # Create main.py
     main_content = '''"""
 Main module for the test application
@@ -49,7 +50,7 @@ def main():
 if __name__ == "__main__":
     main()
 '''
-    
+
     # Create utils.py
     utils_content = '''"""
 Utility functions for the application
@@ -68,7 +69,7 @@ def format_output(data: Dict[str, Any]) -> str:
     """Format output for display"""
     return f"Data: {data}"
 '''
-    
+
     # Create models.py
     models_content = '''"""
 Data models for the application
@@ -101,21 +102,21 @@ class Product:
         """Get formatted price string"""
         return f"${self.price:.2f}"
 '''
-    
+
     # Write files
     with open(os.path.join(temp_dir, "main.py"), "w") as f:
         f.write(main_content)
-    
+
     with open(os.path.join(temp_dir, "utils.py"), "w") as f:
         f.write(utils_content)
-    
+
     with open(os.path.join(temp_dir, "models.py"), "w") as f:
         f.write(models_content)
-    
+
     # Create a subdirectory with more files
     sub_dir = os.path.join(temp_dir, "services")
     os.makedirs(sub_dir)
-    
+
     service_content = '''"""
 Service layer for the application
 """
@@ -142,21 +143,22 @@ class UserService:
                 return user
         raise ValueError(f"User {user_id} not found")
 '''
-    
+
     with open(os.path.join(sub_dir, "user_service.py"), "w") as f:
         f.write(service_content)
-    
+
     with open(os.path.join(sub_dir, "__init__.py"), "w") as f:
         f.write("# Services package\n")
-    
+
     return temp_dir
+
 
 def test_backend_api(project_path):
     """Test the backend API endpoints"""
     base_url = "http://localhost:8000/api"
-    
+
     print("Testing backend API...")
-    
+
     # Test root endpoint
     try:
         response = requests.get("http://localhost:8000/")
@@ -164,7 +166,7 @@ def test_backend_api(project_path):
     except requests.exceptions.ConnectionError:
         print("✗ Backend not running. Please start with: cd backend && python main.py")
         return False
-    
+
     # Test reset endpoint
     try:
         response = requests.post(f"{base_url}/reset")
@@ -172,17 +174,19 @@ def test_backend_api(project_path):
     except Exception as e:
         print(f"✗ Reset endpoint failed: {e}")
         return False
-    
+
     # Test analyze endpoint
     try:
-        response = requests.post(f"{base_url}/analyze", json={"project_path": project_path})
+        response = requests.post(
+            f"{base_url}/analyze", json={"project_path": project_path}
+        )
         if response.status_code == 200:
             data = response.json()
             print(f"✓ Analyze endpoint: {response.status_code}")
             print(f"  - Success: {data.get('success')}")
             print(f"  - Message: {data.get('message')}")
-            if 'data' in data:
-                stats = data['data']
+            if "data" in data:
+                stats = data["data"]
                 print(f"  - Files: {stats.get('total_files', 0)}")
                 print(f"  - Classes: {stats.get('classes_count', 0)}")
                 print(f"  - Functions: {stats.get('functions_count', 0)}")
@@ -193,7 +197,7 @@ def test_backend_api(project_path):
     except Exception as e:
         print(f"✗ Analyze endpoint failed: {e}")
         return False
-    
+
     # Test data endpoint
     try:
         response = requests.get(f"{base_url}/data")
@@ -207,8 +211,9 @@ def test_backend_api(project_path):
     except Exception as e:
         print(f"✗ Data endpoint failed: {e}")
         return False
-    
+
     return True
+
 
 def check_frontend():
     """Check if frontend is accessible"""
@@ -227,41 +232,46 @@ def check_frontend():
         print(f"✗ Frontend check failed: {e}")
         return False
 
+
 def main():
     """Main test function"""
     print("Python Code Analyzer - Integration Test")
     print("=" * 50)
-    
+
     # Create sample project
     print("\n1. Creating sample Python project...")
     project_path = create_sample_project()
     print(f"✓ Sample project created at: {project_path}")
-    
+
     # List files in the project
     print("\nProject structure:")
     for root, dirs, files in os.walk(project_path):
-        level = root.replace(project_path, '').count(os.sep)
-        indent = ' ' * 2 * level
+        level = root.replace(project_path, "").count(os.sep)
+        indent = " " * 2 * level
         print(f"{indent}{os.path.basename(root)}/")
-        subindent = ' ' * 2 * (level + 1)
+        subindent = " " * 2 * (level + 1)
         for file in files:
             print(f"{subindent}{file}")
-    
+
     # Test backend
     print("\n2. Testing backend API...")
     backend_ok = test_backend_api(project_path)
-    
+
     # Test frontend
     print("\n3. Testing frontend accessibility...")
     frontend_ok = check_frontend()
-    
+
     # Summary
     print("\n" + "=" * 50)
     print("Integration Test Summary:")
     print(f"✓ Sample project: Created")
-    print(f"{'✓' if backend_ok else '✗'} Backend API: {'Working' if backend_ok else 'Failed'}")
-    print(f"{'✓' if frontend_ok else '✗'} Frontend: {'Accessible' if frontend_ok else 'Not accessible'}")
-    
+    print(
+        f"{'✓' if backend_ok else '✗'} Backend API: {'Working' if backend_ok else 'Failed'}"
+    )
+    print(
+        f"{'✓' if frontend_ok else '✗'} Frontend: {'Accessible' if frontend_ok else 'Not accessible'}"
+    )
+
     if backend_ok and frontend_ok:
         print("\n🎉 Integration test PASSED!")
         print(f"You can now test the full application by:")
@@ -270,8 +280,10 @@ def main():
         print(f"3. Clicking 'Analyze Project'")
     else:
         print("\n❌ Integration test FAILED!")
-        print("Please check the error messages above and ensure both backend and frontend are running.")
-    
+        print(
+            "Please check the error messages above and ensure both backend and frontend are running."
+        )
+
     # Cleanup
     print(f"\nCleaning up sample project: {project_path}")
     try:
@@ -279,6 +291,7 @@ def main():
         print("✓ Cleanup completed")
     except Exception as e:
         print(f"✗ Cleanup failed: {e}")
+
 
 if __name__ == "__main__":
     main()
