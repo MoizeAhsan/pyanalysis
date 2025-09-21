@@ -7,9 +7,10 @@ import {
   ToggleButtonGroup,
   Card,
   CardContent,
-  Alert
+  Alert,
+  Chip
 } from '@mui/material';
-import { AccountTree, BubbleChart, Hub } from '@mui/icons-material';
+import { AccountTree, BubbleChart, Hub, Description, Class, Functions } from '@mui/icons-material';
 import CytoscapeGraph from './CytoscapeGraph';
 import VisNetworkComponent from './VisNetwork';
 
@@ -45,56 +46,118 @@ const MindMapViewer = ({ data = null }) => {
 
   // Convert analysis data to graph format
   const convertDataToGraphFormat = (analysisData) => {
-    if (!analysisData) return null;
+    if (!analysisData || !analysisData.data) return null;
 
-    const { modules = [], classes = [], functions = [], imports = [] } = analysisData;
+    const data = analysisData.data;
+    const { modules = [], classes = [], functions = [], dependency_graph = null } = data;
 
     // Create nodes from modules, classes, and functions
     const nodes = [];
     const edges = [];
+    const nodeIds = new Set(); // Track unique node IDs
 
-    // Add modules
+    // Add modules with proper file path handling
     modules.forEach(module => {
-      nodes.push({
-        id: module.name || module.file_path,
-        label: module.name || module.file_path,
-        name: module.name || module.file_path,
-        type: 'module'
-      });
+      const nodeId = module.id || module.name;
+      if (!nodeIds.has(nodeId)) {
+        nodeIds.add(nodeId);
+        // Extract filename from file path for cleaner display
+        const fileName = module.location?.file_path ? 
+          module.location.file_path.split('/').pop().replace('.py', '') : 
+          module.name;
+        
+        nodes.push({
+          id: nodeId,
+          label: fileName,
+          name: module.name,
+          type: 'module',
+          file_path: module.location?.file_path,
+          line_number: module.location?.line_number,
+          docstring: module.docstring
+        });
+      }
     });
 
     // Add classes
     classes.forEach(cls => {
-      nodes.push({
-        id: cls.name,
-        label: cls.name,
-        name: cls.name,
-        type: 'class'
-      });
+      const nodeId = cls.id || cls.name;
+      if (!nodeIds.has(nodeId)) {
+        nodeIds.add(nodeId);
+        nodes.push({
+          id: nodeId,
+          label: cls.name,
+          name: cls.name,
+          type: 'class',
+          file_path: cls.location?.file_path,
+          line_number: cls.location?.line_number,
+          docstring: cls.docstring,
+          parameters: cls.parameters,
+          decorators: cls.decorators
+        });
+      }
     });
 
     // Add functions
     functions.forEach(func => {
-      nodes.push({
-        id: func.name,
-        label: func.name,
-        name: func.name,
-        type: 'function'
-      });
-    });
-
-    // Add edges from imports
-    imports.forEach((imp, index) => {
-      if (imp.source && imp.target) {
-        edges.push({
-          id: `e${index}`,
-          source: imp.source,
-          target: imp.target,
-          from: imp.source,
-          to: imp.target
+      const nodeId = func.id || func.name;
+      if (!nodeIds.has(nodeId)) {
+        nodeIds.add(nodeId);
+        nodes.push({
+          id: nodeId,
+          label: func.name,
+          name: func.name,
+          type: 'function',
+          file_path: func.location?.file_path,
+          line_number: func.location?.line_number,
+          docstring: func.docstring,
+          parameters: func.parameters,
+          return_type: func.return_type,
+          decorators: func.decorators
         });
       }
     });
+
+    // Add edges from dependency graph
+    if (dependency_graph && dependency_graph.edges) {
+      dependency_graph.edges.forEach((edge, index) => {
+        // Only add edges if both source and target nodes exist
+        if (nodeIds.has(edge.source) && nodeIds.has(edge.target)) {
+          edges.push({
+            id: `e${index}`,
+            source: edge.source,
+            target: edge.target,
+            from: edge.source,
+            to: edge.target,
+            relationship_type: edge.relationship_type,
+            weight: edge.weight
+          });
+        }
+      });
+    }
+
+    // If no dependency edges, create some basic relationships based on file structure
+    if (edges.length === 0) {
+      // Create edges from modules to their classes and functions
+      [...classes, ...functions].forEach((element, index) => {
+        const elementModule = modules.find(mod => 
+          element.location?.file_path === mod.location?.file_path
+        );
+        if (elementModule) {
+          const moduleId = elementModule.id || elementModule.name;
+          const elementId = element.id || element.name;
+          if (nodeIds.has(moduleId) && nodeIds.has(elementId) && moduleId !== elementId) {
+            edges.push({
+              id: `contains_${index}`,
+              source: moduleId,
+              target: elementId,
+              from: moduleId,
+              to: elementId,
+              relationship_type: 'contains'
+            });
+          }
+        }
+      });
+    }
 
     return {
       cytoscape: [
@@ -115,13 +178,56 @@ const MindMapViewer = ({ data = null }) => {
   // Sample data for testing when no real data is available
   const sampleData = {
     cytoscape: [
-      { data: { id: 'main', label: 'main.py', type: 'module' } },
-      { data: { id: 'utils', label: 'utils.py', type: 'module' } },
-      { data: { id: 'MyClass', label: 'MyClass', type: 'class' } },
-      { data: { id: 'my_function', label: 'my_function', type: 'function' } },
-      { data: { source: 'main', target: 'utils', id: 'e1' } },
-      { data: { source: 'main', target: 'MyClass', id: 'e2' } },
-      { data: { source: 'MyClass', target: 'my_function', id: 'e3' } }
+      { data: { 
+        id: 'main', 
+        label: 'main', 
+        name: 'main.py',
+        type: 'module',
+        file_path: '/project/main.py',
+        line_number: 1,
+        docstring: 'Main module for the application'
+      }},
+      { data: { 
+        id: 'utils', 
+        label: 'utils', 
+        name: 'utils.py',
+        type: 'module',
+        file_path: '/project/utils.py',
+        line_number: 1,
+        docstring: 'Utility functions and helpers'
+      }},
+      { data: { 
+        id: 'MyClass', 
+        label: 'MyClass', 
+        name: 'MyClass',
+        type: 'class',
+        file_path: '/project/main.py',
+        line_number: 15,
+        docstring: 'A sample class demonstrating the analyzer',
+        parameters: [
+          { name: 'self', type_hint: null, default_value: null },
+          { name: 'name', type_hint: 'str', default_value: null }
+        ],
+        decorators: ['dataclass']
+      }},
+      { data: { 
+        id: 'my_function', 
+        label: 'my_function', 
+        name: 'my_function',
+        type: 'function',
+        file_path: '/project/utils.py',
+        line_number: 8,
+        docstring: 'A utility function that processes data',
+        parameters: [
+          { name: 'data', type_hint: 'List[str]', default_value: null },
+          { name: 'verbose', type_hint: 'bool', default_value: 'False' }
+        ],
+        return_type: 'Dict[str, Any]',
+        decorators: ['staticmethod']
+      }},
+      { data: { source: 'main', target: 'utils', id: 'e1', relationship_type: 'imports' } },
+      { data: { source: 'main', target: 'MyClass', id: 'e2', relationship_type: 'contains' } },
+      { data: { source: 'utils', target: 'my_function', id: 'e3', relationship_type: 'contains' } }
     ],
     forceGraph: {
       nodes: [
@@ -133,7 +239,7 @@ const MindMapViewer = ({ data = null }) => {
       links: [
         { source: 'main', target: 'utils' },
         { source: 'main', target: 'MyClass' },
-        { source: 'MyClass', target: 'my_function' }
+        { source: 'utils', target: 'my_function' }
       ]
     },
     visNetwork: {
@@ -146,7 +252,7 @@ const MindMapViewer = ({ data = null }) => {
       edges: [
         { from: 'main', to: 'utils' },
         { from: 'main', to: 'MyClass' },
-        { from: 'MyClass', to: 'my_function' }
+        { from: 'utils', to: 'my_function' }
       ]
     }
   };
@@ -176,6 +282,22 @@ const MindMapViewer = ({ data = null }) => {
             onNodeClick={handleNodeClick}
             onEdgeClick={handleEdgeClick}
             style={{ width: '100%', height: '500px' }}
+            layout={{
+              name: 'cose-bilkent',
+              animate: true,
+              animationDuration: 1000,
+              fit: true,
+              padding: 50,
+              nodeRepulsion: 4500,
+              idealEdgeLength: 100,
+              edgeElasticity: 0.45,
+              nestingFactor: 0.1,
+              gravity: 0.25,
+              numIter: 2500,
+              tile: true,
+              tilingPaddingVertical: 10,
+              tilingPaddingHorizontal: 10
+            }}
           />
         );
       case 'force':
@@ -234,24 +356,149 @@ const MindMapViewer = ({ data = null }) => {
           </ToggleButtonGroup>
         </Box>
 
+        {/* Legend */}
+        <Box sx={{ mb: 2, p: 2, backgroundColor: '#f5f5f5', borderRadius: 1 }}>
+          <Typography variant="subtitle2" gutterBottom>
+            Legend:
+          </Typography>
+          <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Box sx={{ 
+                width: 16, 
+                height: 12, 
+                backgroundColor: '#1976d2', 
+                borderRadius: '2px' 
+              }} />
+              <Typography variant="body2">Modules</Typography>
+            </Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Box sx={{ 
+                width: 16, 
+                height: 16, 
+                backgroundColor: '#388e3c', 
+                borderRadius: '50%' 
+              }} />
+              <Typography variant="body2">Classes</Typography>
+            </Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Box sx={{ 
+                width: 16, 
+                height: 16, 
+                backgroundColor: '#f57c00', 
+                borderRadius: '2px',
+                transform: 'rotate(45deg)'
+              }} />
+              <Typography variant="body2">Functions</Typography>
+            </Box>
+          </Box>
+        </Box>
+
         <Box sx={{ display: 'flex', gap: 2 }}>
           <Box sx={{ flex: 1 }}>
             {renderGraph()}
           </Box>
 
           {selectedNode && (
-            <Card sx={{ width: 300 }}>
+            <Card sx={{ width: 320, maxHeight: '500px', overflow: 'auto' }}>
               <CardContent>
-                <Typography variant="h6" gutterBottom>
-                  Node Details
+                <Typography variant="h6" gutterBottom sx={{ 
+                  color: selectedNode.type === 'module' ? '#1976d2' : 
+                         selectedNode.type === 'class' ? '#388e3c' : '#f57c00',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1
+                }}>
+                  {selectedNode.type === 'module' && <Description />}
+                  {selectedNode.type === 'class' && <Class />}
+                  {selectedNode.type === 'function' && <Functions />}
+                  {selectedNode.name || selectedNode.label}
                 </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  <strong>Name:</strong> {selectedNode.name || selectedNode.label}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  <strong>Type:</strong> {selectedNode.type}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
+                
+                <Chip 
+                  label={selectedNode.type} 
+                  size="small" 
+                  color={selectedNode.type === 'module' ? 'primary' : 
+                         selectedNode.type === 'class' ? 'success' : 'warning'}
+                  sx={{ mb: 2 }}
+                />
+
+                {selectedNode.file_path && (
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                    <strong>File:</strong> {selectedNode.file_path}
+                  </Typography>
+                )}
+
+                {selectedNode.line_number && (
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                    <strong>Line:</strong> {selectedNode.line_number}
+                  </Typography>
+                )}
+
+                {selectedNode.docstring && (
+                  <Box sx={{ mb: 2 }}>
+                    <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 1 }}>
+                      Documentation:
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ 
+                      fontStyle: 'italic',
+                      backgroundColor: '#f5f5f5',
+                      padding: 1,
+                      borderRadius: 1,
+                      fontSize: '0.8rem'
+                    }}>
+                      {selectedNode.docstring.length > 200 
+                        ? `${selectedNode.docstring.substring(0, 200)}...`
+                        : selectedNode.docstring
+                      }
+                    </Typography>
+                  </Box>
+                )}
+
+                {selectedNode.parameters && selectedNode.parameters.length > 0 && (
+                  <Box sx={{ mb: 2 }}>
+                    <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 1 }}>
+                      Parameters:
+                    </Typography>
+                    {selectedNode.parameters.slice(0, 5).map((param, index) => (
+                      <Typography key={index} variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem' }}>
+                        • {param.name}{param.type_hint ? `: ${param.type_hint}` : ''}
+                        {param.default_value ? ` = ${param.default_value}` : ''}
+                      </Typography>
+                    ))}
+                    {selectedNode.parameters.length > 5 && (
+                      <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem', fontStyle: 'italic' }}>
+                        ... and {selectedNode.parameters.length - 5} more parameters
+                      </Typography>
+                    )}
+                  </Box>
+                )}
+
+                {selectedNode.return_type && (
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                    <strong>Returns:</strong> {selectedNode.return_type}
+                  </Typography>
+                )}
+
+                {selectedNode.decorators && selectedNode.decorators.length > 0 && (
+                  <Box sx={{ mb: 2 }}>
+                    <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 1 }}>
+                      Decorators:
+                    </Typography>
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                      {selectedNode.decorators.map((decorator, index) => (
+                        <Chip 
+                          key={index} 
+                          label={`@${decorator}`} 
+                          size="small" 
+                          variant="outlined"
+                          sx={{ fontSize: '0.7rem' }}
+                        />
+                      ))}
+                    </Box>
+                  </Box>
+                )}
+
+                <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem', mt: 2 }}>
                   <strong>ID:</strong> {selectedNode.id}
                 </Typography>
               </CardContent>

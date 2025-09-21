@@ -43,7 +43,7 @@
   - Run mypy and pylint and fix any pretaining errors
   - _Requirements: 8.1, 8.2_
 
-- [ ] 7. Add basic mind map visualization
+- [x] 7. Add basic mind map visualization
   - Create MindMapViewer component using Cytoscape.js
   - Implement simple node layout for modules and classes
   - Add basic visual differentiation for different element types
