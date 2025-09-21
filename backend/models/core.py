@@ -9,6 +9,7 @@ from enum import Enum
 
 
 class ElementType(Enum):
+    """Types of code elements that can be analyzed."""
     MODULE = "module"
     CLASS = "class"
     FUNCTION = "function"
@@ -17,6 +18,7 @@ class ElementType(Enum):
 
 
 class UsageType(Enum):
+    """Types of code element usage patterns."""
     CALL = "call"
     IMPORT = "import"
     INHERITANCE = "inheritance"
@@ -24,6 +26,7 @@ class UsageType(Enum):
 
 
 class PatternType(Enum):
+    """Types of architectural patterns that can be detected."""
     MVC = "mvc"
     FACTORY = "factory"
     OBSERVER = "observer"
@@ -32,6 +35,7 @@ class PatternType(Enum):
 
 @dataclass
 class SourceLocation:
+    """Location information for code elements in source files."""
     file_path: str
     line_number: int
     column_number: int = 0
@@ -41,6 +45,7 @@ class SourceLocation:
 
 @dataclass
 class Parameter:
+    """Function or method parameter information."""
     name: str
     type_hint: Optional[str] = None
     default_value: Optional[str] = None
@@ -48,13 +53,15 @@ class Parameter:
 
 @dataclass
 class Usage:
+    """Usage information for code elements."""
     location: SourceLocation
     context: str
     usage_type: UsageType
 
 
 @dataclass
-class CodeElement:
+class CodeElement:  # pylint: disable=too-many-instance-attributes
+    """Represents a code element (class, function, module, etc.) with metadata."""
     id: str
     name: str
     type: ElementType
@@ -70,6 +77,7 @@ class CodeElement:
 
 @dataclass
 class ProjectInfo:
+    """Information about the analyzed project."""
     name: str
     path: str
     total_files: int = 0
@@ -80,6 +88,7 @@ class ProjectInfo:
 
 @dataclass
 class ArchitecturalPattern:
+    """Detected architectural pattern in the codebase."""
     name: str
     type: PatternType
     confidence: float
@@ -89,6 +98,7 @@ class ArchitecturalPattern:
 
 @dataclass
 class GraphNode:
+    """Node in the dependency graph."""
     id: str
     name: str
     type: ElementType
@@ -97,6 +107,7 @@ class GraphNode:
 
 @dataclass
 class GraphEdge:
+    """Edge in the dependency graph."""
     source: str
     target: str
     relationship_type: str
@@ -105,6 +116,7 @@ class GraphEdge:
 
 @dataclass
 class GraphMetrics:
+    """Metrics for the dependency graph."""
     node_count: int
     edge_count: int
     density: float
@@ -113,6 +125,7 @@ class GraphMetrics:
 
 @dataclass
 class DependencyGraph:
+    """Graph representation of code dependencies."""
     nodes: Dict[str, GraphNode] = field(default_factory=dict)
     edges: List[GraphEdge] = field(default_factory=list)
     metrics: Optional[GraphMetrics] = None

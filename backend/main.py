@@ -27,6 +27,7 @@ app.include_router(router, prefix="/api")
 
 @app.get("/")
 async def root() -> dict[str, str]:
+    """Root endpoint that returns API information."""
     return {"message": "Python Code Analyzer API"}
 
 

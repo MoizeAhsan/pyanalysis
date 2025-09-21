@@ -2,19 +2,23 @@
 API routes for Python Code Analyzer
 """
 
+from typing import Dict, Any
+
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from typing import Dict, Any
+
 from models import current_session
 
 router = APIRouter()
 
 
 class AnalyzeRequest(BaseModel):
+    """Request model for project analysis."""
     project_path: str
 
 
 class AnalyzeResponse(BaseModel):
+    """Response model for API endpoints."""
     success: bool
     message: str
     data: Dict[str, Any] = {}
@@ -31,7 +35,7 @@ async def analyze_project(request: AnalyzeRequest) -> AnalyzeResponse:
             data={"project_path": request.project_path},
         )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.post("/reset", response_model=AnalyzeResponse)
@@ -43,7 +47,7 @@ async def reset_analysis() -> AnalyzeResponse:
             success=True, message="Analysis session reset successfully"
         )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.get("/data", response_model=AnalyzeResponse)
@@ -63,4 +67,4 @@ async def get_analysis_data() -> AnalyzeResponse:
             success=True, message="Analysis data retrieved successfully", data=data
         )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e

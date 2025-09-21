@@ -52,11 +52,11 @@ class PythonASTParser:
         try:
             path = Path(file_path)
             if not path.exists():
-                logger.error(f"File not found: {file_path}")
+                logger.error("File not found: %s", file_path)
                 return None
 
-            if not path.suffix == ".py":
-                logger.warning(f"Skipping non-Python file: {file_path}")
+            if path.suffix != ".py":
+                logger.warning("Skipping non-Python file: %s", file_path)
                 return None
 
             # Read file content
@@ -67,19 +67,19 @@ class PythonASTParser:
             # Parse AST
             ast_tree = ast.parse(source_code, filename=file_path)
 
-            logger.info(f"Successfully parsed: {file_path}")
+            logger.info("Successfully parsed: %s", file_path)
             return FileAST(
                 file_path=str(path), ast_tree=ast_tree, source_lines=source_lines
             )
 
         except SyntaxError as e:
-            logger.error(f"Syntax error in {file_path} at line {e.lineno}: {e.msg}")
+            logger.error("Syntax error in %s at line %s: %s", file_path, e.lineno, e.msg)
             return None
         except UnicodeDecodeError as e:
-            logger.error(f"Encoding error in {file_path}: {e}")
+            logger.error("Encoding error in %s: %s", file_path, e)
             return None
-        except Exception as e:
-            logger.error(f"Unexpected error parsing {file_path}: {e}")
+        except (OSError, IOError) as e:
+            logger.error("File I/O error parsing %s: %s", file_path, e)
             return None
 
     def extract_elements(self, file_ast: FileAST) -> List[CodeElement]:
@@ -109,9 +109,7 @@ class PythonASTParser:
             if isinstance(node, ast.ClassDef):
                 class_element = self._extract_class(node)
                 elements.append(class_element)
-            elif isinstance(node, ast.FunctionDef) or isinstance(
-                node, ast.AsyncFunctionDef
-            ):
+            elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
                 function_element = self._extract_function(node)
                 elements.append(function_element)
             elif isinstance(node, (ast.Import, ast.ImportFrom)):
@@ -341,48 +339,44 @@ class PythonASTParser:
         """Get decorator name as string"""
         if isinstance(decorator, ast.Name):
             return decorator.id
-        elif isinstance(decorator, ast.Attribute):
+        if isinstance(decorator, ast.Attribute):
             return self._get_attribute_name(decorator)
-        elif isinstance(decorator, ast.Call):
+        if isinstance(decorator, ast.Call):
             return self._get_node_name(decorator.func)
-        else:
-            return str(decorator)
+        return str(decorator)
 
     def _get_attribute_name(self, node: ast.Attribute) -> str:
         """Get full attribute name (e.g., 'module.attr')"""
         if isinstance(node.value, ast.Name):
             return f"{node.value.id}.{node.attr}"
-        elif isinstance(node.value, ast.Attribute):
+        if isinstance(node.value, ast.Attribute):
             return f"{self._get_attribute_name(node.value)}.{node.attr}"
-        else:
-            return node.attr
+        return node.attr
 
     def _get_node_name(self, node: ast.expr) -> str:
         """Get name from various AST node types"""
         if isinstance(node, ast.Name):
             return node.id
-        elif isinstance(node, ast.Attribute):
+        if isinstance(node, ast.Attribute):
             return self._get_attribute_name(node)
-        elif isinstance(node, ast.Constant):
+        if isinstance(node, ast.Constant):
             return str(node.value)
-        else:
-            return str(node)
+        return str(node)
 
     def _get_type_annotation(self, annotation: ast.expr) -> str:
         """Get type annotation as string"""
         if isinstance(annotation, ast.Name):
             return annotation.id
-        elif isinstance(annotation, ast.Attribute):
+        if isinstance(annotation, ast.Attribute):
             return self._get_attribute_name(annotation)
-        elif isinstance(annotation, ast.Constant):
+        if isinstance(annotation, ast.Constant):
             return str(annotation.value)
-        elif isinstance(annotation, ast.Subscript):
+        if isinstance(annotation, ast.Subscript):
             # Handle generic types like List[str], Dict[str, int]
             value = self._get_type_annotation(annotation.value)
             slice_val = self._get_type_annotation(annotation.slice)
             return f"{value}[{slice_val}]"
-        else:
-            return str(annotation)
+        return str(annotation)
 
     def _get_default_value(self, default: ast.expr) -> str:
         """Get default parameter value as string"""
@@ -390,9 +384,8 @@ class PythonASTParser:
             if isinstance(default.value, str):
                 return f"'{default.value}'"
             return str(default.value)
-        elif isinstance(default, ast.Name):
+        if isinstance(default, ast.Name):
             return default.id
-        elif isinstance(default, ast.Attribute):
+        if isinstance(default, ast.Attribute):
             return self._get_attribute_name(default)
-        else:
-            return str(default)
+        return str(default)
