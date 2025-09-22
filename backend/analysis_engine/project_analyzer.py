@@ -2,12 +2,16 @@
 Project analyzer that orchestrates the analysis pipeline
 """
 
+import gc
 import logging
-from pathlib import Path
-from typing import List, Optional, Dict, Any
-from datetime import datetime
+import os
 import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import datetime
+from pathlib import Path
+from typing import List, Optional, Dict, Any
+
+import psutil
 
 from models.core import ProjectInfo, CodeElement, AnalysisSession, current_session
 from parsers.python_ast_parser import PythonASTParser
@@ -65,12 +69,14 @@ class ProjectAnalyzer:
     Main analyzer class that orchestrates the analysis pipeline
     """
 
-    def __init__(self, max_workers: int = 4):
+    def __init__(self, max_workers: Optional[int] = None, memory_limit_mb: int = 1024):
         """
         Initialize the project analyzer
 
         Args:
-            max_workers: Maximum number of worker threads for parallel processing
+            max_workers: Maximum number of worker threads for parallel processing.
+                        If None, uses CPU count * 2 for I/O bound tasks
+            memory_limit_mb: Memory limit in MB before triggering cleanup
         """
         self.file_scanner = FileSystemScanner()
         self.ast_parser = PythonASTParser()
@@ -78,8 +84,21 @@ class ProjectAnalyzer:
         self.usage_analyzer = UsageAnalyzer()
         self.dependency_analyzer = DependencyAnalyzer()
         self.pattern_detector = ArchitecturalPatternDetector()
-        self.max_workers = max_workers
+
+        # Optimize worker count based on system resources
+        if max_workers is None:
+            cpu_count = os.cpu_count() or 4
+            # For I/O bound tasks like file parsing, use more threads than CPU cores
+            self.max_workers = min(cpu_count * 2, 16)  # Cap at 16 to avoid overhead
+        else:
+            self.max_workers = max_workers
+
+        self.memory_limit_mb = memory_limit_mb
         self.current_progress: Optional[AnalysisProgress] = None
+
+        # Memory monitoring
+        self.process = psutil.Process()
+        self._last_memory_check = 0
 
     def analyze_project(self, project_path: str) -> AnalysisSession:
         """
@@ -131,9 +150,9 @@ class ProjectAnalyzer:
             # Step 4: Initialize progress tracking
             self.current_progress = AnalysisProgress(len(python_files))
 
-            # Step 5: Parse files and extract code elements
+            # Step 5: Parse files and extract code elements with optimized batching
             logger.info("Parsing %d Python files...", len(python_files))
-            all_elements = self._parse_files_batch(python_files)
+            all_elements = self._parse_files_optimized(python_files)
 
             # Step 6: Store elements in session
             for element in all_elements:
@@ -176,6 +195,50 @@ class ProjectAnalyzer:
             current_session.reset()
             raise
 
+    def _parse_files_optimized(self, file_paths: List[str]) -> List[CodeElement]:
+        """
+        Parse multiple files with optimized memory usage and parallel processing
+
+        Args:
+            file_paths: List of Python file paths to parse
+
+        Returns:
+            List of all extracted code elements
+        """
+        all_elements: List[CodeElement] = []
+        total_files = len(file_paths)
+
+        if total_files == 0:
+            return all_elements
+
+        # Calculate optimal batch size based on memory constraints
+        batch_size = self._optimize_batch_size(total_files)
+
+        logger.info(
+            "Processing %d files in batches of %d with %d workers",
+            total_files, batch_size, self.max_workers
+        )
+
+        # Process files in batches to manage memory usage
+        for i in range(0, total_files, batch_size):
+            batch_files = file_paths[i:i + batch_size]
+            batch_elements = self._parse_files_batch(batch_files)
+            all_elements.extend(batch_elements)
+
+            # Memory management between batches
+            if i > 0 and i % (batch_size * 3) == 0:  # Every 3 batches
+                self._check_memory_usage()
+
+            logger.debug(
+                "Processed batch %d/%d (%d files), total elements: %d",
+                (i // batch_size) + 1,
+                (total_files + batch_size - 1) // batch_size,
+                len(batch_files),
+                len(all_elements)
+            )
+
+        return all_elements
+
     def _parse_files_batch(self, file_paths: List[str]) -> List[CodeElement]:
         """
         Parse multiple files in parallel and extract code elements
@@ -186,16 +249,18 @@ class ProjectAnalyzer:
         Returns:
             List of all extracted code elements
         """
-        all_elements = []
+        all_elements: List[CodeElement] = []
 
-        if self.max_workers == 1:
-            # Single-threaded processing
+        if self.max_workers == 1 or len(file_paths) < 4:
+            # Single-threaded processing for small batches
             for file_path in file_paths:
                 elements = self._parse_single_file(file_path)
                 all_elements.extend(elements)
         else:
-            # Multi-threaded processing
-            with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
+            # Multi-threaded processing with optimized worker count
+            effective_workers = min(self.max_workers, len(file_paths))
+
+            with ThreadPoolExecutor(max_workers=effective_workers) as executor:
                 # Submit all parsing tasks
                 future_to_file = {
                     executor.submit(self._parse_single_file, file_path): file_path
@@ -225,7 +290,7 @@ class ProjectAnalyzer:
         Returns:
             List of code elements from the file
         """
-        elements = []
+        elements: List[CodeElement] = []
 
         try:
             # Update progress
@@ -266,3 +331,59 @@ class ProjectAnalyzer:
         logger.info("Resetting analysis session")
         current_session.reset()
         self.current_progress = None
+        # Force garbage collection after reset
+        gc.collect()
+
+    def _check_memory_usage(self) -> None:
+        """
+        Check current memory usage and trigger cleanup if needed
+        """
+        try:
+            memory_mb = self.process.memory_info().rss / 1024 / 1024
+            if memory_mb > self.memory_limit_mb:
+                logger.warning(
+                    "Memory usage (%.1f MB) exceeds limit (%.1f MB), triggering cleanup",
+                    memory_mb, self.memory_limit_mb
+                )
+                gc.collect()
+                # Log memory after cleanup
+                new_memory_mb = self.process.memory_info().rss / 1024 / 1024
+                logger.info("Memory after cleanup: %.1f MB", new_memory_mb)
+        except Exception as e:
+            logger.debug("Failed to check memory usage: %s", e)
+
+    def _optimize_batch_size(self, total_files: int) -> int:
+        """
+        Calculate optimal batch size based on available memory and file count
+        
+        Args:
+            total_files: Total number of files to process
+            
+        Returns:
+            Optimal batch size for processing
+        """
+        try:
+            # Get available memory
+            available_memory_mb = psutil.virtual_memory().available / 1024 / 1024
+
+            # Estimate memory per file (rough estimate: 50KB per file)
+            estimated_memory_per_file_mb = 0.05
+
+            # Calculate safe batch size (use 25% of available memory)
+            safe_memory_mb = available_memory_mb * 0.25
+            max_batch_size = int(safe_memory_mb / estimated_memory_per_file_mb)
+
+            # Ensure reasonable bounds
+            batch_size = max(10, min(max_batch_size, total_files, 1000))
+
+            logger.debug(
+                "Calculated batch size: %d (available memory: %.1f MB, total files: %d)",
+                batch_size, available_memory_mb, total_files
+            )
+
+            return batch_size
+
+        except Exception as e:
+            logger.debug("Failed to calculate optimal batch size: %s", e)
+            # Fallback to conservative batch size
+            return min(100, total_files)

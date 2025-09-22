@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Container, AppBar, Toolbar, Typography, Box, Alert, Snackbar, Tabs, Tab } from '@mui/material';
 import ProjectInput from './components/ProjectInput';
 import AnalysisResults from './components/AnalysisResults';
@@ -6,6 +6,7 @@ import MindMapViewer from './components/MindMapViewer';
 import ArchitectureViewer from './components/ArchitectureViewer';
 import CodeExplorer from './components/CodeExplorer';
 import SearchInterface from './components/SearchInterface';
+import performanceMonitor from './utils/performance';
 
 function App() {
   const [analysisTriggered, setAnalysisTriggered] = useState(false);
@@ -15,6 +16,16 @@ function App() {
   const [success, setSuccess] = useState('');
   const [activeTab, setActiveTab] = useState(0);
   const [selectedElement, setSelectedElement] = useState(null);
+
+  // Initialize performance monitoring
+  useEffect(() => {
+    performanceMonitor.startTiming('app-mount');
+    
+    return () => {
+      performanceMonitor.endTiming('app-mount');
+      performanceMonitor.cleanup();
+    };
+  }, []);
 
   const handleAnalysisStart = () => {
     setLoading(true);

@@ -6,17 +6,18 @@ import logging
 from typing import Dict, Any, Optional, List
 from pathlib import Path
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Header
 from pydantic import BaseModel, validator
 
 from models.core import current_session, CodeElement, DependencyGraph
 from analysis_engine.project_analyzer import ProjectAnalyzer
+from utils.compression import compress_large_response
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
-# Global analyzer instance
-analyzer = ProjectAnalyzer()
+# Global analyzer instance with optimized settings
+analyzer = ProjectAnalyzer(memory_limit_mb=2048)  # 2GB memory limit
 
 
 class AnalyzeRequest(BaseModel):
@@ -191,7 +192,9 @@ async def reset_analysis() -> AnalyzeResponse:
 
 
 @router.get("/architecture", response_model=AnalyzeResponse)
-async def get_architectural_data() -> AnalyzeResponse:
+async def get_architectural_data(
+    accept_encoding: Optional[str] = Header(None, alias="accept-encoding")
+) -> AnalyzeResponse:
     """Get architectural overview data for current session"""
     try:
         # Check if there's any analysis data
@@ -241,6 +244,28 @@ async def get_architectural_data() -> AnalyzeResponse:
             "Retrieved architectural data for project: %s",
             current_session.project_info.name,
         )
+
+        # Apply compression for large architectural data
+        should_compress = (
+            accept_encoding and "gzip" in accept_encoding.lower()
+        ) or len(str(architectural_data)) > 5120  # Compress if > 5KB
+
+        if should_compress:
+            compressed_data = compress_large_response(
+                architectural_data, threshold=2048
+            )  # 2KB threshold
+            if compressed_data.get("compressed", False):
+                logger.info(
+                    "Compressed architectural response: %d -> %d bytes (%.1f%% reduction)",
+                    compressed_data["original_size"],
+                    compressed_data["compressed_size"],
+                    (1 - compressed_data["compression_ratio"]) * 100
+                )
+                return AnalyzeResponse(
+                    success=True,
+                    message="Architectural data retrieved successfully (compressed)",
+                    data=compressed_data,
+                )
 
         return AnalyzeResponse(
             success=True,
@@ -459,7 +484,9 @@ async def search_elements(
 
 
 @router.get("/data", response_model=AnalyzeResponse)
-async def get_analysis_data() -> AnalyzeResponse:
+async def get_analysis_data(
+    accept_encoding: Optional[str] = Header(None, alias="accept-encoding")
+) -> AnalyzeResponse:
     """Get all analysis results for current session"""
     try:
         # Check if there's any analysis data
@@ -521,6 +548,26 @@ async def get_analysis_data() -> AnalyzeResponse:
         logger.info(
             "Retrieved analysis data for project: %s", current_session.project_info.name
         )
+
+        # Apply compression for large responses
+        should_compress = (
+            accept_encoding and "gzip" in accept_encoding.lower()
+        ) or len(str(data)) > 10240  # Compress if > 10KB
+
+        if should_compress:
+            compressed_data = compress_large_response(data, threshold=5120)  # 5KB threshold
+            if compressed_data.get("compressed", False):
+                logger.info(
+                    "Compressed response: %d -> %d bytes (%.1f%% reduction)",
+                    compressed_data["original_size"],
+                    compressed_data["compressed_size"],
+                    (1 - compressed_data["compression_ratio"]) * 100
+                )
+                return AnalyzeResponse(
+                    success=True,
+                    message="Analysis data retrieved successfully (compressed)",
+                    data=compressed_data
+                )
 
         return AnalyzeResponse(
             success=True, message="Analysis data retrieved successfully", data=data

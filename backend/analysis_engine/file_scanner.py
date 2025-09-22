@@ -3,8 +3,10 @@ File system scanner for discovering Python files in project directories
 """
 
 import logging
+import os
 from pathlib import Path
 from typing import List, Set, Generator, Optional, Dict, Any
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 logger = logging.getLogger(__name__)
 
@@ -14,12 +16,17 @@ class FileSystemScanner:
     Scanner for recursively discovering Python files in project directories
     """
 
-    def __init__(self, exclude_patterns: Optional[Set[str]] = None):
+    def __init__(
+        self,
+        exclude_patterns: Optional[Set[str]] = None,
+        max_workers: Optional[int] = None
+    ):
         """
         Initialize the file scanner
 
         Args:
             exclude_patterns: Set of directory/file patterns to exclude
+            max_workers: Maximum number of worker threads for parallel scanning
         """
         self.exclude_patterns = exclude_patterns or {
             "__pycache__",
@@ -41,6 +48,13 @@ class FileSystemScanner:
             "htmlcov",
             ".coverage",
         }
+
+        # Optimize worker count for I/O bound directory scanning
+        if max_workers is None:
+            cpu_count = os.cpu_count() or 4
+            self.max_workers = min(cpu_count, 8)  # Cap at 8 for directory scanning
+        else:
+            self.max_workers = max_workers
 
     def scan_project(self, project_path: str) -> List[str]:
         """
@@ -153,7 +167,7 @@ class FileSystemScanner:
 
     def get_project_stats(self, project_path: str) -> Dict[str, Any]:
         """
-        Get basic statistics about the project
+        Get basic statistics about the project with parallel line counting
 
         Args:
             project_path: Path to the project directory
@@ -162,20 +176,70 @@ class FileSystemScanner:
             Dictionary with project statistics
         """
         python_files = self.scan_project(project_path)
-
-        total_lines = 0
         total_files = len(python_files)
+        if total_files == 0:
+            return {
+                "total_files": 0,
+                "total_lines": 0,
+                "python_files": [],
+            }
 
-        for file_path in python_files:
-            try:
-                with open(file_path, "r", encoding="utf-8") as f:
-                    total_lines += sum(1 for _ in f)
-            except (OSError, UnicodeDecodeError):
-                # Skip files that can't be read
-                continue
+        # Count lines in parallel for better performance
+        total_lines = self._count_lines_parallel(python_files)
 
         return {
             "total_files": total_files,
             "total_lines": total_lines,
             "python_files": python_files,
         }
+
+    def _count_lines_parallel(self, file_paths: List[str]) -> int:
+        """
+        Count lines in multiple files using parallel processing
+        
+        Args:
+            file_paths: List of file paths to count lines in
+
+        Returns:
+            Total line count across all files
+        """
+        total_lines = 0
+
+        if len(file_paths) < 10 or self.max_workers == 1:
+            # Use single-threaded for small file counts
+            for file_path in file_paths:
+                total_lines += self._count_lines_single_file(file_path)
+        else:
+            # Use multi-threaded for larger file counts
+            with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
+                future_to_file = {
+                    executor.submit(self._count_lines_single_file, file_path): file_path
+                    for file_path in file_paths
+                }
+
+                for future in as_completed(future_to_file):
+                    try:
+                        line_count = future.result()
+                        total_lines += line_count
+                    except Exception as e:
+                        file_path = future_to_file[future]
+                        logger.debug("Failed to count lines in %s: %s", file_path, e)
+
+        return total_lines
+
+    def _count_lines_single_file(self, file_path: str) -> int:
+        """
+        Count lines in a single file
+
+        Args:
+            file_path: Path to the file
+
+        Returns:
+            Number of lines in the file
+        """
+        try:
+            with open(file_path, "r", encoding="utf-8") as f:
+                return sum(1 for _ in f)
+        except (OSError, UnicodeDecodeError):
+            # Skip files that can't be read
+            return 0

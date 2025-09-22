@@ -42,10 +42,12 @@ const SearchInterface = ({ data, onElementSelect }) => {
   const [error, setError] = useState('');
   const [hasSearched, setHasSearched] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalResults, setTotalResults] = useState(0);
   const [resultsPerPage] = useState(20); // Fixed page size for progressive disclosure
 
-  // Search function
-  const performSearch = useCallback(async (searchQuery, searchType) => {
+  // Search function with server-side pagination
+  const performSearch = useCallback(async (searchQuery, searchType, page = 1) => {
     if (!searchQuery.trim()) {
       setResults([]);
       setHasSearched(false);
@@ -56,11 +58,25 @@ const SearchInterface = ({ data, onElementSelect }) => {
     try {
       setLoading(true);
       setError('');
-      const response = await apiService.searchElements(searchQuery, searchType || null);
+      const response = await apiService.searchElements(
+        searchQuery, 
+        searchType || null, 
+        page, 
+        resultsPerPage
+      );
 
       if (response.success) {
-        setResults(response.data.results || []);
+        const searchData = response.data;
+        setResults(searchData.results || []);
         setHasSearched(true);
+        
+        // Update pagination info from server response
+        if (searchData.pagination) {
+          setCurrentPage(searchData.pagination.page);
+          // Store total pages for pagination component
+          setTotalPages(searchData.pagination.total_pages);
+          setTotalResults(searchData.pagination.total_results);
+        }
       } else {
         setError(response.message || 'Search failed');
         setResults([]);
@@ -71,7 +87,7 @@ const SearchInterface = ({ data, onElementSelect }) => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [resultsPerPage]);
 
   // Debounced search function
   const debouncedSearch = useMemo(
@@ -82,7 +98,7 @@ const SearchInterface = ({ data, onElementSelect }) => {
   // Effect to trigger search when query or type changes
   useEffect(() => {
     if (data && data.data && data.data.has_data) {
-      debouncedSearch(query, elementType);
+      debouncedSearch(query, elementType, 1);
       setCurrentPage(1); // Reset to first page on new search
     }
   }, [query, elementType, data, debouncedSearch]);
@@ -173,17 +189,15 @@ const SearchInterface = ({ data, onElementSelect }) => {
     return `${fileName}:${location.line_number}`;
   };
 
-  // Pagination logic for progressive disclosure
-  const paginatedResults = useMemo(() => {
-    const startIndex = (currentPage - 1) * resultsPerPage;
-    const endIndex = startIndex + resultsPerPage;
-    return results.slice(startIndex, endIndex);
-  }, [results, currentPage, resultsPerPage]);
-
-  const totalPages = Math.ceil(results.length / resultsPerPage);
+  // Server-side pagination - results are already paginated
+  const paginatedResults = results;
 
   const handlePageChange = (event, page) => {
     setCurrentPage(page);
+    // Trigger new search with the selected page
+    if (query.trim()) {
+      performSearch(query, elementType, page);
+    }
   };
 
   if (!data || !data.data || !data.data.has_data) {
@@ -239,7 +253,7 @@ const SearchInterface = ({ data, onElementSelect }) => {
         {hasSearched && (
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <Typography variant="body2" color="text.secondary">
-              {loading ? 'Searching...' : `Found ${results.length} results${results.length > resultsPerPage ? ` (showing ${Math.min(resultsPerPage, results.length)} per page)` : ''}`}
+              {loading ? 'Searching...' : `Found ${totalResults || results.length} results${totalPages > 1 ? ` (page ${currentPage} of ${totalPages})` : ''}`}
             </Typography>
             {loading && <CircularProgress size={16} />}
           </Box>
@@ -340,7 +354,7 @@ const SearchInterface = ({ data, onElementSelect }) => {
               <Box sx={{ p: 2, borderTop: 1, borderColor: 'divider' }}>
                 <Stack spacing={2} alignItems="center">
                   <Typography variant="body2" color="text.secondary">
-                    Showing {((currentPage - 1) * resultsPerPage) + 1}-{Math.min(currentPage * resultsPerPage, results.length)} of {results.length} results
+                    Showing {((currentPage - 1) * resultsPerPage) + 1}-{Math.min(currentPage * resultsPerPage, totalResults || results.length)} of {totalResults || results.length} results
                   </Typography>
                   <Pagination
                     count={totalPages}
@@ -350,6 +364,7 @@ const SearchInterface = ({ data, onElementSelect }) => {
                     size="small"
                     showFirstButton
                     showLastButton
+                    disabled={loading}
                   />
                 </Stack>
               </Box>

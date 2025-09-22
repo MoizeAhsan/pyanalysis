@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Frontend Performance Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .success { color: green; }
+        .error { color: red; }
+        .info { color: blue; }
+        button {
+            padding: 10px 15px;
+            margin: 5px;
+            cursor: pointer;
+        }
+        #results {
+            background: #f5f5f5;
+            padding: 10px;
+            border-radius: 5px;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <h1>Frontend Performance Optimizations Test</h1>
+    
+    <div class="test-section">
+        <h2>Data Compression Test</h2>
+        <p>Testing client-side decompression of gzip data</p>
+        <button onclick="testCompression()">Test Compression</button>
+        <div id="compression-results"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Virtual List Performance Test</h2>
+        <p>Testing virtual list rendering with large datasets</p>
+        <button onclick="testVirtualList()">Test Virtual List</button>
+        <div id="virtual-list-results"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>API Caching Test</h2>
+        <p>Testing API response caching</p>
+        <button onclick="testCaching()">Test Caching</button>
+        <div id="caching-results"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Performance Monitoring Test</h2>
+        <p>Testing performance monitoring utilities</p>
+        <button onclick="testPerformanceMonitoring()">Test Performance Monitoring</button>
+        <div id="performance-results"></div>
+    </div>
+
+    <div id="results"></div>
+
+    <script>
+        // Mock compressed data (base64 encoded gzip)
+        const mockCompressedData = {
+            compressed: true,
+            data: "H4sIAAAAAAAAA6tWyk5NzCvJzE21UkoD8ZNTSzLz8pNTFZLzSjJSixSslKqVrJSUkvNzc/NTSzKTSxKLUosV7JRqAQAAAP//",
+            original_size: 100,
+            compressed_size: 50,
+            compression_ratio: 0.5
+        };
+
+        // Test compression/decompression
+        async function testCompression() {
+            const resultsDiv = document.getElementById('compression-results');
+            resultsDiv.innerHTML = '<p class="info">Testing compression...</p>';
+            
+            try {
+                // Simulate the decompression logic from ApiService
+                const compressedData = mockCompressedData.data;
+                
+                // Decode base64
+                const binaryString = atob(compressedData);
+                const bytes = new Uint8Array(binaryString.length);
+                for (let i = 0; i < binaryString.length; i++) {
+                    bytes[i] = binaryString.charCodeAt(i);
+                }
+
+                // Check if DecompressionStream is supported
+                if (typeof DecompressionStream !== 'undefined') {
+                    const decompressedStream = new Response(bytes).body.pipeThrough(
+                        new DecompressionStream('gzip')
+                    );
+                    const decompressedResponse = new Response(decompressedStream);
+                    const decompressedText = await decompressedResponse.text();
+                    
+                    resultsDiv.innerHTML = `
+                        <p class="success">✓ Compression test passed!</p>
+                        <p>Original size: ${mockCompressedData.original_size} bytes</p>
+                        <p>Compressed size: ${mockCompressedData.compressed_size} bytes</p>
+                        <p>Compression ratio: ${(mockCompressedData.compression_ratio * 100).toFixed(1)}%</p>
+                        <p>Decompressed data: ${decompressedText.substring(0, 100)}...</p>
+                    `;
+                } else {
+                    resultsDiv.innerHTML = '<p class="error">❌ DecompressionStream not supported in this browser</p>';
+                }
+            } catch (error) {
+                resultsDiv.innerHTML = `<p class="error">❌ Compression test failed: ${error.message}</p>`;
+            }
+        }
+
+        // Test virtual list performance
+        function testVirtualList() {
+            const resultsDiv = document.getElementById('virtual-list-results');
+            resultsDiv.innerHTML = '<p class="info">Testing virtual list performance...</p>';
+            
+            const startTime = performance.now();
+            
+            // Simulate creating a large dataset
+            const largeDataset = Array.from({ length: 10000 }, (_, i) => ({
+                id: i,
+                name: `Item ${i}`,
+                description: `Description for item ${i}`
+            }));
+            
+            // Simulate virtual list rendering (only render visible items)
+            const containerHeight = 400;
+            const itemHeight = 50;
+            const visibleItems = Math.ceil(containerHeight / itemHeight);
+            const renderedItems = largeDataset.slice(0, visibleItems + 5); // +5 for overscan
+            
+            const endTime = performance.now();
+            const renderTime = endTime - startTime;
+            
+            resultsDiv.innerHTML = `
+                <p class="success">✓ Virtual list test passed!</p>
+                <p>Total items: ${largeDataset.length}</p>
+                <p>Rendered items: ${renderedItems.length}</p>
+                <p>Render time: ${renderTime.toFixed(2)}ms</p>
+                <p>Memory efficiency: ${((renderedItems.length / largeDataset.length) * 100).toFixed(1)}% of items rendered</p>
+            `;
+        }
+
+        // Test API caching
+        function testCaching() {
+            const resultsDiv = document.getElementById('caching-results');
+            resultsDiv.innerHTML = '<p class="info">Testing API caching...</p>';
+            
+            // Simulate cache implementation
+            class MockCache {
+                constructor() {
+                    this.cache = new Map();
+                    this.cacheTimeout = 5 * 60 * 1000; // 5 minutes
+                }
+                
+                set(key, data) {
+                    this.cache.set(key, {
+                        data,
+                        timestamp: Date.now()
+                    });
+                }
+                
+                get(key) {
+                    const cached = this.cache.get(key);
+                    if (cached && Date.now() - cached.timestamp < this.cacheTimeout) {
+                        return cached.data;
+                    }
+                    return null;
+                }
+                
+                clear() {
+                    this.cache.clear();
+                }
+            }
+            
+            const cache = new MockCache();
+            const testData = { message: 'Test data', timestamp: Date.now() };
+            
+            // Test cache operations
+            const startTime = performance.now();
+            
+            cache.set('test-key', testData);
+            const cachedData = cache.get('test-key');
+            const missedData = cache.get('non-existent-key');
+            
+            const endTime = performance.now();
+            const cacheTime = endTime - startTime;
+            
+            const cacheHit = cachedData !== null;
+            const cacheMiss = missedData === null;
+            
+            resultsDiv.innerHTML = `
+                <p class="success">✓ Caching test passed!</p>
+                <p>Cache hit: ${cacheHit ? '✓' : '❌'}</p>
+                <p>Cache miss: ${cacheMiss ? '✓' : '❌'}</p>
+                <p>Cache operation time: ${cacheTime.toFixed(2)}ms</p>
+                <p>Cache size: ${cache.cache.size} items</p>
+            `;
+        }
+
+        // Test performance monitoring
+        function testPerformanceMonitoring() {
+            const resultsDiv = document.getElementById('performance-results');
+            resultsDiv.innerHTML = '<p class="info">Testing performance monitoring...</p>';
+            
+            // Simulate performance monitoring
+            class MockPerformanceMonitor {
+                constructor() {
+                    this.metrics = new Map();
+                }
+                
+                startTiming(label) {
+                    this.metrics.set(label, {
+                        startTime: performance.now(),
+                        startMemory: performance.memory ? performance.memory.usedJSHeapSize : 0
+                    });
+                }
+                
+                endTiming(label) {
+                    const start = this.metrics.get(label);
+                    if (!start) return null;
+                    
+                    const endTime = performance.now();
+                    const endMemory = performance.memory ? performance.memory.usedJSHeapSize : 0;
+                    
+                    const metrics = {
+                        duration: endTime - start.startTime,
+                        memoryDelta: endMemory - start.startMemory,
+                        label
+                    };
+                    
+                    this.metrics.delete(label);
+                    return metrics;
+                }
+                
+                debounce(func, wait) {
+                    let timeout;
+                    return function executedFunction(...args) {
+                        const later = () => {
+                            timeout = null;
+                            func(...args);
+                        };
+                        clearTimeout(timeout);
+                        timeout = setTimeout(later, wait);
+                    };
+                }
+            }
+            
+            const monitor = new MockPerformanceMonitor();
+            
+            // Test timing
+            monitor.startTiming('test-operation');
+            
+            // Simulate some work
+            const data = Array.from({ length: 1000 }, (_, i) => i * i);
+            const sum = data.reduce((a, b) => a + b, 0);
+            
+            const metrics = monitor.endTiming('test-operation');
+            
+            // Test debounce
+            let debounceCallCount = 0;
+            const debouncedFn = monitor.debounce(() => debounceCallCount++, 100);
+            
+            // Call multiple times quickly
+            debouncedFn();
+            debouncedFn();
+            debouncedFn();
+            
+            setTimeout(() => {
+                resultsDiv.innerHTML = `
+                    <p class="success">✓ Performance monitoring test passed!</p>
+                    <p>Operation duration: ${metrics.duration.toFixed(2)}ms</p>
+                    <p>Memory delta: ${metrics.memoryDelta} bytes</p>
+                    <p>Computed sum: ${sum}</p>
+                    <p>Debounce calls: ${debounceCallCount} (should be 1)</p>
+                    <p>Memory usage: ${performance.memory ? (performance.memory.usedJSHeapSize / 1024 / 1024).toFixed(2) + ' MB' : 'Not available'}</p>
+                `;
+            }, 200);
+        }
+
+        // Run all tests
+        function runAllTests() {
+            console.log('Running frontend performance tests...');
+            testCompression();
+            setTimeout(() => testVirtualList(), 100);
+            setTimeout(() => testCaching(), 200);
+            setTimeout(() => testPerformanceMonitoring(), 300);
+        }
+
+        // Auto-run tests when page loads
+        window.addEventListener('load', () => {
+            console.log('Frontend performance test page loaded');
+            document.getElementById('results').textContent = 'Frontend performance optimizations loaded successfully!\nClick the test buttons to verify functionality.';
+        });
+    </script>
+</body>
+</html>

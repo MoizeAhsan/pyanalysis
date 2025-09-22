@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Paper,
   Typography,
@@ -10,7 +10,8 @@ import {
   ListItemIcon,
   Chip,
   CircularProgress,
-  Alert
+  Alert,
+  Box
 } from '@mui/material';
 import {
   Description,
@@ -24,22 +25,20 @@ import {
 } from '@mui/icons-material';
 import CollapsibleSection from './CollapsibleSection';
 import LazyList from './LazyList';
+import VirtualList from './VirtualList';
 import apiService from '../services/api';
+import { usePerformanceMonitor } from '../utils/performance';
 
 const AnalysisResults = ({ analysisTriggered, onDataLoaded, loading: parentLoading = false }) => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const { startTiming, endTiming } = usePerformanceMonitor();
 
-  useEffect(() => {
-    if (analysisTriggered) {
-      fetchAnalysisData();
-    }
-  }, [analysisTriggered]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const fetchAnalysisData = async () => {
+  const fetchAnalysisData = useCallback(async () => {
     setLoading(true);
     setError('');
+    startTiming('fetch-analysis-data');
 
     try {
       const result = await apiService.getAnalysisData();
@@ -48,13 +47,86 @@ const AnalysisResults = ({ analysisTriggered, onDataLoaded, loading: parentLoadi
       if (onDataLoaded) {
         onDataLoaded(result);
       }
+      endTiming('fetch-analysis-data');
     } catch (err) {
       setError('Failed to fetch analysis data');
       console.error('Error fetching analysis data:', err);
+      endTiming('fetch-analysis-data');
     } finally {
       setLoading(false);
     }
-  };
+  }, [onDataLoaded, startTiming, endTiming]);
+
+  // Parse the actual API response structure
+  // The API returns: { success: true, message: "...", data: { ... } }
+  const responseData = data?.data || data || {}; // Handle both wrapped and unwrapped responses
+
+  const {
+    project_info = {},
+    modules = [],
+    classes = [],
+    functions = [],
+    statistics = {},
+    has_data = false
+  } = responseData;
+
+  // Memoize expensive computations - must be at top level
+  const stats = useMemo(() => ({
+    total_files: project_info.total_files || statistics.total_files || 0,
+    total_lines: project_info.total_lines || statistics.total_lines || 0,
+    modules_count: statistics.modules_count || modules.length || 0,
+    classes_count: statistics.classes_count || classes.length || 0,
+    functions_count: statistics.functions_count || functions.length || 0
+  }), [project_info, statistics, modules.length, classes.length, functions.length]);
+
+  // Memoize render functions for better performance - must be at top level
+  const renderModuleItem = useCallback((module, index) => (
+    <Box key={module.id || index} sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+      <Description color="action" sx={{ mr: 2 }} />
+      <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+        <Typography variant="body2" noWrap>
+          {module.name || `Module ${index + 1}`}
+        </Typography>
+        <Typography variant="caption" color="text.secondary" noWrap>
+          {module.location?.file_path || 'Unknown file'}
+        </Typography>
+      </Box>
+      <Chip
+        label={module.type || 'module'}
+        size="small"
+        variant="outlined"
+        sx={{ ml: 1 }}
+      />
+    </Box>
+  ), []);
+
+  const renderClassChip = useCallback((cls, index) => (
+    <Chip
+      key={cls.id || index}
+      label={cls.name || `Class ${index + 1}`}
+      size="small"
+      color="primary"
+      variant="outlined"
+      sx={{ mr: 0.5, mb: 0.5 }}
+    />
+  ), []);
+
+  const renderFunctionChip = useCallback((func, index) => (
+    <Chip
+      key={func.id || index}
+      label={func.name || `Function ${index + 1}`}
+      size="small"
+      color="secondary"
+      variant="outlined"
+      sx={{ mr: 0.5, mb: 0.5 }}
+    />
+  ), []);
+
+  useEffect(() => {
+    if (analysisTriggered) {
+      fetchAnalysisData();
+    }
+  }, [analysisTriggered, fetchAnalysisData]);
 
   if (loading || parentLoading) {
     return (
@@ -82,19 +154,6 @@ const AnalysisResults = ({ analysisTriggered, onDataLoaded, loading: parentLoadi
     return null;
   }
 
-  // Parse the actual API response structure
-  // The API returns: { success: true, message: "...", data: { ... } }
-  const responseData = data.data || data; // Handle both wrapped and unwrapped responses
-
-  const {
-    project_info = {},
-    modules = [],
-    classes = [],
-    functions = [],
-    statistics = {},
-    has_data = false
-  } = responseData;
-
   // If no data is available, show appropriate message
   if (!has_data && !project_info.name) {
     return (
@@ -108,15 +167,6 @@ const AnalysisResults = ({ analysisTriggered, onDataLoaded, loading: parentLoadi
       </Paper>
     );
   }
-
-  // Extract statistics with fallbacks
-  const stats = {
-    total_files: project_info.total_files || statistics.total_files || 0,
-    total_lines: project_info.total_lines || statistics.total_lines || 0,
-    modules_count: statistics.modules_count || modules.length || 0,
-    classes_count: statistics.classes_count || classes.length || 0,
-    functions_count: statistics.functions_count || functions.length || 0
-  };
 
   return (
     <Paper elevation={3} sx={{ p: 4, mb: 4 }}>
@@ -199,29 +249,26 @@ const AnalysisResults = ({ analysisTriggered, onDataLoaded, loading: parentLoadi
             defaultExpanded={stats.modules_count <= 10}
           >
             {Array.isArray(modules) && modules.length > 0 ? (
-              <LazyList
-                items={modules}
-                initialBatchSize={10}
-                batchSize={15}
-                maxItems={100}
-                renderItem={(module, index) => (
-                  <ListItem key={index}>
-                    <ListItemIcon>
-                      <Description color="action" />
-                    </ListItemIcon>
-                    <ListItemText
-                      primary={module.name || `Module ${index + 1}`}
-                      secondary={`${module.location?.file_path || 'Unknown file'}`}
-                    />
-                    <Chip
-                      label={module.type || 'module'}
-                      size="small"
-                      variant="outlined"
-                    />
-                  </ListItem>
-                )}
-                sx={{ maxHeight: 400, overflow: 'auto' }}
-              />
+              modules.length > 50 ? (
+                // Use VirtualList for large datasets
+                <VirtualList
+                  items={modules}
+                  renderItem={renderModuleItem}
+                  itemHeight={72}
+                  containerHeight={400}
+                  overscan={5}
+                />
+              ) : (
+                // Use LazyList for smaller datasets
+                <LazyList
+                  items={modules}
+                  initialBatchSize={10}
+                  batchSize={15}
+                  maxItems={100}
+                  renderItem={renderModuleItem}
+                  sx={{ maxHeight: 400, overflow: 'auto' }}
+                />
+              )
             ) : stats.modules_count > 0 ? (
               <ListItem>
                 <ListItemIcon>
@@ -257,20 +304,11 @@ const AnalysisResults = ({ analysisTriggered, onDataLoaded, loading: parentLoadi
               {Array.isArray(classes) && classes.length > 0 ? (
                 <LazyList
                   items={classes}
-                  initialBatchSize={10}
-                  batchSize={15}
-                  maxItems={50}
-                  renderItem={(cls, index) => (
-                    <Chip
-                      key={index}
-                      label={cls.name || `Class ${index + 1}`}
-                      size="small"
-                      color="primary"
-                      variant="outlined"
-                      sx={{ mr: 0.5, mb: 0.5 }}
-                    />
-                  )}
-                  showLoadMore={false}
+                  initialBatchSize={20}
+                  batchSize={20}
+                  maxItems={100}
+                  renderItem={renderClassChip}
+                  showLoadMore={classes.length > 20}
                   sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}
                 />
               ) : stats.classes_count > 0 ? (
@@ -297,20 +335,11 @@ const AnalysisResults = ({ analysisTriggered, onDataLoaded, loading: parentLoadi
               {Array.isArray(functions) && functions.length > 0 ? (
                 <LazyList
                   items={functions}
-                  initialBatchSize={10}
-                  batchSize={15}
-                  maxItems={50}
-                  renderItem={(func, index) => (
-                    <Chip
-                      key={index}
-                      label={func.name || `Function ${index + 1}`}
-                      size="small"
-                      color="secondary"
-                      variant="outlined"
-                      sx={{ mr: 0.5, mb: 0.5 }}
-                    />
-                  )}
-                  showLoadMore={false}
+                  initialBatchSize={20}
+                  batchSize={20}
+                  maxItems={100}
+                  renderItem={renderFunctionChip}
+                  showLoadMore={functions.length > 20}
                   sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}
                 />
               ) : stats.functions_count > 0 ? (
