@@ -2,6 +2,8 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import cytoscape from 'cytoscape';
 import dagre from 'cytoscape-dagre';
 import coseBilkent from 'cytoscape-cose-bilkent';
+import { Box, IconButton, Tooltip, Typography } from '@mui/material';
+import { ZoomIn, ZoomOut, CenterFocusStrong, Fullscreen, FullscreenExit } from '@mui/icons-material';
 
 // Register layout extensions
 cytoscape.use(dagre);
@@ -40,15 +42,21 @@ const CytoscapeGraph = ({
   layout = { name: 'dagre' },
   stylesheet = [],
   onNodeClick = () => {},
-  onEdgeClick = () => {}
+  onEdgeClick = () => {},
+  enableCollapse = true,
+  showControls = true
 }) => {
   const containerRef = useRef(null);
   const cyRef = useRef(null);
   const [collapsedNodes, setCollapsedNodes] = useState(new Set());
   const [originalElements, setOriginalElements] = useState([]);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [zoomLevel, setZoomLevel] = useState(1);
 
   // Function to toggle node collapse/expand
   const toggleNodeCollapse = useCallback((nodeId) => {
+    if (!enableCollapse) return;
+    
     setCollapsedNodes(prevCollapsed => {
       const newCollapsedNodes = new Set(prevCollapsed);
       
@@ -62,6 +70,34 @@ const CytoscapeGraph = ({
       
       return newCollapsedNodes;
     });
+  }, [enableCollapse]);
+
+  // Control functions
+  const handleZoomIn = useCallback(() => {
+    if (cyRef.current) {
+      cyRef.current.zoom(cyRef.current.zoom() * 1.25);
+      cyRef.current.center();
+      setZoomLevel(cyRef.current.zoom());
+    }
+  }, []);
+
+  const handleZoomOut = useCallback(() => {
+    if (cyRef.current) {
+      cyRef.current.zoom(cyRef.current.zoom() * 0.8);
+      cyRef.current.center();
+      setZoomLevel(cyRef.current.zoom());
+    }
+  }, []);
+
+  const handleFit = useCallback(() => {
+    if (cyRef.current) {
+      cyRef.current.fit();
+      setZoomLevel(cyRef.current.zoom());
+    }
+  }, []);
+
+  const toggleFullscreen = useCallback(() => {
+    setIsFullscreen(prev => !prev);
   }, []);
 
   // Function to filter elements based on collapsed state
@@ -342,7 +378,7 @@ const CytoscapeGraph = ({
       const now = Date.now();
       const lastClick = node.scratch('lastClick') || 0;
       
-      if (now - lastClick < 300) { // Double click detected
+      if (now - lastClick < 300 && enableCollapse) { // Double click detected
         const hasChildren = getNodeChildren(nodeData.id, elements).length > 0;
         if (hasChildren) {
           toggleNodeCollapse(nodeData.id);
@@ -414,13 +450,21 @@ const CytoscapeGraph = ({
       connectedEdges.removeClass('hover-highlight');
     });
 
+    // Track zoom changes
+    cyRef.current.on('zoom', () => {
+      setZoomLevel(cyRef.current.zoom());
+    });
+
+    // Initial zoom level
+    setZoomLevel(cyRef.current.zoom());
+
     // Cleanup function
     return () => {
       if (cyRef.current) {
         cyRef.current.destroy();
       }
     };
-  }, [elements, layout, stylesheet, onNodeClick, onEdgeClick, collapsedNodes, toggleNodeCollapse, getVisibleElements]);
+  }, [elements, layout, stylesheet, onNodeClick, onEdgeClick, collapsedNodes, toggleNodeCollapse, getVisibleElements, enableCollapse]);
 
   // Update elements when they change or when collapsed state changes
   useEffect(() => {
@@ -459,11 +503,89 @@ const CytoscapeGraph = ({
   }, [originalElements, layout, collapsedNodes, getVisibleElements]);
 
   return (
-    <div 
-      ref={containerRef} 
-      style={style}
-      className="cytoscape-container"
-    />
+    <Box sx={{ 
+      position: 'relative',
+      ...style,
+      ...(isFullscreen && {
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        width: '100vw',
+        height: '100vh',
+        zIndex: 9999,
+        backgroundColor: 'white'
+      })
+    }}>
+      {/* Control Panel */}
+      {showControls && (
+        <Box sx={{ 
+          position: 'absolute', 
+          top: 10, 
+          right: 10, 
+          zIndex: 1000,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 1,
+          backgroundColor: 'rgba(255, 255, 255, 0.95)',
+          borderRadius: 1,
+          p: 1,
+          boxShadow: 2
+        }}>
+          <Tooltip title="Zoom In">
+            <IconButton size="small" onClick={handleZoomIn}>
+              <ZoomIn />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Zoom Out">
+            <IconButton size="small" onClick={handleZoomOut}>
+              <ZoomOut />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Fit to View">
+            <IconButton size="small" onClick={handleFit}>
+              <CenterFocusStrong />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}>
+            <IconButton size="small" onClick={toggleFullscreen}>
+              {isFullscreen ? <FullscreenExit /> : <Fullscreen />}
+            </IconButton>
+          </Tooltip>
+          <Typography variant="caption" sx={{ textAlign: 'center', mt: 1, fontSize: '0.7rem' }}>
+            {Math.round(zoomLevel * 100)}%
+          </Typography>
+        </Box>
+      )}
+
+      {/* Collapse Instructions */}
+      {enableCollapse && showControls && (
+        <Box sx={{ 
+          position: 'absolute', 
+          bottom: 10, 
+          left: 10, 
+          zIndex: 1000,
+          backgroundColor: 'rgba(255, 255, 255, 0.9)',
+          borderRadius: 1,
+          p: 1,
+          fontSize: '0.75rem',
+          color: 'text.secondary'
+        }}>
+          <Typography variant="caption">
+            Double-click nodes to collapse/expand
+          </Typography>
+        </Box>
+      )}
+
+      <div 
+        ref={containerRef} 
+        style={{ 
+          width: '100%', 
+          height: '100%',
+          minHeight: isFullscreen ? '100vh' : '400px'
+        }}
+        className="cytoscape-container"
+      />
+    </Box>
   );
 };
 

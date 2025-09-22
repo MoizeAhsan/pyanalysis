@@ -452,7 +452,7 @@ const ArchitectureViewer = ({ data = null }) => {
         onEdgeClick={handleEdgeClick}
         style={{ width: '100%', height: '600px' }}
         layout={getArchitecturalLayout(layoutType)}
-        cytoscapeStyle={cytoscapeStyle}
+        stylesheet={cytoscapeStyle}
       />
     );
   };

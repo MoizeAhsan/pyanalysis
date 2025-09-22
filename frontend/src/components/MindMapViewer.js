@@ -7,7 +7,7 @@ import {
   ToggleButtonGroup,
   Card,
   CardContent,
-  Alert,
+
   Chip,
   FormControl,
   InputLabel,
@@ -18,17 +18,8 @@ import { AccountTree, BubbleChart, Hub, Description, Class, Functions } from '@m
 import CytoscapeGraph from './CytoscapeGraph';
 import VisNetworkComponent from './VisNetwork';
 
-// Lazy load ForceGraph to handle dependency issues
-const ForceGraphComponent = React.lazy(() =>
-  import('./ForceGraph').catch(() => ({
-    default: () => (
-      <Alert severity="warning">
-        Force Graph visualization is temporarily unavailable due to dependency issues.
-        Please use Cytoscape or Vis Network instead.
-      </Alert>
-    )
-  }))
-);
+// Import ForceGraph component
+import ForceGraphComponent from './ForceGraph';
 
 const MindMapViewer = ({ data = null }) => {
   const [graphType, setGraphType] = useState('cytoscape');
@@ -383,15 +374,19 @@ const MindMapViewer = ({ data = null }) => {
         );
       case 'force':
         return (
-          <React.Suspense fallback={<Typography>Loading Force Graph...</Typography>}>
-            <ForceGraphComponent
-              graphData={graphData.forceGraph}
-              onNodeClick={handleNodeClick}
-              onLinkClick={handleEdgeClick}
-              width={800}
-              height={500}
-            />
-          </React.Suspense>
+          <ForceGraphComponent
+            graphData={graphData.forceGraph}
+            onNodeClick={handleNodeClick}
+            onLinkClick={handleEdgeClick}
+            width={800}
+            height={600}
+            showLabels={true}
+            enableZoom={true}
+            enableDrag={true}
+            linkDistance={120}
+            chargeStrength={-400}
+            collisionRadius={25}
+          />
         );
       case 'vis':
         return (
@@ -446,9 +441,9 @@ const MindMapViewer = ({ data = null }) => {
                 <AccountTree sx={{ mr: 1 }} />
                 Cytoscape
               </ToggleButton>
-              <ToggleButton value="force" aria-label="force graph" disabled>
+              <ToggleButton value="force" aria-label="force graph">
                 <BubbleChart sx={{ mr: 1 }} />
-                Force Graph (Disabled)
+                Force Graph
               </ToggleButton>
               <ToggleButton value="vis" aria-label="vis network">
                 <Hub sx={{ mr: 1 }} />
