@@ -13,6 +13,8 @@ from models.core import ProjectInfo, CodeElement, AnalysisSession, current_sessi
 from parsers.python_ast_parser import PythonASTParser
 from analysis_engine.file_scanner import FileSystemScanner
 from graph.dependency_graph_builder import DependencyGraphBuilder
+from analyzers.usage_analyzer import UsageAnalyzer
+from analyzers.dependency_analyzer import DependencyAnalyzer
 
 logger = logging.getLogger(__name__)
 
@@ -72,6 +74,8 @@ class ProjectAnalyzer:
         self.file_scanner = FileSystemScanner()
         self.ast_parser = PythonASTParser()
         self.graph_builder = DependencyGraphBuilder()
+        self.usage_analyzer = UsageAnalyzer()
+        self.dependency_analyzer = DependencyAnalyzer()
         self.max_workers = max_workers
         self.current_progress: Optional[AnalysisProgress] = None
 
@@ -133,7 +137,15 @@ class ProjectAnalyzer:
             for element in all_elements:
                 current_session.add_element(element)
 
-            # Step 7: Build dependency graph
+            # Step 7: Analyze dependencies
+            logger.info("Analyzing dependencies...")
+            self.dependency_analyzer.analyze_dependencies(all_elements, python_files)
+
+            # Step 8: Analyze usage patterns
+            logger.info("Analyzing usage patterns...")
+            self.usage_analyzer.analyze_usage(all_elements, python_files)
+
+            # Step 9: Build dependency graph
             logger.info("Building dependency graph...")
             dependency_graph = self.graph_builder.build_graph(all_elements)
             current_session.dependency_graph = dependency_graph

@@ -74,7 +74,7 @@
   - Run mypy and pylint and fix any pretaining errors
   - _Requirements: 4.1, 4.2, 4.3, 4.4_
 
-- [ ] 11. Develop code explorer interface
+- [x] 11. Develop code explorer interface
   - Create CodeExplorer component for detailed element browsing
   - Implement usage tracking display with line numbers
   - Add navigation between definition and usage locations

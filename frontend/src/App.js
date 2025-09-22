@@ -4,6 +4,7 @@ import ProjectInput from './components/ProjectInput';
 import AnalysisResults from './components/AnalysisResults';
 import MindMapViewer from './components/MindMapViewer';
 import ArchitectureViewer from './components/ArchitectureViewer';
+import CodeExplorer from './components/CodeExplorer';
 
 function App() {
   const [analysisTriggered, setAnalysisTriggered] = useState(false);
@@ -99,6 +100,7 @@ function App() {
               <Tabs value={activeTab} onChange={handleTabChange} aria-label="analysis views">
                 <Tab label="Mind Map" />
                 <Tab label="Architecture Overview" />
+                <Tab label="Code Explorer" />
               </Tabs>
             </Box>
             
@@ -108,6 +110,10 @@ function App() {
             
             {activeTab === 1 && (
               <ArchitectureViewer data={analysisData} />
+            )}
+            
+            {activeTab === 2 && (
+              <CodeExplorer data={analysisData} />
             )}
           </Box>
         )}

@@ -238,13 +238,14 @@ async def get_architectural_data() -> AnalyzeResponse:
         }
 
         logger.info(
-            "Retrieved architectural data for project: %s", current_session.project_info.name
+            "Retrieved architectural data for project: %s",
+            current_session.project_info.name,
         )
 
         return AnalyzeResponse(
             success=True,
             message="Architectural data retrieved successfully",
-            data=architectural_data
+            data=architectural_data,
         )
     except Exception as e:
         logger.error("Failed to retrieve architectural data: %s", e)
