@@ -20,11 +20,11 @@ const getNodeChildren = (nodeId, elements) => {
 const getAllDescendants = (nodeId, elements) => {
   const descendants = new Set();
   const queue = [nodeId];
-  
+
   while (queue.length > 0) {
     const currentId = queue.shift();
     const children = getNodeChildren(currentId, elements);
-    
+
     children.forEach(childId => {
       if (!descendants.has(childId)) {
         descendants.add(childId);
@@ -32,34 +32,33 @@ const getAllDescendants = (nodeId, elements) => {
       }
     });
   }
-  
+
   return Array.from(descendants);
 };
 
-const CytoscapeGraph = ({ 
-  elements = [], 
+const CytoscapeGraph = ({
+  elements = [],
   style = { width: '100%', height: '400px' },
   layout = { name: 'dagre' },
   stylesheet = [],
-  onNodeClick = () => {},
-  onEdgeClick = () => {},
+  onNodeClick = () => { },
+  onEdgeClick = () => { },
   enableCollapse = true,
   showControls = true
 }) => {
   const containerRef = useRef(null);
   const cyRef = useRef(null);
   const [collapsedNodes, setCollapsedNodes] = useState(new Set());
-  const [originalElements, setOriginalElements] = useState([]);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(1);
 
   // Function to toggle node collapse/expand
   const toggleNodeCollapse = useCallback((nodeId) => {
     if (!enableCollapse) return;
-    
+
     setCollapsedNodes(prevCollapsed => {
       const newCollapsedNodes = new Set(prevCollapsed);
-      
+
       if (prevCollapsed.has(nodeId)) {
         // Expand: remove from collapsed set
         newCollapsedNodes.delete(nodeId);
@@ -67,7 +66,7 @@ const CytoscapeGraph = ({
         // Collapse: add to collapsed set
         newCollapsedNodes.add(nodeId);
       }
-      
+
       return newCollapsedNodes;
     });
   }, [enableCollapse]);
@@ -75,24 +74,29 @@ const CytoscapeGraph = ({
   // Control functions
   const handleZoomIn = useCallback(() => {
     if (cyRef.current) {
-      cyRef.current.zoom(cyRef.current.zoom() * 1.25);
+      const newZoom = cyRef.current.zoom() * 1.25;
+      cyRef.current.zoom(newZoom);
       cyRef.current.center();
-      setZoomLevel(cyRef.current.zoom());
+      setZoomLevel(newZoom);
     }
   }, []);
 
   const handleZoomOut = useCallback(() => {
     if (cyRef.current) {
-      cyRef.current.zoom(cyRef.current.zoom() * 0.8);
+      const newZoom = cyRef.current.zoom() * 0.8;
+      cyRef.current.zoom(newZoom);
       cyRef.current.center();
-      setZoomLevel(cyRef.current.zoom());
+      setZoomLevel(newZoom);
     }
   }, []);
 
   const handleFit = useCallback(() => {
     if (cyRef.current) {
       cyRef.current.fit();
-      setZoomLevel(cyRef.current.zoom());
+      // Use setTimeout to get the zoom level after fit completes
+      setTimeout(() => {
+        setZoomLevel(cyRef.current.zoom());
+      }, 100);
     }
   }, []);
 
@@ -103,21 +107,21 @@ const CytoscapeGraph = ({
   // Function to filter elements based on collapsed state
   const getVisibleElements = useCallback((elements, collapsed) => {
     if (collapsed.size === 0) return elements;
-    
+
     const hiddenNodes = new Set();
-    
+
     // Find all nodes that should be hidden due to collapsed parents
     collapsed.forEach(collapsedNodeId => {
       const descendants = getAllDescendants(collapsedNodeId, elements);
       descendants.forEach(descendant => hiddenNodes.add(descendant));
     });
-    
+
     // Filter out hidden nodes and their edges
     return elements.filter(el => {
       if (el.data) {
         // Hide nodes that are descendants of collapsed nodes
         if (hiddenNodes.has(el.data.id)) return false;
-        
+
         // Hide edges connected to hidden nodes
         if (el.data.source && (hiddenNodes.has(el.data.source) || hiddenNodes.has(el.data.target))) {
           return false;
@@ -127,11 +131,9 @@ const CytoscapeGraph = ({
     });
   }, []);
 
+  // Initialize cytoscape only once
   useEffect(() => {
-    if (!containerRef.current) return;
-    
-    // Store original elements
-    setOriginalElements(elements);
+    if (!containerRef.current || cyRef.current) return;
 
     // Enhanced stylesheet with better visual differentiation and collapse indicators
     const defaultStylesheet = [
@@ -198,7 +200,7 @@ const CytoscapeGraph = ({
           'border-width': 4,
           'border-style': 'double',
           'border-color': '#ff5722',
-          'background-color': function(ele) {
+          'background-color': function (ele) {
             const type = ele.data('type');
             if (type === 'module') return '#0d47a1';
             if (type === 'class') return '#1b5e20';
@@ -330,18 +332,18 @@ const CytoscapeGraph = ({
 
     // Get visible elements based on collapsed state
     const visibleElements = getVisibleElements(elements, collapsedNodes);
-    
+
     // Add classes to nodes based on their state
     const elementsWithClasses = visibleElements.map(el => {
       if (el.data && !el.data.source && !el.data.target) { // It's a node
         const nodeId = el.data.id;
         const hasChildren = getNodeChildren(nodeId, elements).length > 0;
         const isCollapsed = collapsedNodes.has(nodeId);
-        
+
         const classes = [];
         if (hasChildren) classes.push('expandable');
         if (isCollapsed) classes.push('collapsed');
-        
+
         return {
           ...el,
           classes: classes.join(' ')
@@ -359,7 +361,7 @@ const CytoscapeGraph = ({
         ...layout,
         animate: true,
         animationDuration: 500,
-        fit: true,
+        fit: true, // Fit on initial load
         padding: 50
       },
       userZoomingEnabled: true,
@@ -369,53 +371,64 @@ const CytoscapeGraph = ({
       autounselectify: false
     });
 
-    // Enhanced event listeners
+    // Enhanced event listeners with better double-click detection
+    let clickTimeout;
     cyRef.current.on('tap', 'node', (event) => {
       const node = event.target;
       const nodeData = node.data();
-      
+
+      // Clear any existing timeout
+      clearTimeout(clickTimeout);
+
       // Check if this is a double-click for collapse/expand
       const now = Date.now();
       const lastClick = node.scratch('lastClick') || 0;
-      
-      if (now - lastClick < 300 && enableCollapse) { // Double click detected
+      const timeDiff = now - lastClick;
+
+      if (timeDiff < 400 && enableCollapse) { // Double click detected
         const hasChildren = getNodeChildren(nodeData.id, elements).length > 0;
         if (hasChildren) {
           toggleNodeCollapse(nodeData.id);
+          // Don't process as single click
+          node.scratch('lastClick', 0); // Reset to prevent triple-click issues
+          return;
         }
-      } else {
+      }
+
+      // Set timeout for single click to avoid interference with double-click
+      clickTimeout = setTimeout(() => {
         // Single click - select node and show details
         onNodeClick(nodeData);
-        
+
         // Highlight connected nodes
         const connectedEdges = node.connectedEdges();
         const connectedNodes = connectedEdges.connectedNodes();
-        
+
         // Reset all highlighting
         cyRef.current.elements().removeClass('highlighted dimmed');
-        
+
         // Highlight connected elements
         node.addClass('highlighted');
         connectedNodes.addClass('highlighted');
         connectedEdges.addClass('highlighted');
-        
+
         // Dim non-connected elements
         cyRef.current.nodes().not(node).not(connectedNodes).addClass('dimmed');
         cyRef.current.edges().not(connectedEdges).addClass('dimmed');
-      }
-      
+      }, 200); // Wait 200ms to see if it's a double-click
+
       node.scratch('lastClick', now);
     });
 
     cyRef.current.on('tap', 'edge', (event) => {
       const edge = event.target;
       onEdgeClick(edge.data());
-      
+
       // Highlight edge and connected nodes
       cyRef.current.elements().removeClass('highlighted dimmed');
       edge.addClass('highlighted');
       edge.connectedNodes().addClass('highlighted');
-      
+
       // Dim other elements
       cyRef.current.elements().not(edge).not(edge.connectedNodes()).addClass('dimmed');
     });
@@ -433,7 +446,7 @@ const CytoscapeGraph = ({
       if (!node.hasClass('highlighted')) {
         const connectedEdges = node.connectedEdges();
         const connectedNodes = connectedEdges.connectedNodes();
-        
+
         node.addClass('hover-highlight');
         connectedNodes.addClass('hover-highlight');
         connectedEdges.addClass('hover-highlight');
@@ -444,66 +457,218 @@ const CytoscapeGraph = ({
       const node = event.target;
       const connectedEdges = node.connectedEdges();
       const connectedNodes = connectedEdges.connectedNodes();
-      
+
       node.removeClass('hover-highlight');
       connectedNodes.removeClass('hover-highlight');
       connectedEdges.removeClass('hover-highlight');
     });
 
-    // Track zoom changes
-    cyRef.current.on('zoom', () => {
+    // Set initial zoom level after layout completes
+    cyRef.current.one('layoutstop', () => {
       setZoomLevel(cyRef.current.zoom());
     });
 
-    // Initial zoom level
-    setZoomLevel(cyRef.current.zoom());
+
 
     // Cleanup function
     return () => {
       if (cyRef.current) {
         cyRef.current.destroy();
+        cyRef.current = null;
       }
     };
-  }, [elements, layout, stylesheet, onNodeClick, onEdgeClick, collapsedNodes, toggleNodeCollapse, getVisibleElements, enableCollapse]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run once on mount
 
-  // Update elements when they change or when collapsed state changes
+  // Separate effect for zoom tracking
   useEffect(() => {
-    if (cyRef.current && originalElements.length > 0) {
-      const visibleElements = getVisibleElements(originalElements, collapsedNodes);
-      
-      // Add classes to nodes based on their state
-      const elementsWithClasses = visibleElements.map(el => {
-        if (el.data && !el.data.source && !el.data.target) { // It's a node
+    if (!cyRef.current) return;
+
+    let zoomTimeout;
+    const handleZoomChange = () => {
+      clearTimeout(zoomTimeout);
+      zoomTimeout = setTimeout(() => {
+        if (cyRef.current) {
+          setZoomLevel(cyRef.current.zoom());
+        }
+      }, 100);
+    };
+
+    cyRef.current.on('zoom pan', handleZoomChange);
+
+    return () => {
+      clearTimeout(zoomTimeout);
+      if (cyRef.current) {
+        cyRef.current.off('zoom pan', handleZoomChange);
+      }
+    };
+  }, []);
+
+  // Update elements when they change (but not on every collapsed node change)
+  useEffect(() => {
+    if (!cyRef.current) return;
+
+    const visibleElements = getVisibleElements(elements, collapsedNodes);
+
+    // Add classes to nodes based on their state
+    const elementsWithClasses = visibleElements.map(el => {
+      if (el.data && !el.data.source && !el.data.target) { // It's a node
+        const nodeId = el.data.id;
+        const hasChildren = getNodeChildren(nodeId, elements).length > 0;
+        const isCollapsed = collapsedNodes.has(nodeId);
+
+        const classes = [];
+        if (hasChildren) classes.push('expandable');
+        if (isCollapsed) classes.push('collapsed');
+
+        return {
+          ...el,
+          classes: classes.join(' ')
+        };
+      }
+      return el;
+    });
+
+    // Store current zoom and pan before updating elements
+    const currentZoom = cyRef.current.zoom();
+    const currentPan = cyRef.current.pan();
+
+    cyRef.current.elements().remove();
+    cyRef.current.add(elementsWithClasses);
+
+    // Run layout without fitting to preserve zoom level
+    const layoutInstance = cyRef.current.layout({
+      ...layout,
+      animate: true,
+      animationDuration: 500,
+      fit: false, // Don't fit to preserve zoom
+      padding: 50
+    });
+
+    layoutInstance.run();
+
+    // Restore zoom and pan after layout completes
+    layoutInstance.one('layoutstop', () => {
+      if (cyRef.current) {
+        cyRef.current.zoom(currentZoom);
+        cyRef.current.pan(currentPan);
+      }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [elements, layout]); // Removed collapsedNodes from dependencies to prevent view resets
+
+  // Separate effect to handle collapsed nodes changes without full re-render
+  useEffect(() => {
+    if (!cyRef.current) return;
+
+    // Get all visible elements based on current collapsed state
+    const visibleElements = getVisibleElements(elements, collapsedNodes);
+
+    // Create sets for quick lookup
+    const visibleNodeIds = new Set(visibleElements
+      .filter(el => el.data && !el.data.source && !el.data.target)
+      .map(el => el.data.id));
+
+    const visibleEdgeIds = new Set(visibleElements
+      .filter(el => el.data && el.data.source && el.data.target)
+      .map(el => el.data.id));
+
+    // Get current nodes and edges in cytoscape
+    const currentNodeIds = new Set();
+    const currentEdgeIds = new Set();
+
+    cyRef.current.nodes().forEach(node => currentNodeIds.add(node.id()));
+    cyRef.current.edges().forEach(edge => currentEdgeIds.add(edge.id()));
+
+    // Add missing nodes (for expand operation)
+    visibleElements.forEach(el => {
+      if (el.data && !el.data.source && !el.data.target) { // It's a node
+        if (!currentNodeIds.has(el.data.id)) {
+          // Add missing node
           const nodeId = el.data.id;
-          const hasChildren = getNodeChildren(nodeId, originalElements).length > 0;
+          const hasChildren = getNodeChildren(nodeId, elements).length > 0;
           const isCollapsed = collapsedNodes.has(nodeId);
-          
+
           const classes = [];
           if (hasChildren) classes.push('expandable');
           if (isCollapsed) classes.push('collapsed');
-          
-          return {
+
+          cyRef.current.add({
             ...el,
             classes: classes.join(' ')
-          };
+          });
         }
-        return el;
-      });
-      
-      cyRef.current.elements().remove();
-      cyRef.current.add(elementsWithClasses);
-      cyRef.current.layout({
+      } else if (el.data && el.data.source && el.data.target) { // It's an edge
+        if (!currentEdgeIds.has(el.data.id)) {
+          // Add missing edge
+          cyRef.current.add(el);
+        }
+      }
+    });
+
+    // Update classes and visibility for all nodes
+    cyRef.current.nodes().forEach(node => {
+      const nodeId = node.id();
+      const hasChildren = getNodeChildren(nodeId, elements).length > 0;
+      const isCollapsed = collapsedNodes.has(nodeId);
+
+      // Remove existing classes
+      node.removeClass('expandable collapsed');
+
+      // Add appropriate classes
+      if (hasChildren) node.addClass('expandable');
+      if (isCollapsed) node.addClass('collapsed');
+
+      // Show/hide based on visibility
+      if (visibleNodeIds.has(nodeId)) {
+        node.style('display', 'element');
+      } else {
+        node.style('display', 'none');
+      }
+    });
+
+    // Update visibility for all edges
+    cyRef.current.edges().forEach(edge => {
+      const edgeId = edge.id();
+      const sourceId = edge.source().id();
+      const targetId = edge.target().id();
+
+      // Show edge if both nodes are visible and edge should be visible
+      if (visibleNodeIds.has(sourceId) && visibleNodeIds.has(targetId) && visibleEdgeIds.has(edgeId)) {
+        edge.style('display', 'element');
+      } else {
+        edge.style('display', 'none');
+      }
+    });
+
+    // Run a quick layout update to position new nodes properly
+    if (cyRef.current.nodes(':visible').length > 0) {
+      const currentZoom = cyRef.current.zoom();
+      const currentPan = cyRef.current.pan();
+
+      const layoutInstance = cyRef.current.layout({
         ...layout,
         animate: true,
-        animationDuration: 500,
-        fit: true,
-        padding: 50
-      }).run();
+        animationDuration: 300,
+        fit: false,
+        padding: 30
+      });
+
+      layoutInstance.run();
+
+      // Restore zoom and pan after layout
+      layoutInstance.one('layoutstop', () => {
+        if (cyRef.current) {
+          cyRef.current.zoom(currentZoom);
+          cyRef.current.pan(currentPan);
+        }
+      });
     }
-  }, [originalElements, layout, collapsedNodes, getVisibleElements]);
+
+  }, [collapsedNodes, elements, getVisibleElements, layout]);
 
   return (
-    <Box sx={{ 
+    <Box sx={{
       position: 'relative',
       ...style,
       ...(isFullscreen && {
@@ -518,10 +683,10 @@ const CytoscapeGraph = ({
     }}>
       {/* Control Panel */}
       {showControls && (
-        <Box sx={{ 
-          position: 'absolute', 
-          top: 10, 
-          right: 10, 
+        <Box sx={{
+          position: 'absolute',
+          top: 10,
+          right: 10,
           zIndex: 1000,
           display: 'flex',
           flexDirection: 'column',
@@ -559,10 +724,10 @@ const CytoscapeGraph = ({
 
       {/* Collapse Instructions */}
       {enableCollapse && showControls && (
-        <Box sx={{ 
-          position: 'absolute', 
-          bottom: 10, 
-          left: 10, 
+        <Box sx={{
+          position: 'absolute',
+          bottom: 10,
+          left: 10,
           zIndex: 1000,
           backgroundColor: 'rgba(255, 255, 255, 0.9)',
           borderRadius: 1,
@@ -576,10 +741,10 @@ const CytoscapeGraph = ({
         </Box>
       )}
 
-      <div 
-        ref={containerRef} 
-        style={{ 
-          width: '100%', 
+      <div
+        ref={containerRef}
+        style={{
+          width: '100%',
           height: '100%',
           minHeight: isFullscreen ? '100vh' : '400px'
         }}
