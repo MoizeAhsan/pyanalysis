@@ -261,7 +261,7 @@ def _search_element(element: CodeElement, query: str) -> Optional[Dict[str, Any]
         return {
             "element": _serialize_code_element(element),
             "match_type": "name",
-            "match_text": element.name
+            "match_text": element.name,
         }
 
     # Search in docstring
@@ -280,7 +280,7 @@ def _search_element(element: CodeElement, query: str) -> Optional[Dict[str, Any]
         return {
             "element": _serialize_code_element(element),
             "match_type": "docstring",
-            "match_text": snippet
+            "match_text": snippet,
         }
 
     # Search in file path
@@ -288,7 +288,7 @@ def _search_element(element: CodeElement, query: str) -> Optional[Dict[str, Any]
         return {
             "element": _serialize_code_element(element),
             "match_type": "file_path",
-            "match_text": element.location.file_path
+            "match_text": element.location.file_path,
         }
 
     return None
@@ -344,7 +344,13 @@ def _detect_circular_dependencies() -> List[List[str]]:
 
 
 @router.get("/search", response_model=AnalyzeResponse)
-async def search_elements(q: str = "", element_type: Optional[str] = None) -> AnalyzeResponse:
+async def search_elements(
+    q: str = "",
+    element_type: Optional[str] = None,
+    page: int = 1,
+    page_size: int = 20,
+    max_results: int = 100,
+) -> AnalyzeResponse:
     """Search code elements with optional filtering by type"""
     try:
         # Check if there's any analysis data
@@ -364,7 +370,7 @@ async def search_elements(q: str = "", element_type: Optional[str] = None) -> An
                     "has_data": True,
                     "results": [],
                     "query": query,
-                    "element_type": element_type
+                    "element_type": element_type,
                 },
             )
 
@@ -396,26 +402,55 @@ async def search_elements(q: str = "", element_type: Optional[str] = None) -> An
             return (2, result["element"]["name"].lower())
 
         results.sort(key=sort_key)
-        # Limit results to prevent overwhelming the UI
-        max_results = 100
-        if len(results) > max_results:
+
+        # Store total results before pagination
+        total_results = len(results)
+
+        # Apply pagination for progressive disclosure
+        start_index = (page - 1) * page_size
+        end_index = start_index + page_size
+
+        # Limit total results to prevent overwhelming the system
+        if total_results > max_results:
             results = results[:max_results]
+            total_results = max_results
+
+        # Apply pagination
+        paginated_results = results[start_index:end_index]
+
+        # Calculate pagination info
+        total_pages = (total_results + page_size - 1) // page_size
+        has_next = page < total_pages
+        has_prev = page > 1
 
         logger.info(
-            "Search completed: query='%s', type='%s', found %d results",
-            query, element_type or "all", len(results)
+            "Search completed: query='%s', type='%s', found %d results (page %d/%d)",
+            query,
+            element_type or "all",
+            total_results,
+            page,
+            total_pages,
         )
 
         return AnalyzeResponse(
             success=True,
-            message=f"Found {len(results)} results for '{query}'",
+            message=f"Found {total_results} results for '{query}' (page {page}/{total_pages})",
             data={
                 "has_data": True,
-                "results": results,
+                "results": paginated_results,
                 "query": query,
                 "element_type": element_type,
-                "total_results": len(results),
-                "truncated": len(results) >= max_results
+                "pagination": {
+                    "page": page,
+                    "page_size": page_size,
+                    "total_results": total_results,
+                    "total_pages": total_pages,
+                    "has_next": has_next,
+                    "has_prev": has_prev,
+                    "start_index": start_index + 1,
+                    "end_index": min(end_index, total_results),
+                },
+                "truncated": len(results) >= max_results,
             },
         )
     except Exception as e:
@@ -435,7 +470,8 @@ async def get_analysis_data() -> AnalyzeResponse:
                 data={"has_data": False},
             )
         logger.info(
-            "Retrieving analysis data for project: %s", current_session.project_info.name
+            "Retrieving analysis data for project: %s",
+            current_session.project_info.name,
         )
         # Serialize all data for JSON response
         data = {

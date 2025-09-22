@@ -17,7 +17,9 @@ import {
   Alert,
   Divider,
   IconButton,
-  Tooltip
+  Tooltip,
+  Pagination,
+  Stack
 } from '@mui/material';
 import {
   Search as SearchIcon,
@@ -39,6 +41,8 @@ const SearchInterface = ({ data, onElementSelect }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [hasSearched, setHasSearched] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [resultsPerPage] = useState(20); // Fixed page size for progressive disclosure
 
   // Search function
   const performSearch = useCallback(async (searchQuery, searchType) => {
@@ -79,6 +83,7 @@ const SearchInterface = ({ data, onElementSelect }) => {
   useEffect(() => {
     if (data && data.data && data.data.has_data) {
       debouncedSearch(query, elementType);
+      setCurrentPage(1); // Reset to first page on new search
     }
   }, [query, elementType, data, debouncedSearch]);
 
@@ -96,6 +101,7 @@ const SearchInterface = ({ data, onElementSelect }) => {
     setResults([]);
     setHasSearched(false);
     setError('');
+    setCurrentPage(1);
   };
 
   const handleElementClick = (element) => {
@@ -167,6 +173,19 @@ const SearchInterface = ({ data, onElementSelect }) => {
     return `${fileName}:${location.line_number}`;
   };
 
+  // Pagination logic for progressive disclosure
+  const paginatedResults = useMemo(() => {
+    const startIndex = (currentPage - 1) * resultsPerPage;
+    const endIndex = startIndex + resultsPerPage;
+    return results.slice(startIndex, endIndex);
+  }, [results, currentPage, resultsPerPage]);
+
+  const totalPages = Math.ceil(results.length / resultsPerPage);
+
+  const handlePageChange = (event, page) => {
+    setCurrentPage(page);
+  };
+
   if (!data || !data.data || !data.data.has_data) {
     return (
       <Paper sx={{ p: 3, textAlign: 'center' }}>
@@ -220,7 +239,7 @@ const SearchInterface = ({ data, onElementSelect }) => {
         {hasSearched && (
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <Typography variant="body2" color="text.secondary">
-              {loading ? 'Searching...' : `Found ${results.length} results`}
+              {loading ? 'Searching...' : `Found ${results.length} results${results.length > resultsPerPage ? ` (showing ${Math.min(resultsPerPage, results.length)} per page)` : ''}`}
             </Typography>
             {loading && <CircularProgress size={16} />}
           </Box>
@@ -248,72 +267,94 @@ const SearchInterface = ({ data, onElementSelect }) => {
         )}
 
         {results.length > 0 && (
-          <List sx={{ flex: 1, overflow: 'auto', p: 0 }}>
-            {results.map((result, index) => (
-              <React.Fragment key={`${result.element.id}-${index}`}>
-                <ListItem disablePadding>
-                  <ListItemButton
-                    onClick={() => handleElementClick(result.element)}
-                    sx={{ py: 1.5 }}
-                  >
-                    <Box sx={{ display: 'flex', alignItems: 'center', mr: 2 }}>
-                      {getElementIcon(result.element.type)}
-                    </Box>
+          <>
+            <List sx={{ flex: 1, overflow: 'auto', p: 0 }}>
+              {paginatedResults.map((result, index) => (
+                <React.Fragment key={`${result.element.id}-${index}`}>
+                  <ListItem disablePadding>
+                    <ListItemButton
+                      onClick={() => handleElementClick(result.element)}
+                      sx={{ py: 1.5 }}
+                    >
+                      <Box sx={{ display: 'flex', alignItems: 'center', mr: 2 }}>
+                        {getElementIcon(result.element.type)}
+                      </Box>
 
-                    <ListItemText
-                      primary={
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
-                          <Typography variant="subtitle1" component="span">
-                            {result.element.name}
-                          </Typography>
-                          <Chip
-                            size="small"
-                            label={result.element.type}
-                            color={result.element.type === 'class' ? 'secondary' :
-                              result.element.type === 'function' ? 'success' : 'primary'}
-                            variant="outlined"
-                          />
-                          <Tooltip title={`Match in ${result.match_type}`}>
+                      <ListItemText
+                        primary={
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                            <Typography variant="subtitle1" component="span">
+                              {result.element.name}
+                            </Typography>
                             <Chip
                               size="small"
-                              icon={getMatchTypeIcon(result.match_type)}
-                              label={result.match_type}
-                              color={getMatchTypeColor(result.match_type)}
-                              variant="filled"
+                              label={result.element.type}
+                              color={result.element.type === 'class' ? 'secondary' :
+                                result.element.type === 'function' ? 'success' : 'primary'}
+                              variant="outlined"
                             />
-                          </Tooltip>
-                        </Box>
-                      }
-                      secondary={
-                        <div>
-                          <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                            {formatLocation(result.element.location)}
-                          </Typography>
-                          {result.match_type === 'docstring' && result.match_text && (
-                            <Typography
-                              variant="body2"
-                              color="text.secondary"
-                              sx={{
-                                fontStyle: 'italic',
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                                display: '-webkit-box',
-                                WebkitLineClamp: 2,
-                                WebkitBoxOrient: 'vertical'
-                              }}
-                            >
-                              "{result.match_text}"
+                            <Tooltip title={`Match in ${result.match_type}`}>
+                              <Chip
+                                size="small"
+                                icon={getMatchTypeIcon(result.match_type)}
+                                label={result.match_type}
+                                color={getMatchTypeColor(result.match_type)}
+                                variant="filled"
+                              />
+                            </Tooltip>
+                          </Box>
+                        }
+                        secondary={
+                          <div>
+                            <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                              {formatLocation(result.element.location)}
                             </Typography>
-                          )}
-                        </div>
-                      }
-                    />
-                  </ListItemButton>
-                </ListItem>
-                {index < results.length - 1 && <Divider />}
-              </React.Fragment>
-            ))}
-          </List>
+                            {result.match_type === 'docstring' && result.match_text && (
+                              <Typography
+                                variant="body2"
+                                color="text.secondary"
+                                sx={{
+                                  fontStyle: 'italic',
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  display: '-webkit-box',
+                                  WebkitLineClamp: 2,
+                                  WebkitBoxOrient: 'vertical'
+                                }}
+                              >
+                                "{result.match_text}"
+                              </Typography>
+                            )}
+                          </div>
+                        }
+                      />
+                    </ListItemButton>
+                  </ListItem>
+                  {index < paginatedResults.length - 1 && <Divider />}
+                </React.Fragment>
+              ))}
+            </List>
+            
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <Box sx={{ p: 2, borderTop: 1, borderColor: 'divider' }}>
+                <Stack spacing={2} alignItems="center">
+                  <Typography variant="body2" color="text.secondary">
+                    Showing {((currentPage - 1) * resultsPerPage) + 1}-{Math.min(currentPage * resultsPerPage, results.length)} of {results.length} results
+                  </Typography>
+                  <Pagination
+                    count={totalPages}
+                    page={currentPage}
+                    onChange={handlePageChange}
+                    color="primary"
+                    size="small"
+                    showFirstButton
+                    showLastButton
+                  />
+                </Stack>
+              </Box>
+            )}
+          </>
         )}
       </Paper>
     </Box>

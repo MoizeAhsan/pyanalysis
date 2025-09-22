@@ -1,17 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Box,
   Paper,
   Typography,
   Grid,
   Card,
   CardContent,
-  List,
   ListItem,
   ListItemText,
   ListItemIcon,
   Chip,
-  Divider,
   CircularProgress,
   Alert
 } from '@mui/material';
@@ -21,8 +18,12 @@ import {
   Functions,
   ImportExport,
   Folder,
-  Code
+  Code,
+  Assessment,
+  Info
 } from '@mui/icons-material';
+import CollapsibleSection from './CollapsibleSection';
+import LazyList from './LazyList';
 import apiService from '../services/api';
 
 const AnalysisResults = ({ analysisTriggered, onDataLoaded, loading: parentLoading = false }) => {
@@ -124,10 +125,11 @@ const AnalysisResults = ({ analysisTriggered, onDataLoaded, loading: parentLoadi
       </Typography>
 
       {/* Project Overview */}
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h6" gutterBottom>
-          Project Overview
-        </Typography>
+      <CollapsibleSection
+        title="Project Overview"
+        icon={<Assessment />}
+        defaultExpanded={true}
+      >
         <Grid container spacing={3}>
           <Grid item xs={12} sm={6} md={3}>
             <Card>
@@ -185,200 +187,193 @@ const AnalysisResults = ({ analysisTriggered, onDataLoaded, loading: parentLoadi
             </Card>
           </Grid>
         </Grid>
-      </Box>
-
-      <Divider sx={{ mb: 4 }} />
+      </CollapsibleSection>
 
       {/* Parsed Files */}
       <Grid container spacing={4}>
         <Grid item xs={12} md={6}>
-          <Typography variant="h6" gutterBottom>
-            Parsed Files ({stats.modules_count})
-          </Typography>
-          <Paper variant="outlined" sx={{ maxHeight: 300, overflow: 'auto' }}>
-            <List dense>
-              {Array.isArray(modules) && modules.length > 0 ? (
-                <>
-                  {modules.slice(0, 20).map((module, index) => (
-                    <ListItem key={index}>
-                      <ListItemIcon>
-                        <Description color="action" />
-                      </ListItemIcon>
-                      <ListItemText
-                        primary={module.name || `Module ${index + 1}`}
-                        secondary={`${module.location?.file_path || 'Unknown file'}`}
-                      />
-                      <Chip
-                        label={module.type || 'module'}
-                        size="small"
-                        variant="outlined"
-                      />
-                    </ListItem>
-                  ))}
-                  {modules.length > 20 && (
-                    <ListItem>
-                      <ListItemText
-                        primary={`... and ${modules.length - 20} more files`}
-                        sx={{ fontStyle: 'italic', color: 'text.secondary' }}
-                      />
-                    </ListItem>
-                  )}
-                </>
-              ) : stats.modules_count > 0 ? (
-                <ListItem>
-                  <ListItemIcon>
-                    <Description color="action" />
-                  </ListItemIcon>
-                  <ListItemText
-                    primary="Module details not available"
-                    secondary={`${stats.modules_count} modules found`}
-                    sx={{ fontStyle: 'italic', color: 'text.secondary' }}
-                  />
-                </ListItem>
-              ) : (
-                <ListItem>
-                  <ListItemText
-                    primary="No modules found"
-                    sx={{ fontStyle: 'italic', color: 'text.secondary' }}
-                  />
-                </ListItem>
-              )}
-            </List>
-          </Paper>
+          <CollapsibleSection
+            title={`Parsed Files (${stats.modules_count})`}
+            icon={<Description />}
+            badge={stats.modules_count}
+            defaultExpanded={stats.modules_count <= 10}
+          >
+            {Array.isArray(modules) && modules.length > 0 ? (
+              <LazyList
+                items={modules}
+                initialBatchSize={10}
+                batchSize={15}
+                maxItems={100}
+                renderItem={(module, index) => (
+                  <ListItem key={index}>
+                    <ListItemIcon>
+                      <Description color="action" />
+                    </ListItemIcon>
+                    <ListItemText
+                      primary={module.name || `Module ${index + 1}`}
+                      secondary={`${module.location?.file_path || 'Unknown file'}`}
+                    />
+                    <Chip
+                      label={module.type || 'module'}
+                      size="small"
+                      variant="outlined"
+                    />
+                  </ListItem>
+                )}
+                sx={{ maxHeight: 400, overflow: 'auto' }}
+              />
+            ) : stats.modules_count > 0 ? (
+              <ListItem>
+                <ListItemIcon>
+                  <Description color="action" />
+                </ListItemIcon>
+                <ListItemText
+                  primary="Module details not available"
+                  secondary={`${stats.modules_count} modules found`}
+                  sx={{ fontStyle: 'italic', color: 'text.secondary' }}
+                />
+              </ListItem>
+            ) : (
+              <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic', textAlign: 'center', py: 2 }}>
+                No modules found
+              </Typography>
+            )}
+          </CollapsibleSection>
         </Grid>
 
         <Grid item xs={12} md={6}>
-          <Typography variant="h6" gutterBottom>
-            Code Elements
-          </Typography>
-          <Paper variant="outlined" sx={{ p: 2 }}>
-            <Box sx={{ mb: 2 }}>
-              <Typography variant="subtitle2" gutterBottom>
-                Classes ({stats.classes_count})
-              </Typography>
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
-                {Array.isArray(classes) && classes.length > 0 ? (
-                  <>
-                    {classes.slice(0, 10).map((cls, index) => (
-                      <Chip
-                        key={index}
-                        label={cls.name || `Class ${index + 1}`}
-                        size="small"
-                        color="primary"
-                        variant="outlined"
-                      />
-                    ))}
-                    {classes.length > 10 && (
-                      <Chip
-                        label={`+${classes.length - 10} more`}
-                        size="small"
-                        variant="outlined"
-                      />
-                    )}
-                  </>
-                ) : stats.classes_count > 0 ? (
-                  <Chip
-                    label={`${stats.classes_count} classes found (details not available)`}
-                    size="small"
-                    color="primary"
-                    variant="outlined"
-                  />
-                ) : (
-                  <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
-                    No classes found
-                  </Typography>
-                )}
-              </Box>
-            </Box>
-
-            <Box sx={{ mb: 2 }}>
-              <Typography variant="subtitle2" gutterBottom>
-                Functions ({stats.functions_count})
-              </Typography>
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
-                {Array.isArray(functions) && functions.length > 0 ? (
-                  <>
-                    {functions.slice(0, 10).map((func, index) => (
-                      <Chip
-                        key={index}
-                        label={func.name || `Function ${index + 1}`}
-                        size="small"
-                        color="secondary"
-                        variant="outlined"
-                      />
-                    ))}
-                    {functions.length > 10 && (
-                      <Chip
-                        label={`+${functions.length - 10} more`}
-                        size="small"
-                        variant="outlined"
-                      />
-                    )}
-                  </>
-                ) : stats.functions_count > 0 ? (
-                  <Chip
-                    label={`${stats.functions_count} functions found (details not available)`}
-                    size="small"
-                    color="secondary"
-                    variant="outlined"
-                  />
-                ) : (
-                  <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
-                    No functions found
-                  </Typography>
-                )}
-              </Box>
-            </Box>
-
-            <Box>
-              <Typography variant="subtitle2" gutterBottom>
-                Dependencies
-              </Typography>
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                {responseData.dependency_graph?.edges?.length > 0 ? (
-                  <>
+          <CollapsibleSection
+            title="Code Elements"
+            icon={<Code />}
+            defaultExpanded={true}
+          >
+            <CollapsibleSection
+              title={`Classes (${stats.classes_count})`}
+              icon={<Class />}
+              badge={stats.classes_count}
+              defaultExpanded={stats.classes_count <= 10 && stats.classes_count > 0}
+              variant="outlined"
+            >
+              {Array.isArray(classes) && classes.length > 0 ? (
+                <LazyList
+                  items={classes}
+                  initialBatchSize={10}
+                  batchSize={15}
+                  maxItems={50}
+                  renderItem={(cls, index) => (
                     <Chip
-                      label={`${responseData.dependency_graph.edges.length} dependencies found`}
+                      key={index}
+                      label={cls.name || `Class ${index + 1}`}
                       size="small"
-                      color="default"
+                      color="primary"
                       variant="outlined"
-                      icon={<ImportExport />}
+                      sx={{ mr: 0.5, mb: 0.5 }}
                     />
-                  </>
-                ) : (
-                  <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
-                    No dependencies analyzed
-                  </Typography>
-                )}
-              </Box>
-            </Box>
-          </Paper>
+                  )}
+                  showLoadMore={false}
+                  sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}
+                />
+              ) : stats.classes_count > 0 ? (
+                <Chip
+                  label={`${stats.classes_count} classes found (details not available)`}
+                  size="small"
+                  color="primary"
+                  variant="outlined"
+                />
+              ) : (
+                <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                  No classes found
+                </Typography>
+              )}
+            </CollapsibleSection>
+
+            <CollapsibleSection
+              title={`Functions (${stats.functions_count})`}
+              icon={<Functions />}
+              badge={stats.functions_count}
+              defaultExpanded={stats.functions_count <= 10 && stats.functions_count > 0}
+              variant="outlined"
+            >
+              {Array.isArray(functions) && functions.length > 0 ? (
+                <LazyList
+                  items={functions}
+                  initialBatchSize={10}
+                  batchSize={15}
+                  maxItems={50}
+                  renderItem={(func, index) => (
+                    <Chip
+                      key={index}
+                      label={func.name || `Function ${index + 1}`}
+                      size="small"
+                      color="secondary"
+                      variant="outlined"
+                      sx={{ mr: 0.5, mb: 0.5 }}
+                    />
+                  )}
+                  showLoadMore={false}
+                  sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}
+                />
+              ) : stats.functions_count > 0 ? (
+                <Chip
+                  label={`${stats.functions_count} functions found (details not available)`}
+                  size="small"
+                  color="secondary"
+                  variant="outlined"
+                />
+              ) : (
+                <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                  No functions found
+                </Typography>
+              )}
+            </CollapsibleSection>
+
+            <CollapsibleSection
+              title="Dependencies"
+              icon={<ImportExport />}
+              badge={responseData.dependency_graph?.edges?.length || 0}
+              defaultExpanded={false}
+              variant="outlined"
+            >
+              {responseData.dependency_graph?.edges?.length > 0 ? (
+                <Chip
+                  label={`${responseData.dependency_graph.edges.length} dependencies found`}
+                  size="small"
+                  color="default"
+                  variant="outlined"
+                  icon={<ImportExport />}
+                />
+              ) : (
+                <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                  No dependencies analyzed
+                </Typography>
+              )}
+            </CollapsibleSection>
+          </CollapsibleSection>
         </Grid>
       </Grid>
 
       {/* Project Info */}
       {project_info.name && (
-        <Box sx={{ mt: 4 }}>
-          <Typography variant="h6" gutterBottom>
-            Project Information
+        <CollapsibleSection
+          title="Project Information"
+          icon={<Info />}
+          defaultExpanded={false}
+        >
+          <Typography variant="body2" sx={{ mb: 1 }}>
+            <strong>Name:</strong> {project_info.name}
           </Typography>
-          <Paper variant="outlined" sx={{ p: 2 }}>
+          <Typography variant="body2" sx={{ mb: 1 }}>
+            <strong>Path:</strong> {project_info.path}
+          </Typography>
+          <Typography variant="body2" sx={{ mb: 1 }}>
+            <strong>Languages:</strong> {project_info.languages?.join(', ') || 'Python'}
+          </Typography>
+          {project_info.analysis_timestamp && (
             <Typography variant="body2">
-              <strong>Name:</strong> {project_info.name}
+              <strong>Analyzed:</strong> {new Date(project_info.analysis_timestamp).toLocaleString()}
             </Typography>
-            <Typography variant="body2">
-              <strong>Path:</strong> {project_info.path}
-            </Typography>
-            <Typography variant="body2">
-              <strong>Languages:</strong> {project_info.languages?.join(', ') || 'Python'}
-            </Typography>
-            {project_info.analysis_timestamp && (
-              <Typography variant="body2">
-                <strong>Analyzed:</strong> {new Date(project_info.analysis_timestamp).toLocaleString()}
-              </Typography>
-            )}
-          </Paper>
-        </Box>
+          )}
+        </CollapsibleSection>
       )}
     </Paper>
   );

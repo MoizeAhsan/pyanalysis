@@ -9,8 +9,6 @@ import {
     ListItemText,
     ListItemIcon,
     Chip,
-    Card,
-    CardContent,
     Divider,
     IconButton,
     Collapse,
@@ -18,10 +16,9 @@ import {
     InputLabel,
     Select,
     MenuItem,
-    Tabs,
-    Tab,
     Tooltip,
-    Badge
+    Badge,
+    ListItemButton
 } from '@mui/material';
 import {
     Code,
@@ -37,13 +34,15 @@ import {
     AccountTree,
     Folder
 } from '@mui/icons-material';
+import LazyList from './LazyList';
+import CollapsibleSection from './CollapsibleSection';
+import TabbedInterface from './TabbedInterface';
 
 const CodeExplorer = ({ data = null, selectedElement: propSelectedElement = null }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedElement, setSelectedElement] = useState(propSelectedElement);
     const [expandedElements, setExpandedElements] = useState(new Set());
     const [filterType, setFilterType] = useState('all');
-    const [activeTab, setActiveTab] = useState(0);
     const [sortBy, setSortBy] = useState('name');
 
     // Update selected element when prop changes
@@ -52,8 +51,6 @@ const CodeExplorer = ({ data = null, selectedElement: propSelectedElement = null
             setSelectedElement(propSelectedElement);
             // Expand the element details
             setExpandedElements(prev => new Set([...prev, propSelectedElement.id]));
-            // Switch to overview tab
-            setActiveTab(0);
         }
     }, [propSelectedElement]);
 
@@ -194,9 +191,7 @@ const CodeExplorer = ({ data = null, selectedElement: propSelectedElement = null
         setExpandedElements(newExpanded);
     };
 
-    const handleTabChange = (event, newValue) => {
-        setActiveTab(newValue);
-    };
+
 
     const getElementColor = (elementType) => {
         switch (elementType) {
@@ -213,6 +208,234 @@ const CodeExplorer = ({ data = null, selectedElement: propSelectedElement = null
         return parts.length > 3 ? `.../${parts.slice(-2).join('/')}` : filePath;
     };
 
+    const renderElementItem = (element, index) => {
+        const isExpanded = expandedElements.has(element.id);
+        const IconComponent = element.icon;
+
+        return (
+            <Box key={element.id}>
+                <ListItem disablePadding>
+                    <ListItemButton
+                        onClick={() => handleElementClick(element)}
+                        sx={{
+                            borderLeft: `4px solid ${getElementColor(element.elementType)}`,
+                            mb: 1,
+                            backgroundColor: selectedElement?.id === element.id ? '#f5f5f5' : 'transparent',
+                            '&:hover': { backgroundColor: '#f0f0f0' }
+                        }}
+                    >
+                        <ListItemIcon>
+                            <IconComponent sx={{ color: getElementColor(element.elementType) }} />
+                        </ListItemIcon>
+                        <ListItemText
+                            primary={
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                    <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
+                                        {element.name}
+                                    </Typography>
+                                    <Chip
+                                        label={element.elementType}
+                                        size="small"
+                                        sx={{
+                                            backgroundColor: getElementColor(element.elementType),
+                                            color: 'white',
+                                            fontSize: '0.7rem'
+                                        }}
+                                    />
+                                    {element.usages && element.usages.length > 0 && (
+                                        <Badge
+                                            badgeContent={element.usages.length}
+                                            color="secondary"
+                                            sx={{ ml: 1 }}
+                                        >
+                                            <Visibility fontSize="small" />
+                                        </Badge>
+                                    )}
+                                </Box>
+                            }
+                            secondary={
+                                <Box>
+                                    <Typography variant="body2" color="text.secondary">
+                                        {formatFilePath(element.location?.file_path)}
+                                        {element.location?.line_number && ` : Line ${element.location.line_number}`}
+                                    </Typography>
+                                    {element.docstring && (
+                                        <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic', mt: 0.5 }}>
+                                            {element.docstring.length > 100
+                                                ? `${element.docstring.substring(0, 100)}...`
+                                                : element.docstring
+                                            }
+                                        </Typography>
+                                    )}
+                                </Box>
+                            }
+                        />
+                        <IconButton
+                            size="small"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                handleExpandToggle(element.id);
+                            }}
+                        >
+                            {isExpanded ? <ExpandLess /> : <ExpandMore />}
+                        </IconButton>
+                    </ListItemButton>
+                </ListItem>
+
+                <Collapse in={isExpanded} timeout="auto" unmountOnExit>
+                    <Box sx={{ pl: 4, pr: 2, pb: 2 }}>
+                        {/* Element Details using CollapsibleSection */}
+                        <CollapsibleSection
+                            title="Element Details"
+                            icon={<Description />}
+                            defaultExpanded={true}
+                            variant="outlined"
+                        >
+                            {element.parameters && element.parameters.length > 0 && (
+                                <Box sx={{ mb: 2 }}>
+                                    <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 1 }}>
+                                        Parameters:
+                                    </Typography>
+                                    {element.parameters.map((param, paramIndex) => (
+                                        <Chip
+                                            key={paramIndex}
+                                            label={`${param.name}${param.type_hint ? `: ${param.type_hint}` : ''}${param.default_value ? ` = ${param.default_value}` : ''}`}
+                                            size="small"
+                                            variant="outlined"
+                                            sx={{ mr: 0.5, mb: 0.5, fontSize: '0.7rem' }}
+                                        />
+                                    ))}
+                                </Box>
+                            )}
+
+                            {element.return_type && (
+                                <Typography variant="body2" sx={{ mb: 1 }}>
+                                    <strong>Returns:</strong> {element.return_type}
+                                </Typography>
+                            )}
+
+                            {element.decorators && element.decorators.length > 0 && (
+                                <Box sx={{ mb: 2 }}>
+                                    <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 1 }}>
+                                        Decorators:
+                                    </Typography>
+                                    {element.decorators.map((decorator, decoratorIndex) => (
+                                        <Chip
+                                            key={decoratorIndex}
+                                            label={`@${decorator}`}
+                                            size="small"
+                                            color="secondary"
+                                            sx={{ mr: 0.5, mb: 0.5, fontSize: '0.7rem' }}
+                                        />
+                                    ))}
+                                </Box>
+                            )}
+
+                            {element.dependencies && element.dependencies.length > 0 && (
+                                <CollapsibleSection
+                                    title={`Dependencies (${element.dependencies.length})`}
+                                    badge={element.dependencies.length}
+                                    defaultExpanded={element.dependencies.length <= 10}
+                                    variant="outlined"
+                                >
+                                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                                        {element.dependencies.map((dep, depIndex) => (
+                                            <Chip
+                                                key={depIndex}
+                                                label={dep}
+                                                size="small"
+                                                variant="outlined"
+                                                sx={{ fontSize: '0.7rem' }}
+                                            />
+                                        ))}
+                                    </Box>
+                                </CollapsibleSection>
+                            )}
+                        </CollapsibleSection>
+
+                        {/* Usage Information with LazyList */}
+                        {element.usages && element.usages.length > 0 && (
+                            <CollapsibleSection
+                                title="Usage Locations"
+                                icon={<Visibility />}
+                                badge={element.usages.length}
+                                defaultExpanded={element.usages.length <= 5}
+                                variant="outlined"
+                            >
+                                <LazyList
+                                    items={element.usages}
+                                    initialBatchSize={5}
+                                    batchSize={10}
+                                    maxItems={50}
+                                    renderItem={(usage, usageIndex) => (
+                                        <ListItem key={usageIndex} sx={{ pl: 0 }}>
+                                            <ListItemIcon sx={{ minWidth: 32 }}>
+                                                <LocationOn fontSize="small" color="action" />
+                                            </ListItemIcon>
+                                            <ListItemText
+                                                primary={
+                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                        <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                                                            {formatFilePath(usage.location.file_path)}
+                                                        </Typography>
+                                                        <Chip
+                                                            label={`Line ${usage.location.line_number}`}
+                                                            size="small"
+                                                            variant="outlined"
+                                                            sx={{ fontSize: '0.6rem' }}
+                                                        />
+                                                        <Chip
+                                                            label={usage.usage_type}
+                                                            size="small"
+                                                            color="primary"
+                                                            sx={{ fontSize: '0.6rem' }}
+                                                        />
+                                                    </Box>
+                                                }
+                                                secondary={
+                                                    usage.context && (
+                                                        <Typography
+                                                            variant="body2"
+                                                            color="text.secondary"
+                                                            sx={{
+                                                                fontFamily: 'monospace',
+                                                                fontSize: '0.75rem',
+                                                                backgroundColor: '#f5f5f5',
+                                                                padding: '2px 4px',
+                                                                borderRadius: '2px',
+                                                                mt: 0.5
+                                                            }}
+                                                        >
+                                                            {usage.context.length > 80
+                                                                ? `${usage.context.substring(0, 80)}...`
+                                                                : usage.context
+                                                            }
+                                                        </Typography>
+                                                    )
+                                                }
+                                            />
+                                            <Tooltip title="Navigate to usage">
+                                                <IconButton
+                                                    size="small"
+                                                    onClick={() => {
+                                                        console.log('Navigate to:', usage.location);
+                                                    }}
+                                                >
+                                                    <Launch fontSize="small" />
+                                                </IconButton>
+                                            </Tooltip>
+                                        </ListItem>
+                                    )}
+                                    sx={{ p: 0 }}
+                                />
+                            </CollapsibleSection>
+                        )}
+                    </Box>
+                </Collapse>
+            </Box>
+        );
+    };
+
     const renderElementList = (elements) => {
         if (elements.length === 0) {
             return (
@@ -225,249 +448,14 @@ const CodeExplorer = ({ data = null, selectedElement: propSelectedElement = null
         }
 
         return (
-            <List sx={{ maxHeight: '600px', overflow: 'auto' }}>
-                {elements.map((element) => {
-                    const isExpanded = expandedElements.has(element.id);
-                    const IconComponent = element.icon;
-
-                    return (
-                        <Box key={element.id}>
-                            <ListItem
-                                button
-                                onClick={() => handleElementClick(element)}
-                                sx={{
-                                    borderLeft: `4px solid ${getElementColor(element.elementType)}`,
-                                    mb: 1,
-                                    backgroundColor: selectedElement?.id === element.id ? '#f5f5f5' : 'transparent',
-                                    '&:hover': { backgroundColor: '#f0f0f0' }
-                                }}
-                            >
-                                <ListItemIcon>
-                                    <IconComponent sx={{ color: getElementColor(element.elementType) }} />
-                                </ListItemIcon>
-                                <ListItemText
-                                    primary={
-                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                            <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
-                                                {element.name}
-                                            </Typography>
-                                            <Chip
-                                                label={element.elementType}
-                                                size="small"
-                                                sx={{
-                                                    backgroundColor: getElementColor(element.elementType),
-                                                    color: 'white',
-                                                    fontSize: '0.7rem'
-                                                }}
-                                            />
-                                            {element.usages && element.usages.length > 0 && (
-                                                <Badge
-                                                    badgeContent={element.usages.length}
-                                                    color="secondary"
-                                                    sx={{ ml: 1 }}
-                                                >
-                                                    <Visibility fontSize="small" />
-                                                </Badge>
-                                            )}
-                                        </Box>
-                                    }
-                                    secondary={
-                                        <Box>
-                                            <Typography variant="body2" color="text.secondary">
-                                                {formatFilePath(element.location?.file_path)}
-                                                {element.location?.line_number && ` : Line ${element.location.line_number}`}
-                                            </Typography>
-                                            {element.docstring && (
-                                                <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic', mt: 0.5 }}>
-                                                    {element.docstring.length > 100
-                                                        ? `${element.docstring.substring(0, 100)}...`
-                                                        : element.docstring
-                                                    }
-                                                </Typography>
-                                            )}
-                                        </Box>
-                                    }
-                                />
-                                <IconButton
-                                    size="small"
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleExpandToggle(element.id);
-                                    }}
-                                >
-                                    {isExpanded ? <ExpandLess /> : <ExpandMore />}
-                                </IconButton>
-                            </ListItem>
-
-                            <Collapse in={isExpanded} timeout="auto" unmountOnExit>
-                                <Box sx={{ pl: 4, pr: 2, pb: 2 }}>
-                                    {/* Element Details */}
-                                    <Card variant="outlined" sx={{ mb: 2 }}>
-                                        <CardContent sx={{ p: 2 }}>
-                                            <Typography variant="subtitle2" gutterBottom>
-                                                Element Details
-                                            </Typography>
-
-                                            {element.parameters && element.parameters.length > 0 && (
-                                                <Box sx={{ mb: 2 }}>
-                                                    <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 1 }}>
-                                                        Parameters:
-                                                    </Typography>
-                                                    {element.parameters.map((param, index) => (
-                                                        <Chip
-                                                            key={index}
-                                                            label={`${param.name}${param.type_hint ? `: ${param.type_hint}` : ''}${param.default_value ? ` = ${param.default_value}` : ''}`}
-                                                            size="small"
-                                                            variant="outlined"
-                                                            sx={{ mr: 0.5, mb: 0.5, fontSize: '0.7rem' }}
-                                                        />
-                                                    ))}
-                                                </Box>
-                                            )}
-
-                                            {element.return_type && (
-                                                <Typography variant="body2" sx={{ mb: 1 }}>
-                                                    <strong>Returns:</strong> {element.return_type}
-                                                </Typography>
-                                            )}
-
-                                            {element.decorators && element.decorators.length > 0 && (
-                                                <Box sx={{ mb: 2 }}>
-                                                    <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 1 }}>
-                                                        Decorators:
-                                                    </Typography>
-                                                    {element.decorators.map((decorator, index) => (
-                                                        <Chip
-                                                            key={index}
-                                                            label={`@${decorator}`}
-                                                            size="small"
-                                                            color="secondary"
-                                                            sx={{ mr: 0.5, mb: 0.5, fontSize: '0.7rem' }}
-                                                        />
-                                                    ))}
-                                                </Box>
-                                            )}
-
-                                            {element.dependencies && element.dependencies.length > 0 && (
-                                                <Box sx={{ mb: 2 }}>
-                                                    <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 1 }}>
-                                                        Dependencies ({element.dependencies.length}):
-                                                    </Typography>
-                                                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                                                        {element.dependencies.slice(0, 5).map((dep, index) => (
-                                                            <Chip
-                                                                key={index}
-                                                                label={dep}
-                                                                size="small"
-                                                                variant="outlined"
-                                                                sx={{ fontSize: '0.7rem' }}
-                                                            />
-                                                        ))}
-                                                        {element.dependencies.length > 5 && (
-                                                            <Chip
-                                                                label={`+${element.dependencies.length - 5} more`}
-                                                                size="small"
-                                                                variant="outlined"
-                                                                sx={{ fontSize: '0.7rem', fontStyle: 'italic' }}
-                                                            />
-                                                        )}
-                                                    </Box>
-                                                </Box>
-                                            )}
-                                        </CardContent>
-                                    </Card>
-
-                                    {/* Usage Information */}
-                                    {element.usages && element.usages.length > 0 && (
-                                        <Card variant="outlined">
-                                            <CardContent sx={{ p: 2 }}>
-                                                <Typography variant="subtitle2" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                    <Visibility />
-                                                    Usage Locations ({element.usages.length})
-                                                </Typography>
-
-                                                <List dense>
-                                                    {element.usages.slice(0, 10).map((usage, index) => (
-                                                        <ListItem key={index} sx={{ pl: 0 }}>
-                                                            <ListItemIcon sx={{ minWidth: 32 }}>
-                                                                <LocationOn fontSize="small" color="action" />
-                                                            </ListItemIcon>
-                                                            <ListItemText
-                                                                primary={
-                                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                                        <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                                                                            {formatFilePath(usage.location.file_path)}
-                                                                        </Typography>
-                                                                        <Chip
-                                                                            label={`Line ${usage.location.line_number}`}
-                                                                            size="small"
-                                                                            variant="outlined"
-                                                                            sx={{ fontSize: '0.6rem' }}
-                                                                        />
-                                                                        <Chip
-                                                                            label={usage.usage_type}
-                                                                            size="small"
-                                                                            color="primary"
-                                                                            sx={{ fontSize: '0.6rem' }}
-                                                                        />
-                                                                    </Box>
-                                                                }
-                                                                secondary={
-                                                                    usage.context && (
-                                                                        <Typography
-                                                                            variant="body2"
-                                                                            color="text.secondary"
-                                                                            sx={{
-                                                                                fontFamily: 'monospace',
-                                                                                fontSize: '0.75rem',
-                                                                                backgroundColor: '#f5f5f5',
-                                                                                padding: '2px 4px',
-                                                                                borderRadius: '2px',
-                                                                                mt: 0.5
-                                                                            }}
-                                                                        >
-                                                                            {usage.context.length > 80
-                                                                                ? `${usage.context.substring(0, 80)}...`
-                                                                                : usage.context
-                                                                            }
-                                                                        </Typography>
-                                                                    )
-                                                                }
-                                                            />
-                                                            <Tooltip title="Navigate to usage">
-                                                                <IconButton
-                                                                    size="small"
-                                                                    onClick={() => {
-                                                                        // In a real implementation, this would open the file at the specific line
-                                                                        console.log('Navigate to:', usage.location);
-                                                                    }}
-                                                                >
-                                                                    <Launch fontSize="small" />
-                                                                </IconButton>
-                                                            </Tooltip>
-                                                        </ListItem>
-                                                    ))}
-                                                    {element.usages.length > 10 && (
-                                                        <ListItem sx={{ pl: 0 }}>
-                                                            <ListItemText
-                                                                primary={
-                                                                    <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
-                                                                        ... and {element.usages.length - 10} more usage locations
-                                                                    </Typography>
-                                                                }
-                                                            />
-                                                        </ListItem>
-                                                    )}
-                                                </List>
-                                            </CardContent>
-                                        </Card>
-                                    )}
-                                </Box>
-                            </Collapse>
-                        </Box>
-                    );
-                })}
-            </List>
+            <LazyList
+                items={elements}
+                renderItem={renderElementItem}
+                initialBatchSize={15}
+                batchSize={20}
+                maxItems={200}
+                sx={{ maxHeight: '600px', overflow: 'auto' }}
+            />
         );
     };
 
@@ -515,203 +503,210 @@ const CodeExplorer = ({ data = null, selectedElement: propSelectedElement = null
 
                 <Divider sx={{ mb: 3 }} />
 
-                <Tabs value={activeTab} onChange={handleTabChange} sx={{ mb: 3 }}>
-                    <Tab label="Overview" />
-                    <Tab
-                        label={`Usages (${selectedElement.usages?.length || 0})`}
-                        disabled={!selectedElement.usages || selectedElement.usages.length === 0}
-                    />
-                    <Tab label="Dependencies" />
-                </Tabs>
-
-                {activeTab === 0 && (
-                    <Box>
-                        {/* Documentation */}
-                        {selectedElement.docstring && (
-                            <Card sx={{ mb: 3 }}>
-                                <CardContent>
-                                    <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                        <Description />
-                                        Documentation
-                                    </Typography>
-                                    <Typography
-                                        variant="body2"
-                                        sx={{
-                                            fontFamily: 'monospace',
-                                            backgroundColor: '#f5f5f5',
-                                            padding: 2,
-                                            borderRadius: 1,
-                                            whiteSpace: 'pre-wrap'
-                                        }}
-                                    >
-                                        {selectedElement.docstring}
-                                    </Typography>
-                                </CardContent>
-                            </Card>
-                        )}
-
-                        {/* Parameters */}
-                        {selectedElement.parameters && selectedElement.parameters.length > 0 && (
-                            <Card sx={{ mb: 3 }}>
-                                <CardContent>
-                                    <Typography variant="h6" gutterBottom>
-                                        Parameters ({selectedElement.parameters.length})
-                                    </Typography>
-                                    <List dense>
-                                        {selectedElement.parameters.map((param, index) => (
-                                            <ListItem key={index} sx={{ pl: 0 }}>
-                                                <ListItemText
-                                                    primary={
-                                                        <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
-                                                            <strong>{param.name}</strong>
-                                                            {param.type_hint && <span style={{ color: '#666' }}>: {param.type_hint}</span>}
-                                                            {param.default_value && <span style={{ color: '#888' }}> = {param.default_value}</span>}
-                                                        </Typography>
-                                                    }
-                                                />
-                                            </ListItem>
-                                        ))}
-                                    </List>
-                                </CardContent>
-                            </Card>
-                        )}
-
-                        {/* Return Type */}
-                        {selectedElement.return_type && (
-                            <Card sx={{ mb: 3 }}>
-                                <CardContent>
-                                    <Typography variant="h6" gutterBottom>
-                                        Return Type
-                                    </Typography>
-                                    <Typography variant="body2" sx={{ fontFamily: 'monospace', color: '#666' }}>
-                                        {selectedElement.return_type}
-                                    </Typography>
-                                </CardContent>
-                            </Card>
-                        )}
-
-                        {/* Decorators */}
-                        {selectedElement.decorators && selectedElement.decorators.length > 0 && (
-                            <Card sx={{ mb: 3 }}>
-                                <CardContent>
-                                    <Typography variant="h6" gutterBottom>
-                                        Decorators
-                                    </Typography>
-                                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                                        {selectedElement.decorators.map((decorator, index) => (
-                                            <Chip
-                                                key={index}
-                                                label={`@${decorator}`}
-                                                color="secondary"
-                                                sx={{ fontFamily: 'monospace' }}
-                                            />
-                                        ))}
-                                    </Box>
-                                </CardContent>
-                            </Card>
-                        )}
-                    </Box>
-                )}
-
-                {activeTab === 1 && selectedElement.usages && (
-                    <Card>
-                        <CardContent>
-                            <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <Visibility />
-                                Usage Locations ({selectedElement.usages.length})
-                            </Typography>
-
-                            <List>
-                                {selectedElement.usages.map((usage, index) => (
-                                    <ListItem key={index} sx={{ border: '1px solid #e0e0e0', borderRadius: 1, mb: 1 }}>
-                                        <ListItemIcon>
-                                            <LocationOn color="action" />
-                                        </ListItemIcon>
-                                        <ListItemText
-                                            primary={
-                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                                                    <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
-                                                        {formatFilePath(usage.location.file_path)}
-                                                    </Typography>
-                                                    <Chip
-                                                        label={`Line ${usage.location.line_number}:${usage.location.column_number}`}
-                                                        size="small"
-                                                        variant="outlined"
-                                                    />
-                                                    <Chip
-                                                        label={usage.usage_type}
-                                                        size="small"
-                                                        color="primary"
-                                                    />
-                                                </Box>
-                                            }
-                                            secondary={
-                                                usage.context && (
-                                                    <Typography
-                                                        variant="body2"
-                                                        sx={{
-                                                            fontFamily: 'monospace',
-                                                            fontSize: '0.8rem',
-                                                            backgroundColor: '#f8f8f8',
-                                                            padding: 1,
-                                                            borderRadius: 1,
-                                                            border: '1px solid #e0e0e0',
-                                                            whiteSpace: 'pre-wrap'
-                                                        }}
-                                                    >
-                                                        {usage.context}
-                                                    </Typography>
-                                                )
-                                            }
-                                        />
-                                        <Tooltip title="Navigate to this usage">
-                                            <IconButton
-                                                onClick={() => {
-                                                    // In a real implementation, this would open the file at the specific line
-                                                    console.log('Navigate to usage:', usage.location);
+                <TabbedInterface
+                    tabs={[
+                        {
+                            id: 'overview',
+                            label: 'Overview',
+                            icon: <Description />,
+                            content: (
+                                <Box>
+                                    {/* Documentation */}
+                                    {selectedElement.docstring && (
+                                        <CollapsibleSection
+                                            title="Documentation"
+                                            icon={<Description />}
+                                            defaultExpanded={true}
+                                        >
+                                            <Typography
+                                                variant="body2"
+                                                sx={{
+                                                    fontFamily: 'monospace',
+                                                    backgroundColor: '#f5f5f5',
+                                                    padding: 2,
+                                                    borderRadius: 1,
+                                                    whiteSpace: 'pre-wrap'
                                                 }}
                                             >
-                                                <Launch />
-                                            </IconButton>
-                                        </Tooltip>
-                                    </ListItem>
-                                ))}
-                            </List>
-                        </CardContent>
-                    </Card>
-                )}
+                                                {selectedElement.docstring}
+                                            </Typography>
+                                        </CollapsibleSection>
+                                    )}
 
-                {activeTab === 2 && (
-                    <Card>
-                        <CardContent>
-                            <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <AccountTree />
-                                Dependencies ({selectedElement.dependencies?.length || 0})
-                            </Typography>
+                                    {/* Parameters */}
+                                    {selectedElement.parameters && selectedElement.parameters.length > 0 && (
+                                        <CollapsibleSection
+                                            title={`Parameters (${selectedElement.parameters.length})`}
+                                            badge={selectedElement.parameters.length}
+                                            defaultExpanded={selectedElement.parameters.length <= 5}
+                                        >
+                                            <List dense>
+                                                {selectedElement.parameters.map((param, index) => (
+                                                    <ListItem key={index} sx={{ pl: 0 }}>
+                                                        <ListItemText
+                                                            primary={
+                                                                <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+                                                                    <strong>{param.name}</strong>
+                                                                    {param.type_hint && <span style={{ color: '#666' }}>: {param.type_hint}</span>}
+                                                                    {param.default_value && <span style={{ color: '#888' }}> = {param.default_value}</span>}
+                                                                </Typography>
+                                                            }
+                                                        />
+                                                    </ListItem>
+                                                ))}
+                                            </List>
+                                        </CollapsibleSection>
+                                    )}
 
-                            {selectedElement.dependencies && selectedElement.dependencies.length > 0 ? (
-                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                                    {selectedElement.dependencies.map((dep, index) => (
-                                        <Chip
-                                            key={index}
-                                            label={dep}
-                                            variant="outlined"
-                                            onClick={() => {
-                                                // In a real implementation, this would navigate to the dependency
-                                                console.log('Navigate to dependency:', dep);
-                                            }}
-                                            sx={{ cursor: 'pointer' }}
-                                        />
-                                    ))}
+                                    {/* Return Type */}
+                                    {selectedElement.return_type && (
+                                        <CollapsibleSection
+                                            title="Return Type"
+                                            defaultExpanded={true}
+                                        >
+                                            <Typography variant="body2" sx={{ fontFamily: 'monospace', color: '#666' }}>
+                                                {selectedElement.return_type}
+                                            </Typography>
+                                        </CollapsibleSection>
+                                    )}
+
+                                    {/* Decorators */}
+                                    {selectedElement.decorators && selectedElement.decorators.length > 0 && (
+                                        <CollapsibleSection
+                                            title="Decorators"
+                                            badge={selectedElement.decorators.length}
+                                            defaultExpanded={true}
+                                        >
+                                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                                                {selectedElement.decorators.map((decorator, index) => (
+                                                    <Chip
+                                                        key={index}
+                                                        label={`@${decorator}`}
+                                                        color="secondary"
+                                                        sx={{ fontFamily: 'monospace' }}
+                                                    />
+                                                ))}
+                                            </Box>
+                                        </CollapsibleSection>
+                                    )}
                                 </Box>
-                            ) : (
-                                <Typography variant="body2" color="text.secondary">
-                                    No dependencies found for this element.
-                                </Typography>
-                            )}
-                        </CardContent>
-                    </Card>
-                )}
+                            )
+                        },
+                        {
+                            id: 'usages',
+                            label: 'Usages',
+                            icon: <Visibility />,
+                            badge: selectedElement.usages?.length || 0,
+                            disabled: !selectedElement.usages || selectedElement.usages.length === 0,
+                            content: (
+                                <Box>
+                                    {selectedElement.usages && selectedElement.usages.length > 0 && (
+                                        <LazyList
+                                            items={selectedElement.usages}
+                                            initialBatchSize={10}
+                                            batchSize={15}
+                                            maxItems={100}
+                                            renderItem={(usage, index) => (
+                                                <ListItem key={index} sx={{ border: '1px solid #e0e0e0', borderRadius: 1, mb: 1 }}>
+                                                    <ListItemIcon>
+                                                        <LocationOn color="action" />
+                                                    </ListItemIcon>
+                                                    <ListItemText
+                                                        primary={
+                                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                                                                <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
+                                                                    {formatFilePath(usage.location.file_path)}
+                                                                </Typography>
+                                                                <Chip
+                                                                    label={`Line ${usage.location.line_number}:${usage.location.column_number}`}
+                                                                    size="small"
+                                                                    variant="outlined"
+                                                                />
+                                                                <Chip
+                                                                    label={usage.usage_type}
+                                                                    size="small"
+                                                                    color="primary"
+                                                                />
+                                                            </Box>
+                                                        }
+                                                        secondary={
+                                                            usage.context && (
+                                                                <Typography
+                                                                    variant="body2"
+                                                                    sx={{
+                                                                        fontFamily: 'monospace',
+                                                                        fontSize: '0.8rem',
+                                                                        backgroundColor: '#f8f8f8',
+                                                                        padding: 1,
+                                                                        borderRadius: 1,
+                                                                        border: '1px solid #e0e0e0',
+                                                                        whiteSpace: 'pre-wrap'
+                                                                    }}
+                                                                >
+                                                                    {usage.context}
+                                                                </Typography>
+                                                            )
+                                                        }
+                                                    />
+                                                    <Tooltip title="Navigate to this usage">
+                                                        <IconButton
+                                                            onClick={() => {
+                                                                console.log('Navigate to usage:', usage.location);
+                                                            }}
+                                                        >
+                                                            <Launch />
+                                                        </IconButton>
+                                                    </Tooltip>
+                                                </ListItem>
+                                            )}
+                                            sx={{ p: 0 }}
+                                        />
+                                    )}
+                                </Box>
+                            )
+                        },
+                        {
+                            id: 'dependencies',
+                            label: 'Dependencies',
+                            icon: <AccountTree />,
+                            badge: selectedElement.dependencies?.length || 0,
+                            content: (
+                                <Box>
+                                    {selectedElement.dependencies && selectedElement.dependencies.length > 0 ? (
+                                        <LazyList
+                                            items={selectedElement.dependencies}
+                                            initialBatchSize={20}
+                                            batchSize={30}
+                                            renderItem={(dep, index) => (
+                                                <ListItem key={index} sx={{ pl: 0 }}>
+                                                    <ListItemText
+                                                        primary={
+                                                            <Chip
+                                                                label={dep}
+                                                                variant="outlined"
+                                                                onClick={() => {
+                                                                    console.log('Navigate to dependency:', dep);
+                                                                }}
+                                                                sx={{ cursor: 'pointer' }}
+                                                            />
+                                                        }
+                                                    />
+                                                </ListItem>
+                                            )}
+                                            sx={{ p: 0 }}
+                                        />
+                                    ) : (
+                                        <Typography variant="body2" color="text.secondary">
+                                            No dependencies found for this element.
+                                        </Typography>
+                                    )}
+                                </Box>
+                            )
+                        }
+                    ]}
+                    defaultTab={0}
+                    lazyLoad={true}
+                                />
             </Box>
         );
     };
