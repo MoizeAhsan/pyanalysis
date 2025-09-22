@@ -15,6 +15,7 @@ from analysis_engine.file_scanner import FileSystemScanner
 from graph.dependency_graph_builder import DependencyGraphBuilder
 from analyzers.usage_analyzer import UsageAnalyzer
 from analyzers.dependency_analyzer import DependencyAnalyzer
+from analyzers.pattern_detector import ArchitecturalPatternDetector
 
 logger = logging.getLogger(__name__)
 
@@ -76,6 +77,7 @@ class ProjectAnalyzer:
         self.graph_builder = DependencyGraphBuilder()
         self.usage_analyzer = UsageAnalyzer()
         self.dependency_analyzer = DependencyAnalyzer()
+        self.pattern_detector = ArchitecturalPatternDetector()
         self.max_workers = max_workers
         self.current_progress: Optional[AnalysisProgress] = None
 
@@ -150,13 +152,21 @@ class ProjectAnalyzer:
             dependency_graph = self.graph_builder.build_graph(all_elements)
             current_session.dependency_graph = dependency_graph
 
+            # Step 10: Detect architectural patterns
+            logger.info("Detecting architectural patterns...")
+            patterns = self.pattern_detector.detect_patterns(
+                all_elements, dependency_graph
+            )
+            current_session.architectural_patterns = patterns
+
             logger.info(
                 "Analysis complete. Processed %d files, extracted %d elements, "
-                "built graph with %d nodes and %d edges",
+                "built graph with %d nodes and %d edges, detected %d patterns",
                 len(python_files),
                 len(all_elements),
                 dependency_graph.metrics.node_count if dependency_graph.metrics else 0,
                 dependency_graph.metrics.edge_count if dependency_graph.metrics else 0,
+                len(patterns),
             )
 
             return current_session

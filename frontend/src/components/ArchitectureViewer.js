@@ -589,6 +589,48 @@ const ArchitectureViewer = ({ data = null }) => {
 
           {/* Side panel with details and circular dependencies */}
           <Box sx={{ width: 320 }}>
+            {/* Architectural Patterns */}
+            {data && data.data && data.data.architectural_patterns && data.data.architectural_patterns.length > 0 && (
+              <Card sx={{ mb: 2 }}>
+                <CardContent>
+                  <Typography variant="h6" gutterBottom sx={{ color: '#2e7d32', display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Architecture />
+                    Detected Patterns ({data.data.architectural_patterns.length})
+                  </Typography>
+                  <List dense>
+                    {data.data.architectural_patterns.slice(0, 4).map((pattern, index) => (
+                      <ListItem key={index}>
+                        <ListItemIcon>
+                          <Architecture color="success" />
+                        </ListItemIcon>
+                        <ListItemText
+                          primary={pattern.name}
+                          secondary={
+                            <Box>
+                              <Typography variant="caption" display="block">
+                                Confidence: {Math.round(pattern.confidence * 100)}%
+                              </Typography>
+                              <Typography variant="caption" display="block" sx={{ fontStyle: 'italic' }}>
+                                {pattern.description}
+                              </Typography>
+                            </Box>
+                          }
+                        />
+                      </ListItem>
+                    ))}
+                    {data.data.architectural_patterns.length > 4 && (
+                      <ListItem>
+                        <ListItemText
+                          primary={`... and ${data.data.architectural_patterns.length - 4} more patterns`}
+                          sx={{ fontStyle: 'italic', color: 'text.secondary' }}
+                        />
+                      </ListItem>
+                    )}
+                  </List>
+                </CardContent>
+              </Card>
+            )}
+
             {/* Circular Dependencies Alert */}
             {circularDependencies.length > 0 && (
               <Card sx={{ mb: 2 }}>

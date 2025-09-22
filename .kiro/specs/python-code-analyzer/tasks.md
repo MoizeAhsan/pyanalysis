@@ -97,7 +97,7 @@
   - Run mypy and pylint and fix any pretaining errors
   - _Requirements: 7.1, 7.2, 7.3_
 
-- [ ] 14. Add architectural pattern detection
+- [x] 14. Add architectural pattern detection
   - Implement basic pattern detection algorithms
   - Integrate pattern results into architectural overview
   - Display detected patterns in UI
