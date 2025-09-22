@@ -5,6 +5,7 @@ import AnalysisResults from './components/AnalysisResults';
 import MindMapViewer from './components/MindMapViewer';
 import ArchitectureViewer from './components/ArchitectureViewer';
 import CodeExplorer from './components/CodeExplorer';
+import SearchInterface from './components/SearchInterface';
 
 function App() {
   const [analysisTriggered, setAnalysisTriggered] = useState(false);
@@ -13,6 +14,7 @@ function App() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [activeTab, setActiveTab] = useState(0);
+  const [selectedElement, setSelectedElement] = useState(null);
 
   const handleAnalysisStart = () => {
     setLoading(true);
@@ -55,6 +57,12 @@ function App() {
 
   const handleTabChange = (event, newValue) => {
     setActiveTab(newValue);
+  };
+
+  const handleElementSelect = (element) => {
+    setSelectedElement(element);
+    // Switch to Code Explorer tab to show the selected element
+    setActiveTab(2);
   };
 
   return (
@@ -101,6 +109,7 @@ function App() {
                 <Tab label="Mind Map" />
                 <Tab label="Architecture Overview" />
                 <Tab label="Code Explorer" />
+                <Tab label="Search" />
               </Tabs>
             </Box>
             
@@ -113,7 +122,11 @@ function App() {
             )}
             
             {activeTab === 2 && (
-              <CodeExplorer data={analysisData} />
+              <CodeExplorer data={analysisData} selectedElement={selectedElement} />
+            )}
+            
+            {activeTab === 3 && (
+              <SearchInterface data={analysisData} onElementSelect={handleElementSelect} />
             )}
           </Box>
         )}

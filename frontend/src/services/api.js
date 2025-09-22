@@ -63,8 +63,13 @@ class ApiService {
     return response.json();
   }
 
-  async searchElements(query) {
-    const response = await fetch(`${API_BASE_URL}/search?q=${encodeURIComponent(query)}`);
+  async searchElements(query, elementType = null) {
+    const params = new URLSearchParams({ q: query });
+    if (elementType) {
+      params.append('element_type', elementType);
+    }
+    
+    const response = await fetch(`${API_BASE_URL}/search?${params}`);
 
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);

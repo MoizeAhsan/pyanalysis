@@ -254,6 +254,46 @@ async def get_architectural_data() -> AnalyzeResponse:
         ) from e
 
 
+def _search_element(element: CodeElement, query: str) -> Optional[Dict[str, Any]]:
+    """Search for query in a single element and return match result if found"""
+    # Search in name
+    if query in element.name.lower():
+        return {
+            "element": _serialize_code_element(element),
+            "match_type": "name",
+            "match_text": element.name
+        }
+
+    # Search in docstring
+    if element.docstring and query in element.docstring.lower():
+        # Find the matching snippet
+        docstring_lower = element.docstring.lower()
+        start_idx = docstring_lower.find(query)
+        snippet_start = max(0, start_idx - 50)
+        snippet_end = min(len(element.docstring), start_idx + len(query) + 50)
+        snippet = element.docstring[snippet_start:snippet_end]
+        if snippet_start > 0:
+            snippet = "..." + snippet
+        if snippet_end < len(element.docstring):
+            snippet = snippet + "..."
+
+        return {
+            "element": _serialize_code_element(element),
+            "match_type": "docstring",
+            "match_text": snippet
+        }
+
+    # Search in file path
+    if query in element.location.file_path.lower():
+        return {
+            "element": _serialize_code_element(element),
+            "match_type": "file_path",
+            "match_text": element.location.file_path
+        }
+
+    return None
+
+
 def _detect_circular_dependencies() -> List[List[str]]:
     """Detect circular dependencies in the current dependency graph"""
     if not current_session.dependency_graph:
@@ -303,6 +343,86 @@ def _detect_circular_dependencies() -> List[List[str]]:
     return cycles
 
 
+@router.get("/search", response_model=AnalyzeResponse)
+async def search_elements(q: str = "", element_type: Optional[str] = None) -> AnalyzeResponse:
+    """Search code elements with optional filtering by type"""
+    try:
+        # Check if there's any analysis data
+        if not current_session.project_info:
+            return AnalyzeResponse(
+                success=True,
+                message="No analysis data available. Please analyze a project first.",
+                data={"has_data": False, "results": []},
+            )
+
+        query = q.strip().lower()
+        if not query:
+            return AnalyzeResponse(
+                success=True,
+                message="Empty search query",
+                data={
+                    "has_data": True,
+                    "results": [],
+                    "query": query,
+                    "element_type": element_type
+                },
+            )
+
+        # Get all elements to search through
+        all_elements = list(current_session.all_elements.values())
+        # Filter by element type if specified
+        if element_type:
+            element_type_lower = element_type.lower()
+            if element_type_lower == "module":
+                all_elements = list(current_session.modules.values())
+            if element_type_lower == "class":
+                all_elements = list(current_session.classes.values())
+            if element_type_lower == "function":
+                all_elements = list(current_session.functions.values())
+
+        # Search through elements
+        results = []
+        for element in all_elements:
+            match_result = _search_element(element, query)
+            if match_result:
+                results.append(match_result)
+
+        # Sort results by relevance (name matches first, then docstring, then file path)
+        def sort_key(result):
+            if result["match_type"] == "name":
+                return (0, result["element"]["name"].lower())
+            if result["match_type"] == "docstring":
+                return (1, result["element"]["name"].lower())
+            return (2, result["element"]["name"].lower())
+
+        results.sort(key=sort_key)
+        # Limit results to prevent overwhelming the UI
+        max_results = 100
+        if len(results) > max_results:
+            results = results[:max_results]
+
+        logger.info(
+            "Search completed: query='%s', type='%s', found %d results",
+            query, element_type or "all", len(results)
+        )
+
+        return AnalyzeResponse(
+            success=True,
+            message=f"Found {len(results)} results for '{query}'",
+            data={
+                "has_data": True,
+                "results": results,
+                "query": query,
+                "element_type": element_type,
+                "total_results": len(results),
+                "truncated": len(results) >= max_results
+            },
+        )
+    except Exception as e:
+        logger.error("Search failed: %s", e)
+        raise HTTPException(status_code=500, detail=f"Search failed: {e}") from e
+
+
 @router.get("/data", response_model=AnalyzeResponse)
 async def get_analysis_data() -> AnalyzeResponse:
     """Get all analysis results for current session"""
@@ -314,7 +434,9 @@ async def get_analysis_data() -> AnalyzeResponse:
                 message="No analysis data available. Please analyze a project first.",
                 data={"has_data": False},
             )
-
+        logger.info(
+            "Retrieving analysis data for project: %s", current_session.project_info.name
+        )
         # Serialize all data for JSON response
         data = {
             "has_data": True,

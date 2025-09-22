@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
     Box,
     Paper,
@@ -38,13 +38,24 @@ import {
     Folder
 } from '@mui/icons-material';
 
-const CodeExplorer = ({ data = null }) => {
+const CodeExplorer = ({ data = null, selectedElement: propSelectedElement = null }) => {
     const [searchTerm, setSearchTerm] = useState('');
-    const [selectedElement, setSelectedElement] = useState(null);
+    const [selectedElement, setSelectedElement] = useState(propSelectedElement);
     const [expandedElements, setExpandedElements] = useState(new Set());
     const [filterType, setFilterType] = useState('all');
     const [activeTab, setActiveTab] = useState(0);
     const [sortBy, setSortBy] = useState('name');
+
+    // Update selected element when prop changes
+    useEffect(() => {
+        if (propSelectedElement) {
+            setSelectedElement(propSelectedElement);
+            // Expand the element details
+            setExpandedElements(prev => new Set([...prev, propSelectedElement.id]));
+            // Switch to overview tab
+            setActiveTab(0);
+        }
+    }, [propSelectedElement]);
 
     // Sample data for testing when no real data is available
     const sampleData = {
