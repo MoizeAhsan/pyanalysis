@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Container, AppBar, Toolbar, Typography, Box, Alert, Snackbar, Tabs, Tab } from '@mui/material';
+import { ThemeSwitcher } from '@design-system/components/ThemeSwitcher';
 import ProjectInput from '@features/analysis/components/ProjectInput';
 import AnalysisResults from '@features/analysis/components/AnalysisResults';
 import MindMapViewer from '@features/visualization/components/MindMapViewer';
@@ -102,6 +103,7 @@ function App() {
             <span style={{ fontSize: '1.5em' }}>🐍</span>
             Python Code Analyzer
           </Typography>
+          <ThemeSwitcher variant="icon" size="medium" />
         </Toolbar>
       </AppBar>
       

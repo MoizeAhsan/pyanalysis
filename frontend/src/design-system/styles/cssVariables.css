@@ -1,0 +1,207 @@
+/**
+ * CSS Custom Properties for dynamic theming
+ * These variables can be updated at runtime for theme switching
+ */
+
+:root {
+  /* Color variables - Light theme defaults */
+  --color-primary-50: #e3f2fd;
+  --color-primary-100: #bbdefb;
+  --color-primary-200: #90caf9;
+  --color-primary-300: #64b5f6;
+  --color-primary-400: #42a5f5;
+  --color-primary-500: #2196f3;
+  --color-primary-600: #1e88e5;
+  --color-primary-700: #1976d2;
+  --color-primary-800: #1565c0;
+  --color-primary-900: #0d47a1;
+  
+  --color-secondary-50: #e0f2f1;
+  --color-secondary-100: #b2dfdb;
+  --color-secondary-200: #80cbc4;
+  --color-secondary-300: #4db6ac;
+  --color-secondary-400: #26a69a;
+  --color-secondary-500: #009688;
+  --color-secondary-600: #00897b;
+  --color-secondary-700: #00796b;
+  --color-secondary-800: #00695c;
+  --color-secondary-900: #004d40;
+  
+  /* Surface colors */
+  --color-background: #ffffff;
+  --color-surface: #ffffff;
+  --color-surface-elevated: #f8f9fa;
+  --color-surface-overlay: rgba(0, 0, 0, 0.04);
+  
+  /* Text colors */
+  --color-text-primary: rgba(0, 0, 0, 0.87);
+  --color-text-secondary: rgba(0, 0, 0, 0.6);
+  --color-text-disabled: rgba(0, 0, 0, 0.38);
+  --color-text-hint: rgba(0, 0, 0, 0.38);
+  
+  /* Border and divider colors */
+  --color-divider: rgba(0, 0, 0, 0.12);
+  --color-border: rgba(0, 0, 0, 0.12);
+  
+  /* Action colors */
+  --color-action-active: rgba(0, 0, 0, 0.54);
+  --color-action-hover: rgba(0, 0, 0, 0.04);
+  --color-action-selected: rgba(0, 0, 0, 0.08);
+  --color-action-disabled: rgba(0, 0, 0, 0.26);
+  --color-action-focus: rgba(0, 0, 0, 0.12);
+  
+  /* Spacing variables */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+  --spacing-xxl: 48px;
+  --spacing-xxxl: 64px;
+  
+  /* Border radius variables */
+  --border-radius-xs: 2px;
+  --border-radius-sm: 4px;
+  --border-radius-md: 8px;
+  --border-radius-lg: 12px;
+  --border-radius-xl: 16px;
+  --border-radius-xxl: 24px;
+  --border-radius-full: 9999px;
+  
+  /* Typography variables */
+  --font-family-primary: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-family-monospace: "SF Mono", Monaco, Inconsolata, "Roboto Mono", "Source Code Pro", Menlo, Consolas, "Courier New", monospace;
+  
+  --font-weight-light: 300;
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  
+  /* Shadow variables */
+  --shadow-elevation-0: none;
+  --shadow-elevation-1: 0px 1px 2px rgba(0, 0, 0, 0.3), 0px 1px 3px 1px rgba(0, 0, 0, 0.15);
+  --shadow-elevation-2: 0px 1px 2px rgba(0, 0, 0, 0.3), 0px 2px 6px 2px rgba(0, 0, 0, 0.15);
+  --shadow-elevation-3: 0px 1px 3px rgba(0, 0, 0, 0.3), 0px 4px 8px 3px rgba(0, 0, 0, 0.15);
+  --shadow-elevation-4: 0px 2px 3px rgba(0, 0, 0, 0.3), 0px 6px 10px 4px rgba(0, 0, 0, 0.15);
+  --shadow-elevation-5: 0px 4px 4px rgba(0, 0, 0, 0.3), 0px 8px 12px 6px rgba(0, 0, 0, 0.15);
+  
+  --shadow-focus: 0px 0px 0px 2px rgba(25, 118, 210, 0.2);
+  --shadow-card: 0px 2px 4px rgba(0, 0, 0, 0.1), 0px 8px 16px rgba(0, 0, 0, 0.1);
+  --shadow-card-hover: 0px 4px 8px rgba(0, 0, 0, 0.12), 0px 16px 24px rgba(0, 0, 0, 0.14);
+  
+  /* Animation variables */
+  --transition-duration-short: 150ms;
+  --transition-duration-standard: 300ms;
+  --transition-duration-long: 500ms;
+  
+  --transition-easing-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-easing-decelerate: cubic-bezier(0, 0, 0.2, 1);
+  --transition-easing-accelerate: cubic-bezier(0.4, 0, 1, 1);
+}
+
+/* Dark theme variables */
+[data-theme="dark"] {
+  /* Primary colors adjusted for dark theme */
+  --color-primary-main: #42a5f5;
+  --color-primary-light: #64b5f6;
+  --color-primary-dark: #1e88e5;
+  
+  --color-secondary-main: #26a69a;
+  --color-secondary-light: #4db6ac;
+  --color-secondary-dark: #00897b;
+  
+  /* Surface colors for dark theme */
+  --color-background: #121212;
+  --color-surface: #1e1e1e;
+  --color-surface-elevated: #2d2d2d;
+  --color-surface-overlay: rgba(255, 255, 255, 0.08);
+  
+  /* Text colors for dark theme */
+  --color-text-primary: rgba(255, 255, 255, 0.87);
+  --color-text-secondary: rgba(255, 255, 255, 0.6);
+  --color-text-disabled: rgba(255, 255, 255, 0.38);
+  --color-text-hint: rgba(255, 255, 255, 0.38);
+  
+  /* Border and divider colors for dark theme */
+  --color-divider: rgba(255, 255, 255, 0.12);
+  --color-border: rgba(255, 255, 255, 0.12);
+  
+  /* Action colors for dark theme */
+  --color-action-active: rgba(255, 255, 255, 0.56);
+  --color-action-hover: rgba(255, 255, 255, 0.08);
+  --color-action-selected: rgba(255, 255, 255, 0.16);
+  --color-action-disabled: rgba(255, 255, 255, 0.3);
+  --color-action-focus: rgba(255, 255, 255, 0.12);
+}
+
+/* High contrast theme variables */
+[data-theme="high-contrast"] {
+  --color-background: #ffffff;
+  --color-surface: #ffffff;
+  --color-text-primary: #000000;
+  --color-text-secondary: #000000;
+  --color-primary-main: #0000ff;
+  --color-border: #000000;
+  --color-divider: #000000;
+}
+
+/* Reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --transition-duration-short: 0ms;
+    --transition-duration-standard: 0ms;
+    --transition-duration-long: 0ms;
+  }
+}
+
+/* System color scheme preferences */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    /* Apply dark theme variables when system preference is dark and no explicit theme is set */
+    --color-background: #121212;
+    --color-surface: #1e1e1e;
+    --color-surface-elevated: #2d2d2d;
+    --color-text-primary: rgba(255, 255, 255, 0.87);
+    --color-text-secondary: rgba(255, 255, 255, 0.6);
+    --color-divider: rgba(255, 255, 255, 0.12);
+    --color-action-hover: rgba(255, 255, 255, 0.08);
+  }
+}
+
+/* Utility classes using CSS variables */
+.surface-background {
+  background-color: var(--color-background);
+}
+
+.surface-paper {
+  background-color: var(--color-surface);
+}
+
+.surface-elevated {
+  background-color: var(--color-surface-elevated);
+}
+
+.text-primary {
+  color: var(--color-text-primary);
+}
+
+.text-secondary {
+  color: var(--color-text-secondary);
+}
+
+.border-divider {
+  border-color: var(--color-divider);
+}
+
+.shadow-card {
+  box-shadow: var(--shadow-card);
+}
+
+.shadow-card-hover {
+  box-shadow: var(--shadow-card-hover);
+}
+
+.transition-standard {
+  transition: all var(--transition-duration-standard) var(--transition-easing-standard);
+}
