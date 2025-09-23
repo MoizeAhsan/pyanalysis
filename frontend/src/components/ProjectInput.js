@@ -2,12 +2,12 @@ import React, { useState } from 'react';
 import {
   Box,
   TextField,
-  Button,
   Paper,
   Typography,
   Alert
 } from '@mui/material';
 import { FolderOpen, Refresh } from '@mui/icons-material';
+import EnhancedButton from './EnhancedButton';
 
 const ProjectInput = ({ onAnalysisStart, onAnalysisComplete, onAnalysisError, onReset, loading = false }) => {
   const [projectPath, setProjectPath] = useState('');
@@ -89,8 +89,36 @@ const ProjectInput = ({ onAnalysisStart, onAnalysisComplete, onAnalysisError, on
   };
 
   return (
-    <Paper elevation={3} sx={{ p: 4, mb: 4 }}>
-      <Typography variant="h5" component="h2" gutterBottom>
+    <Paper 
+      elevation={3} 
+      sx={{ 
+        p: { xs: 3, sm: 4 }, 
+        mb: { xs: 3, sm: 4 },
+        borderRadius: 3,
+        background: 'linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%)',
+        border: '1px solid rgba(25, 118, 210, 0.08)',
+        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+        '&:hover': {
+          boxShadow: '0px 8px 32px rgba(25, 118, 210, 0.12)',
+          transform: 'translateY(-2px)',
+        }
+      }}
+      className="hover-lift"
+    >
+      <Typography 
+        variant="h5" 
+        component="h2" 
+        gutterBottom
+        sx={{
+          fontWeight: 600,
+          color: 'primary.main',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 1,
+          mb: 3
+        }}
+      >
+        <FolderOpen sx={{ fontSize: '1.2em' }} />
         Project Analysis
       </Typography>
       
@@ -102,29 +130,81 @@ const ProjectInput = ({ onAnalysisStart, onAnalysisComplete, onAnalysisError, on
           value={projectPath}
           onChange={(e) => setProjectPath(e.target.value)}
           variant="outlined"
-          sx={{ mb: 2 }}
+          sx={{ 
+            mb: 3,
+            '& .MuiOutlinedInput-root': {
+              borderRadius: 2,
+              backgroundColor: 'rgba(255, 255, 255, 0.8)',
+              transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+              '&:hover': {
+                backgroundColor: 'rgba(255, 255, 255, 1)',
+                '& .MuiOutlinedInput-notchedOutline': {
+                  borderColor: 'primary.main',
+                  borderWidth: '2px',
+                },
+              },
+              '&.Mui-focused': {
+                backgroundColor: 'rgba(255, 255, 255, 1)',
+                boxShadow: '0 0 0 3px rgba(25, 118, 210, 0.1)',
+              },
+            },
+            '& .MuiInputLabel-root': {
+              fontWeight: 500,
+            }
+          }}
         />
         
-        <Box sx={{ display: 'flex', gap: 2 }}>
-          <Button
+        <Box sx={{ 
+          display: 'flex', 
+          gap: 2,
+          flexDirection: { xs: 'column', sm: 'row' },
+          alignItems: { xs: 'stretch', sm: 'center' },
+          '& > *': {
+            flex: { xs: '1', sm: 'none' }
+          }
+        }}>
+          <EnhancedButton
             variant="contained"
             startIcon={<FolderOpen />}
             onClick={handleAnalyze}
-            disabled={loading}
+            loading={loading}
             size="large"
+            hoverEffect="lift"
+            sx={{
+              py: 1.5,
+              px: 3,
+              fontSize: '1rem',
+              background: 'linear-gradient(45deg, #1976d2 30%, #42a5f5 90%)',
+              boxShadow: '0px 4px 16px rgba(25, 118, 210, 0.3)',
+            }}
           >
             {loading ? 'Analyzing...' : 'Analyze Project'}
-          </Button>
+          </EnhancedButton>
           
-          <Button
+          <EnhancedButton
             variant="outlined"
             startIcon={<Refresh />}
             onClick={handleReset}
             disabled={loading}
             size="large"
+            hoverEffect="lift"
+            sx={{
+              py: 1.5,
+              px: 3,
+              fontSize: '1rem',
+              borderWidth: 2,
+              borderColor: 'primary.main',
+              color: 'primary.main',
+              '&:hover': {
+                borderWidth: 2,
+                backgroundColor: 'rgba(25, 118, 210, 0.04)',
+                borderColor: 'primary.dark',
+                color: 'primary.dark',
+              }
+            }}
           >
             Reset
-          </Button>
+          </EnhancedButton>
         </Box>
       </Box>
 

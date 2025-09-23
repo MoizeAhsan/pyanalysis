@@ -78,20 +78,75 @@ function App() {
 
   return (
     <div className="App">
-      <AppBar position="static" sx={{ background: 'linear-gradient(45deg, #1976d2 30%, #42a5f5 90%)' }}>
-        <Toolbar>
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1, fontWeight: 'bold' }}>
-            🐍 Python Code Analyzer
+      <AppBar 
+        position="static" 
+        sx={{ 
+          background: 'linear-gradient(135deg, #1976d2 0%, #42a5f5 50%, #64b5f6 100%)',
+          boxShadow: '0px 4px 20px rgba(25, 118, 210, 0.3)',
+        }}
+      >
+        <Toolbar sx={{ py: 1 }}>
+          <Typography 
+            variant="h6" 
+            component="div" 
+            sx={{ 
+              flexGrow: 1, 
+              fontWeight: 700,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1,
+              fontSize: { xs: '1.1rem', sm: '1.25rem' }
+            }}
+          >
+            <span style={{ fontSize: '1.5em' }}>🐍</span>
+            Python Code Analyzer
           </Typography>
         </Toolbar>
       </AppBar>
       
-      <Container maxWidth="xl" sx={{ mt: 4 }}>
-        <Box sx={{ mb: 4, textAlign: 'center' }}>
-          <Typography variant="h3" component="h1" gutterBottom sx={{ fontWeight: 'bold', color: 'primary.main' }}>
+      <Container 
+        maxWidth="xl" 
+        sx={{ 
+          mt: { xs: 2, sm: 4 },
+          px: { xs: 2, sm: 3, md: 4 }
+        }}
+        className="fade-in"
+      >
+        <Box sx={{ 
+          mb: { xs: 3, sm: 4 }, 
+          textAlign: 'center',
+          animation: 'fadeIn 0.8s cubic-bezier(0.4, 0, 0.2, 1)'
+        }}>
+          <Typography 
+            variant="h3" 
+            component="h1" 
+            gutterBottom 
+            sx={{ 
+              fontWeight: 700, 
+              color: 'primary.main',
+              fontSize: { xs: '1.75rem', sm: '2.5rem', md: '3rem' },
+              background: 'linear-gradient(135deg, #1976d2 0%, #42a5f5 100%)',
+              backgroundClip: 'text',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              mb: 2
+            }}
+            className="responsive-title"
+          >
             Visual Python Project Explorer
           </Typography>
-          <Typography variant="h6" color="text.secondary" sx={{ maxWidth: 600, mx: 'auto' }}>
+          <Typography 
+            variant="h6" 
+            color="text.secondary" 
+            sx={{ 
+              maxWidth: { xs: '100%', sm: 600 }, 
+              mx: 'auto',
+              fontSize: { xs: '1rem', sm: '1.25rem' },
+              lineHeight: 1.6,
+              fontWeight: 400
+            }}
+            className="responsive-subtitle"
+          >
             Analyze Python projects with interactive mind maps and architectural overviews. 
             Get insights into your code structure, dependencies, and relationships.
           </Typography>
@@ -114,31 +169,81 @@ function App() {
         )}
         
         {analysisData && (
-          <Box sx={{ mt: 4 }}>
-            <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-              <Tabs value={activeTab} onChange={handleTabChange} aria-label="analysis views">
-                <Tab label="Mind Map" />
-                <Tab label="Architecture Overview" />
-                <Tab label="Code Explorer" />
-                <Tab label="Search" />
+          <Box sx={{ mt: { xs: 3, sm: 4 } }} className="fade-in">
+            <Box sx={{ 
+              borderBottom: 1, 
+              borderColor: 'divider',
+              backgroundColor: 'background.paper',
+              borderRadius: '12px 12px 0 0',
+              px: 2,
+              boxShadow: '0px 2px 8px rgba(0, 0, 0, 0.08)'
+            }}>
+              <Tabs 
+                value={activeTab} 
+                onChange={handleTabChange} 
+                aria-label="analysis views"
+                variant="scrollable"
+                scrollButtons="auto"
+                sx={{
+                  '& .MuiTab-root': {
+                    minHeight: 64,
+                    fontSize: { xs: '0.8rem', sm: '0.875rem' },
+                    fontWeight: 600,
+                    textTransform: 'none',
+                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                    '&:hover': {
+                      color: 'primary.main',
+                      backgroundColor: 'rgba(25, 118, 210, 0.04)',
+                    },
+                    '&.Mui-selected': {
+                      color: 'primary.main',
+                      fontWeight: 700,
+                    }
+                  },
+                  '& .MuiTabs-indicator': {
+                    height: 3,
+                    borderRadius: '3px 3px 0 0',
+                    background: 'linear-gradient(90deg, #1976d2, #42a5f5)',
+                  }
+                }}
+              >
+                <Tab label="🗺️ Mind Map" />
+                <Tab label="🏗️ Architecture" />
+                <Tab label="🔍 Code Explorer" />
+                <Tab label="🔎 Search" />
               </Tabs>
             </Box>
             
-            {activeTab === 0 && (
-              <MindMapViewer data={analysisData} />
-            )}
-            
-            {activeTab === 1 && (
-              <ArchitectureViewer data={analysisData} />
-            )}
-            
-            {activeTab === 2 && (
-              <CodeExplorer data={analysisData} selectedElement={selectedElement} />
-            )}
-            
-            {activeTab === 3 && (
-              <SearchInterface data={analysisData} onElementSelect={handleElementSelect} />
-            )}
+            <Box sx={{ 
+              backgroundColor: 'background.paper',
+              borderRadius: '0 0 12px 12px',
+              minHeight: '500px',
+              boxShadow: '0px 4px 16px rgba(0, 0, 0, 0.08)'
+            }}>
+              {activeTab === 0 && (
+                <Box className="fade-in">
+                  <MindMapViewer data={analysisData} />
+                </Box>
+              )}
+              
+              {activeTab === 1 && (
+                <Box className="fade-in">
+                  <ArchitectureViewer data={analysisData} />
+                </Box>
+              )}
+              
+              {activeTab === 2 && (
+                <Box className="fade-in">
+                  <CodeExplorer data={analysisData} selectedElement={selectedElement} />
+                </Box>
+              )}
+              
+              {activeTab === 3 && (
+                <Box className="fade-in">
+                  <SearchInterface data={analysisData} onElementSelect={handleElementSelect} />
+                </Box>
+              )}
+            </Box>
           </Box>
         )}
 

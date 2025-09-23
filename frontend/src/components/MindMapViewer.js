@@ -404,11 +404,39 @@ const MindMapViewer = ({ data = null }) => {
   };
 
   return (
-    <Box sx={{ mt: 4 }}>
-      <Paper elevation={3} sx={{ p: 3 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, flexWrap: 'wrap', gap: 2 }}>
-          <Typography variant="h5" component="h2">
-            Project Mind Map
+    <Box sx={{ mt: { xs: 2, sm: 4 } }}>
+      <Paper 
+        elevation={3} 
+        sx={{ 
+          p: { xs: 2, sm: 3 },
+          borderRadius: 3,
+          background: 'linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%)',
+          border: '1px solid rgba(25, 118, 210, 0.08)',
+          boxShadow: '0px 8px 32px rgba(0, 0, 0, 0.08)',
+        }}
+      >
+        <Box sx={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          mb: 3, 
+          flexWrap: 'wrap', 
+          gap: 2,
+          flexDirection: { xs: 'column', sm: 'row' },
+          alignItems: { xs: 'flex-start', sm: 'center' }
+        }}>
+          <Typography 
+            variant="h5" 
+            component="h2"
+            sx={{
+              fontWeight: 600,
+              color: 'primary.main',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1,
+              fontSize: { xs: '1.25rem', sm: '1.5rem' }
+            }}
+          >
+            🗺️ Project Mind Map
           </Typography>
 
           <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -454,74 +482,186 @@ const MindMapViewer = ({ data = null }) => {
         </Box>
 
         {/* Enhanced Legend and Controls */}
-        <Box sx={{ mb: 2, p: 2, backgroundColor: '#f5f5f5', borderRadius: 1 }}>
-          <Typography variant="subtitle2" gutterBottom>
-            Legend & Controls:
+        <Box sx={{ 
+          mb: 3, 
+          p: 3, 
+          background: 'linear-gradient(135deg, rgba(25, 118, 210, 0.04) 0%, rgba(25, 118, 210, 0.08) 100%)',
+          borderRadius: 2,
+          border: '1px solid rgba(25, 118, 210, 0.12)',
+          boxShadow: '0px 2px 8px rgba(25, 118, 210, 0.08)'
+        }}>
+          <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600, color: 'primary.main', mb: 2 }}>
+            🎨 Legend & Controls
           </Typography>
-          <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap', alignItems: 'center' }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Box sx={{ 
+            display: 'grid',
+            gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(3, 1fr)', md: 'repeat(5, 1fr)' },
+            gap: 2,
+            mb: 2
+          }}>
+            <Box sx={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: 1,
+              p: 1,
+              borderRadius: 1,
+              backgroundColor: 'rgba(255, 255, 255, 0.7)',
+              transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+              '&:hover': {
+                backgroundColor: 'rgba(255, 255, 255, 1)',
+                transform: 'scale(1.02)',
+              }
+            }}>
               <Box sx={{ 
                 width: 20, 
                 height: 12, 
                 backgroundColor: '#1976d2', 
-                borderRadius: '2px' 
+                borderRadius: '3px',
+                boxShadow: '0px 2px 4px rgba(25, 118, 210, 0.3)'
               }} />
-              <Typography variant="body2">Modules</Typography>
+              <Typography variant="body2" sx={{ fontWeight: 500 }}>Modules</Typography>
             </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Box sx={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: 1,
+              p: 1,
+              borderRadius: 1,
+              backgroundColor: 'rgba(255, 255, 255, 0.7)',
+              transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+              '&:hover': {
+                backgroundColor: 'rgba(255, 255, 255, 1)',
+                transform: 'scale(1.02)',
+              }
+            }}>
               <Box sx={{ 
                 width: 16, 
                 height: 16, 
                 backgroundColor: '#388e3c', 
-                borderRadius: '50%' 
+                borderRadius: '50%',
+                boxShadow: '0px 2px 4px rgba(56, 142, 60, 0.3)'
               }} />
-              <Typography variant="body2">Classes</Typography>
+              <Typography variant="body2" sx={{ fontWeight: 500 }}>Classes</Typography>
             </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Box sx={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: 1,
+              p: 1,
+              borderRadius: 1,
+              backgroundColor: 'rgba(255, 255, 255, 0.7)',
+              transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+              '&:hover': {
+                backgroundColor: 'rgba(255, 255, 255, 1)',
+                transform: 'scale(1.02)',
+              }
+            }}>
               <Box sx={{ 
                 width: 16, 
                 height: 16, 
                 backgroundColor: '#f57c00', 
-                borderRadius: '2px',
-                transform: 'rotate(45deg)'
+                borderRadius: '3px',
+                transform: 'rotate(45deg)',
+                boxShadow: '0px 2px 4px rgba(245, 124, 0, 0.3)'
               }} />
-              <Typography variant="body2">Functions</Typography>
+              <Typography variant="body2" sx={{ fontWeight: 500 }}>Functions</Typography>
             </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 2 }}>
+            <Box sx={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: 1,
+              p: 1,
+              borderRadius: 1,
+              backgroundColor: 'rgba(255, 255, 255, 0.7)',
+              transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+              '&:hover': {
+                backgroundColor: 'rgba(255, 255, 255, 1)',
+                transform: 'scale(1.02)',
+              }
+            }}>
               <Box sx={{ 
                 width: 16, 
                 height: 16, 
                 backgroundColor: '#1976d2', 
-                borderRadius: '2px',
-                border: '2px dashed #ff5722'
+                borderRadius: '3px',
+                border: '2px dashed #ff5722',
+                boxShadow: '0px 2px 4px rgba(25, 118, 210, 0.3)'
               }} />
-              <Typography variant="body2">Expandable</Typography>
+              <Typography variant="body2" sx={{ fontWeight: 500 }}>Expandable</Typography>
             </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Box sx={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: 1,
+              p: 1,
+              borderRadius: 1,
+              backgroundColor: 'rgba(255, 255, 255, 0.7)',
+              transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+              '&:hover': {
+                backgroundColor: 'rgba(255, 255, 255, 1)',
+                transform: 'scale(1.02)',
+              }
+            }}>
               <Box sx={{ 
                 width: 16, 
                 height: 16, 
                 backgroundColor: '#0d47a1', 
-                borderRadius: '2px',
-                border: '2px double #ff5722'
+                borderRadius: '3px',
+                border: '2px double #ff5722',
+                boxShadow: '0px 2px 4px rgba(13, 71, 161, 0.3)'
               }} />
-              <Typography variant="body2">Collapsed</Typography>
+              <Typography variant="body2" sx={{ fontWeight: 500 }}>Collapsed</Typography>
             </Box>
           </Box>
-          <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-            💡 <strong>Tip:</strong> Single-click to select and view details • Double-click expandable nodes to collapse/expand • 
-            Hover to highlight connections • Click background to clear selection
-          </Typography>
+          <Box sx={{ 
+            p: 2,
+            backgroundColor: 'rgba(255, 255, 255, 0.8)',
+            borderRadius: 1,
+            border: '1px solid rgba(25, 118, 210, 0.12)'
+          }}>
+            <Typography variant="caption" color="text.secondary" sx={{ 
+              display: 'block',
+              lineHeight: 1.5,
+              fontSize: '0.8rem'
+            }}>
+              💡 <strong>Interactive Tips:</strong> Single-click to select and view details • Double-click expandable nodes to collapse/expand • 
+              Hover to highlight connections • Click background to clear selection
+            </Typography>
+          </Box>
         </Box>
 
-        <Box sx={{ display: 'flex', gap: 2 }}>
-          <Box sx={{ flex: 1 }}>
+        <Box sx={{ 
+          display: 'flex', 
+          gap: 2,
+          flexDirection: { xs: 'column', lg: 'row' },
+          alignItems: 'stretch'
+        }}>
+          <Box sx={{ 
+            flex: 1,
+            minHeight: { xs: '400px', sm: '500px', md: '600px' },
+            '& > *': {
+              height: { xs: '400px !important', sm: '500px !important', md: '600px !important' }
+            }
+          }}>
             {renderGraph()}
           </Box>
 
           {selectedNode && (
-            <Card sx={{ width: 320, maxHeight: '500px', overflow: 'auto' }}>
-              <CardContent>
+            <Card sx={{ 
+              width: { xs: '100%', md: 320 }, 
+              maxHeight: '500px', 
+              overflow: 'auto',
+              borderRadius: 3,
+              boxShadow: '0px 8px 24px rgba(0, 0, 0, 0.12)',
+              border: '1px solid rgba(25, 118, 210, 0.12)',
+              background: 'linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%)',
+              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+              '&:hover': {
+                boxShadow: '0px 12px 32px rgba(0, 0, 0, 0.15)',
+                transform: 'translateY(-2px)',
+              }
+            }}>
+              <CardContent sx={{ p: 3 }}>
                 <Typography variant="h6" gutterBottom sx={{ 
                   color: selectedNode.type === 'module' ? '#1976d2' : 
                          selectedNode.type === 'class' ? '#388e3c' : '#f57c00',

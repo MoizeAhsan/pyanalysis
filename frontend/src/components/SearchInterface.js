@@ -216,8 +216,21 @@ const SearchInterface = ({ data, onElementSelect }) => {
   return (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       {/* Search Controls */}
-      <Paper sx={{ p: 2, mb: 2 }}>
-        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mb: 2 }}>
+      <Paper sx={{ 
+        p: { xs: 2, sm: 3 }, 
+        mb: 2,
+        borderRadius: 3,
+        background: 'linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%)',
+        border: '1px solid rgba(25, 118, 210, 0.08)',
+        boxShadow: '0px 4px 16px rgba(0, 0, 0, 0.08)',
+      }}>
+        <Box sx={{ 
+          display: 'flex', 
+          gap: 2, 
+          alignItems: 'center', 
+          mb: 2,
+          flexDirection: { xs: 'column', sm: 'row' }
+        }}>
           <TextField
             fullWidth
             variant="outlined"
@@ -225,37 +238,87 @@ const SearchInterface = ({ data, onElementSelect }) => {
             value={query}
             onChange={handleQueryChange}
             InputProps={{
-              startAdornment: <SearchIcon sx={{ mr: 1, color: 'text.secondary' }} />,
+              startAdornment: <SearchIcon sx={{ mr: 1, color: 'primary.main' }} />,
               endAdornment: query && (
-                <IconButton size="small" onClick={handleClearSearch}>
+                <IconButton 
+                  size="small" 
+                  onClick={handleClearSearch}
+                  sx={{
+                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                    '&:hover': {
+                      backgroundColor: 'rgba(211, 47, 47, 0.08)',
+                      color: 'error.main',
+                    }
+                  }}
+                >
                   <ClearIcon />
                 </IconButton>
               ),
             }}
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                borderRadius: 2,
+                backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                '&:hover': {
+                  backgroundColor: 'rgba(255, 255, 255, 1)',
+                  '& .MuiOutlinedInput-notchedOutline': {
+                    borderColor: 'primary.main',
+                    borderWidth: '2px',
+                  },
+                },
+                '&.Mui-focused': {
+                  backgroundColor: 'rgba(255, 255, 255, 1)',
+                  boxShadow: '0 0 0 3px rgba(25, 118, 210, 0.1)',
+                },
+              }
+            }}
           />
 
-          <FormControl sx={{ minWidth: 120 }}>
+          <FormControl sx={{ minWidth: { xs: '100%', sm: 140 } }}>
             <InputLabel>Type</InputLabel>
             <Select
               value={elementType}
               label="Type"
               onChange={handleTypeChange}
+              sx={{
+                borderRadius: 2,
+                backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                '&:hover': {
+                  backgroundColor: 'rgba(255, 255, 255, 1)',
+                },
+                '& .MuiOutlinedInput-notchedOutline': {
+                  transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                },
+                '&:hover .MuiOutlinedInput-notchedOutline': {
+                  borderColor: 'primary.main',
+                  borderWidth: '2px',
+                },
+              }}
             >
               <MenuItem value="">All</MenuItem>
-              <MenuItem value="module">Modules</MenuItem>
-              <MenuItem value="class">Classes</MenuItem>
-              <MenuItem value="function">Functions</MenuItem>
+              <MenuItem value="module">📁 Modules</MenuItem>
+              <MenuItem value="class">🏛️ Classes</MenuItem>
+              <MenuItem value="function">⚡ Functions</MenuItem>
             </Select>
           </FormControl>
         </Box>
 
         {/* Search Stats */}
         {hasSearched && (
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Typography variant="body2" color="text.secondary">
+          <Box sx={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: 1,
+            p: 2,
+            backgroundColor: 'rgba(25, 118, 210, 0.04)',
+            borderRadius: 2,
+            border: '1px solid rgba(25, 118, 210, 0.12)'
+          }}>
+            <Typography variant="body2" color="primary.main" sx={{ fontWeight: 500 }}>
               {loading ? 'Searching...' : `Found ${totalResults || results.length} results${totalPages > 1 ? ` (page ${currentPage} of ${totalPages})` : ''}`}
             </Typography>
-            {loading && <CircularProgress size={16} />}
+            {loading && <CircularProgress size={16} color="primary" />}
           </Box>
         )}
       </Paper>
@@ -268,10 +331,26 @@ const SearchInterface = ({ data, onElementSelect }) => {
       )}
 
       {/* Search Results */}
-      <Paper sx={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+      <Paper sx={{ 
+        flex: 1, 
+        overflow: 'hidden', 
+        display: 'flex', 
+        flexDirection: 'column',
+        borderRadius: 3,
+        boxShadow: '0px 4px 16px rgba(0, 0, 0, 0.08)',
+        border: '1px solid rgba(25, 118, 210, 0.08)',
+      }}>
         {hasSearched && !loading && results.length === 0 && !error && (
-          <Box sx={{ p: 3, textAlign: 'center' }}>
-            <Typography variant="h6" color="text.secondary">
+          <Box sx={{ 
+            p: 4, 
+            textAlign: 'center',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: 2
+          }}>
+            <SearchIcon sx={{ fontSize: 48, color: 'text.disabled' }} />
+            <Typography variant="h6" color="text.secondary" sx={{ fontWeight: 500 }}>
               No results found
             </Typography>
             <Typography variant="body2" color="text.secondary">
@@ -282,13 +361,27 @@ const SearchInterface = ({ data, onElementSelect }) => {
 
         {results.length > 0 && (
           <>
-            <List sx={{ flex: 1, overflow: 'auto', p: 0 }}>
+            <List sx={{ flex: 1, overflow: 'auto', p: 1 }}>
               {paginatedResults.map((result, index) => (
                 <React.Fragment key={`${result.element.id}-${index}`}>
-                  <ListItem disablePadding>
+                  <ListItem disablePadding sx={{ mb: 0.5 }}>
                     <ListItemButton
                       onClick={() => handleElementClick(result.element)}
-                      sx={{ py: 1.5 }}
+                      sx={{ 
+                        py: 2,
+                        px: 2,
+                        borderRadius: 2,
+                        transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                        '&:hover': {
+                          backgroundColor: 'rgba(25, 118, 210, 0.08)',
+                          transform: 'translateX(4px)',
+                          boxShadow: '0px 4px 12px rgba(25, 118, 210, 0.15)',
+                        },
+                        '&:active': {
+                          transform: 'translateX(2px)',
+                        }
+                      }}
+                      className="hover-lift"
                     >
                       <Box sx={{ display: 'flex', alignItems: 'center', mr: 2 }}>
                         {getElementIcon(result.element.type)}
