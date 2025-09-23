@@ -32,6 +32,9 @@ import {
   ExpandLess,
   ExpandMore,
   Visibility as VisibilityIcon,
+  PlayArrow as DemoIcon,
+  Dashboard as DashboardIcon,
+  PlayArrow,
 } from '@mui/icons-material';
 import { ThemeSwitcher } from '@design-system/components/ThemeSwitcher';
 import { FocusManager, AriaUtils } from '@shared/utils/accessibility';
@@ -85,6 +88,23 @@ const navigationItems: NavigationItem[] = [
     id: 'search',
     label: 'Search',
     icon: <SearchIcon />,
+  },
+  {
+    id: 'demo',
+    label: 'Demo',
+    icon: <DemoIcon />,
+    children: [
+      {
+        id: 'visualization-demo',
+        label: 'Visualization Components',
+        icon: <DashboardIcon />,
+      },
+      {
+        id: 'component-demo',
+        label: 'Interactive Demo',
+        icon: <PlayArrow />,
+      },
+    ],
   },
   {
     id: 'settings',

@@ -8,6 +8,7 @@ import MindMapViewer from '@features/visualization/components/MindMapViewer';
 import ArchitectureViewer from '@features/visualization/components/ArchitectureViewer';
 import CodeExplorer from '@features/exploration/components/CodeExplorer';
 import SearchInterface from '@features/search/components/SearchInterface';
+import { VisualizationDemo } from '@features/visualization/components';
 import { performanceMonitor } from '@shared/utils';
 import type { AnalysisData, CodeElement } from '@shared/types';
 
@@ -22,7 +23,7 @@ function App() {
   // Initialize performance monitoring
   useEffect(() => {
     performanceMonitor.startTiming('app-mount');
-    
+
     return () => {
       performanceMonitor.endTiming('app-mount');
       performanceMonitor.cleanup();
@@ -76,17 +77,17 @@ function App() {
       case 'home':
         return (
           <Container maxWidth="xl" className="fade-in">
-            <Box sx={{ 
-              mb: { xs: 3, sm: 4 }, 
+            <Box sx={{
+              mb: { xs: 3, sm: 4 },
               textAlign: 'center',
               animation: 'fadeIn 0.8s cubic-bezier(0.4, 0, 0.2, 1)'
             }}>
-              <Typography 
-                variant="h3" 
-                component="h2" 
-                gutterBottom 
-                sx={{ 
-                  fontWeight: 700, 
+              <Typography
+                variant="h3"
+                component="h2"
+                gutterBottom
+                sx={{
+                  fontWeight: 700,
                   color: 'primary.main',
                   fontSize: { xs: '1.75rem', sm: '2.5rem', md: '3rem' },
                   background: 'linear-gradient(135deg, #1976d2 0%, #42a5f5 100%)',
@@ -99,11 +100,11 @@ function App() {
               >
                 Visual Python Project Explorer
               </Typography>
-              <Typography 
-                variant="h6" 
-                color="text.secondary" 
-                sx={{ 
-                  maxWidth: { xs: '100%', sm: 600 }, 
+              <Typography
+                variant="h6"
+                color="text.secondary"
+                sx={{
+                  maxWidth: { xs: '100%', sm: 600 },
                   mx: 'auto',
                   fontSize: { xs: '1rem', sm: '1.25rem' },
                   lineHeight: 1.6,
@@ -111,21 +112,21 @@ function App() {
                 }}
                 className="responsive-subtitle"
               >
-                Analyze Python projects with interactive mind maps and architectural overviews. 
+                Analyze Python projects with interactive mind maps and architectural overviews.
                 Get insights into your code structure, dependencies, and relationships.
               </Typography>
             </Box>
-            
-            <ProjectInput 
+
+            <ProjectInput
               onAnalysisStart={handleAnalysisStart}
               onAnalysisComplete={handleAnalysisComplete}
               onAnalysisError={handleAnalysisError}
               onReset={handleReset}
               loading={loading}
             />
-            
+
             {analysisTriggered && (
-              <AnalysisResults 
+              <AnalysisResults
                 analysisTriggered={analysisTriggered}
                 onDataLoaded={handleDataLoaded}
                 loading={loading}
@@ -140,7 +141,7 @@ function App() {
             <Typography variant="h4" component="h2" gutterBottom sx={{ fontWeight: 600, mb: 3 }}>
               Mind Map View
             </Typography>
-            <Box sx={{ 
+            <Box sx={{
               backgroundColor: 'background.paper',
               borderRadius: 2,
               minHeight: '600px',
@@ -163,7 +164,7 @@ function App() {
             <Typography variant="h4" component="h2" gutterBottom sx={{ fontWeight: 600, mb: 3 }}>
               Architecture View
             </Typography>
-            <Box sx={{ 
+            <Box sx={{
               backgroundColor: 'background.paper',
               borderRadius: 2,
               minHeight: '600px',
@@ -186,7 +187,7 @@ function App() {
             <Typography variant="h4" component="h2" gutterBottom sx={{ fontWeight: 600, mb: 3 }}>
               Code Explorer
             </Typography>
-            <Box sx={{ 
+            <Box sx={{
               backgroundColor: 'background.paper',
               borderRadius: 2,
               minHeight: '600px',
@@ -209,7 +210,7 @@ function App() {
             <Typography variant="h4" component="h2" gutterBottom sx={{ fontWeight: 600, mb: 3 }}>
               Search Interface
             </Typography>
-            <Box sx={{ 
+            <Box sx={{
               backgroundColor: 'background.paper',
               borderRadius: 2,
               minHeight: '600px',
@@ -223,6 +224,40 @@ function App() {
             <Typography variant="h6" color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
               Please analyze a project first to search through the code.
             </Typography>
+          </Container>
+        );
+
+      case 'visualization-demo':
+        return (
+          <Container maxWidth="xl" className="fade-in">
+            <Typography variant="h4" component="h2" gutterBottom sx={{ fontWeight: 600, mb: 3 }}>
+              🚀 Modernized Visualization Components
+            </Typography>
+            <Box sx={{
+              backgroundColor: 'background.paper',
+              borderRadius: 2,
+              minHeight: '600px',
+              boxShadow: '0px 4px 16px rgba(0, 0, 0, 0.08)'
+            }}>
+              <MindMapViewer />
+            </Box>
+          </Container>
+        );
+
+      case 'component-demo':
+        return (
+          <Container maxWidth="xl" className="fade-in">
+            <Typography variant="h4" component="h2" gutterBottom sx={{ fontWeight: 600, mb: 3 }}>
+              🎮 Interactive Visualization Demo
+            </Typography>
+            <Box sx={{
+              backgroundColor: 'background.paper',
+              borderRadius: 2,
+              minHeight: '600px',
+              boxShadow: '0px 4px 16px rgba(0, 0, 0, 0.08)'
+            }}>
+              <VisualizationDemo />
+            </Box>
           </Container>
         );
 
