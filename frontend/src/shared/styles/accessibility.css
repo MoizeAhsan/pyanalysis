@@ -1,0 +1,207 @@
+/**
+ * Accessibility-focused CSS styles
+ */
+
+/* Screen reader only content */
+.sr-only {
+  position: absolute !important;
+  left: -10000px !important;
+  width: 1px !important;
+  height: 1px !important;
+  overflow: hidden !important;
+  clip: rect(1px, 1px, 1px, 1px) !important;
+  white-space: nowrap !important;
+}
+
+/* Skip links */
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  z-index: 9999;
+  padding: 8px 16px;
+  background-color: #1976d2;
+  color: white;
+  text-decoration: none;
+  border-radius: 4px;
+  font-weight: 600;
+  transition: all 0.2s ease-in-out;
+}
+
+.skip-link:focus {
+  left: 8px;
+  top: 8px;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .MuiButton-root,
+  .MuiIconButton-root,
+  .MuiListItemButton-root {
+    border: 1px solid currentColor !important;
+  }
+  
+  .MuiDrawer-paper {
+    border: 2px solid currentColor !important;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  
+  /* Keep essential animations for accessibility */
+  .MuiCollapse-root,
+  .MuiDrawer-root,
+  .MuiSnackbar-root {
+    transition-duration: 0.2s !important;
+  }
+}
+
+/* Focus indicators */
+.focus-visible,
+*:focus-visible {
+  outline: 2px solid #1976d2 !important;
+  outline-offset: 2px !important;
+  border-radius: 4px;
+}
+
+/* Dark theme focus indicators */
+[data-theme="dark"] .focus-visible,
+[data-theme="dark"] *:focus-visible {
+  outline-color: #64b5f6 !important;
+}
+
+/* Ensure sufficient color contrast for focus indicators */
+.MuiButton-containedPrimary:focus-visible {
+  outline-color: white !important;
+}
+
+.MuiListItemButton-root.Mui-selected:focus-visible {
+  outline-color: white !important;
+}
+
+/* Keyboard navigation indicators */
+.keyboard-navigation-active .MuiListItemButton-root:focus {
+  background-color: rgba(25, 118, 210, 0.08) !important;
+}
+
+[data-theme="dark"] .keyboard-navigation-active .MuiListItemButton-root:focus {
+  background-color: rgba(100, 181, 246, 0.08) !important;
+}
+
+/* Improve touch targets for mobile */
+@media (max-width: 768px) {
+  .MuiIconButton-root {
+    min-width: 44px !important;
+    min-height: 44px !important;
+  }
+  
+  .MuiListItemButton-root {
+    min-height: 48px !important;
+  }
+}
+
+/* Windows High Contrast Mode */
+@media screen and (-ms-high-contrast: active) {
+  .MuiButton-root,
+  .MuiIconButton-root,
+  .MuiListItemButton-root {
+    border: 1px solid WindowText !important;
+  }
+  
+  .MuiDrawer-paper {
+    border: 2px solid WindowText !important;
+  }
+  
+  .MuiAppBar-root {
+    background: WindowText !important;
+    color: Window !important;
+  }
+}
+
+/* Ensure text remains visible during font loading */
+@font-face {
+  font-display: swap;
+}
+
+/* Improve readability */
+.MuiTypography-root {
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Ensure interactive elements have sufficient spacing */
+.MuiList-root .MuiListItem-root + .MuiListItem-root {
+  margin-top: 2px;
+}
+
+/* Improve visual hierarchy */
+.MuiTypography-h1,
+.MuiTypography-h2,
+.MuiTypography-h3,
+.MuiTypography-h4,
+.MuiTypography-h5,
+.MuiTypography-h6 {
+  line-height: 1.2;
+  margin-bottom: 0.5em;
+}
+
+/* Ensure sufficient line height for readability */
+.MuiTypography-body1,
+.MuiTypography-body2 {
+  line-height: 1.6;
+}
+
+/* Improve form accessibility */
+.MuiFormControl-root {
+  margin-bottom: 16px;
+}
+
+.MuiFormHelperText-root {
+  margin-top: 4px;
+}
+
+/* Ensure error messages are clearly visible */
+.MuiFormHelperText-root.Mui-error {
+  font-weight: 500;
+}
+
+/* Improve table accessibility */
+.MuiTable-root {
+  border-collapse: collapse;
+}
+
+.MuiTableCell-root {
+  border: 1px solid rgba(224, 224, 224, 1);
+}
+
+[data-theme="dark"] .MuiTableCell-root {
+  border-color: rgba(81, 81, 81, 1);
+}
+
+/* Ensure sufficient spacing for touch targets */
+.MuiChip-root,
+.MuiBadge-root {
+  margin: 2px;
+}
+
+/* Improve notification accessibility */
+.MuiSnackbar-root {
+  max-width: 90vw;
+}
+
+.MuiAlert-root {
+  align-items: flex-start;
+}
+
+.MuiAlert-message {
+  padding-top: 2px;
+}

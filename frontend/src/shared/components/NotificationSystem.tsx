@@ -1,0 +1,272 @@
+/**
+ * Global Notification System with Toast Messages
+ */
+
+import { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+import {
+  Snackbar,
+  Alert,
+  AlertTitle,
+  IconButton,
+  Slide,
+  Stack,
+  Portal,
+  Box,
+} from '@mui/material';
+import {
+  Close as CloseIcon,
+  CheckCircle as SuccessIcon,
+  Error as ErrorIcon,
+  Warning as WarningIcon,
+  Info as InfoIcon,
+} from '@mui/icons-material';
+
+export type NotificationType = 'success' | 'error' | 'warning' | 'info';
+
+export interface Notification {
+  id: string;
+  type: NotificationType;
+  title?: string;
+  message: string;
+  duration?: number;
+  persistent?: boolean;
+  action?: {
+    label: string;
+    onClick: () => void;
+  };
+}
+
+interface NotificationContextType {
+  notifications: Notification[];
+  addNotification: (notification: Omit<Notification, 'id'>) => string;
+  removeNotification: (id: string) => void;
+  clearAll: () => void;
+  // Convenience methods
+  success: (message: string, options?: Partial<Notification>) => string;
+  error: (message: string, options?: Partial<Notification>) => string;
+  warning: (message: string, options?: Partial<Notification>) => string;
+  info: (message: string, options?: Partial<Notification>) => string;
+}
+
+const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
+
+interface NotificationProviderProps {
+  children: ReactNode;
+  maxNotifications?: number;
+}
+
+export function NotificationProvider({ 
+  children, 
+  maxNotifications = 5 
+}: NotificationProviderProps) {
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+
+  const addNotification = useCallback((notification: Omit<Notification, 'id'>) => {
+    const id = `notification-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const newNotification: Notification = {
+      id,
+      duration: 6000, // Default 6 seconds
+      ...notification,
+    };
+
+    setNotifications(prev => {
+      const updated = [newNotification, ...prev];
+      // Limit the number of notifications
+      return updated.slice(0, maxNotifications);
+    });
+
+    // Auto-remove non-persistent notifications
+    if (!newNotification.persistent && newNotification.duration && newNotification.duration > 0) {
+      setTimeout(() => {
+        removeNotification(id);
+      }, newNotification.duration);
+    }
+
+    return id;
+  }, [maxNotifications]);
+
+  const removeNotification = useCallback((id: string) => {
+    setNotifications(prev => prev.filter(notification => notification.id !== id));
+  }, []);
+
+  const clearAll = useCallback(() => {
+    setNotifications([]);
+  }, []);
+
+  // Convenience methods
+  const success = useCallback((message: string, options?: Partial<Notification>) => {
+    return addNotification({ type: 'success', message, ...options });
+  }, [addNotification]);
+
+  const error = useCallback((message: string, options?: Partial<Notification>) => {
+    return addNotification({ 
+      type: 'error', 
+      message, 
+      duration: 8000, // Errors stay longer
+      ...options 
+    });
+  }, [addNotification]);
+
+  const warning = useCallback((message: string, options?: Partial<Notification>) => {
+    return addNotification({ type: 'warning', message, ...options });
+  }, [addNotification]);
+
+  const info = useCallback((message: string, options?: Partial<Notification>) => {
+    return addNotification({ type: 'info', message, ...options });
+  }, [addNotification]);
+
+  const contextValue: NotificationContextType = {
+    notifications,
+    addNotification,
+    removeNotification,
+    clearAll,
+    success,
+    error,
+    warning,
+    info,
+  };
+
+  return (
+    <NotificationContext.Provider value={contextValue}>
+      {children}
+      <NotificationContainer />
+    </NotificationContext.Provider>
+  );
+}
+
+function NotificationContainer() {
+  const { notifications, removeNotification } = useNotifications();
+
+  return (
+    <Portal>
+      <Box
+        sx={{
+          position: 'fixed',
+          top: 88, // Below app bar
+          right: 16,
+          zIndex: 9999,
+          pointerEvents: 'none',
+        }}
+      >
+        <Stack spacing={1} sx={{ maxWidth: 400 }}>
+          {notifications.map((notification) => (
+            <NotificationItem
+              key={notification.id}
+              notification={notification}
+              onClose={() => removeNotification(notification.id)}
+            />
+          ))}
+        </Stack>
+      </Box>
+    </Portal>
+  );
+}
+
+interface NotificationItemProps {
+  notification: Notification;
+  onClose: () => void;
+}
+
+function NotificationItem({ notification, onClose }: NotificationItemProps) {
+  const getIcon = () => {
+    switch (notification.type) {
+      case 'success':
+        return <SuccessIcon />;
+      case 'error':
+        return <ErrorIcon />;
+      case 'warning':
+        return <WarningIcon />;
+      case 'info':
+        return <InfoIcon />;
+      default:
+        return <InfoIcon />;
+    }
+  };
+
+  return (
+    <Slide direction="left" in={true} mountOnEnter unmountOnExit>
+      <Alert
+        severity={notification.type}
+        icon={getIcon()}
+        sx={{
+          pointerEvents: 'auto',
+          minWidth: 300,
+          maxWidth: 400,
+          boxShadow: 3,
+          borderRadius: 2,
+          '& .MuiAlert-message': {
+            width: '100%',
+          },
+        }}
+        action={
+          <Stack direction="row" spacing={1} alignItems="center">
+            {notification.action && (
+              <IconButton
+                size="small"
+                onClick={notification.action.onClick}
+                sx={{ color: 'inherit' }}
+                aria-label={notification.action.label}
+              >
+                {notification.action.label}
+              </IconButton>
+            )}
+            <IconButton
+              size="small"
+              onClick={onClose}
+              sx={{ color: 'inherit' }}
+              aria-label="Close notification"
+            >
+              <CloseIcon fontSize="small" />
+            </IconButton>
+          </Stack>
+        }
+      >
+        {notification.title && (
+          <AlertTitle sx={{ fontWeight: 600 }}>
+            {notification.title}
+          </AlertTitle>
+        )}
+        {notification.message}
+      </Alert>
+    </Slide>
+  );
+}
+
+// Hook to use notifications
+export function useNotifications() {
+  const context = useContext(NotificationContext);
+  if (context === undefined) {
+    throw new Error('useNotifications must be used within a NotificationProvider');
+  }
+  return context;
+}
+
+// Legacy Snackbar component for backward compatibility
+interface LegacySnackbarProps {
+  open: boolean;
+  message: string;
+  severity?: NotificationType;
+  onClose: () => void;
+  autoHideDuration?: number;
+}
+
+export function LegacySnackbar({
+  open,
+  message,
+  severity = 'info',
+  onClose,
+  autoHideDuration = 6000,
+}: LegacySnackbarProps) {
+  return (
+    <Snackbar
+      open={open}
+      autoHideDuration={autoHideDuration}
+      onClose={onClose}
+      anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+    >
+      <Alert onClose={onClose} severity={severity} sx={{ width: '100%' }}>
+        {message}
+      </Alert>
+    </Snackbar>
+  );
+}
