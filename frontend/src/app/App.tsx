@@ -6,7 +6,7 @@ import MindMapViewer from '@features/visualization/components/MindMapViewer';
 import ArchitectureViewer from '@features/visualization/components/ArchitectureViewer';
 import CodeExplorer from '@features/exploration/components/CodeExplorer';
 import SearchInterface from '@features/search/components/SearchInterface';
-import performanceMonitor from '@shared/utils/performance';
+import { performanceMonitor } from '@shared/utils';
 import type { AnalysisData, CodeElement } from '@shared/types';
 
 function App() {
