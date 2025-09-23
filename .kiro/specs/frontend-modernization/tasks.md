@@ -44,14 +44,14 @@
   - Ensure WCAG 2.1 AA color contrast compliance
   - _Requirements: 2.1, 2.2, 2.3_
 
-- [ ] 4. Enhance project input component
-- [ ] 4.1 Modernize project input with drag & drop support
+- [x] 4. Enhance project input component
+- [x] 4.1 Modernize project input with drag & drop support
   - Add drag and drop functionality for files and folders
   - Implement path validation with real-time feedback
   - Create recent projects history with local storage
   - _Requirements: 1.1, 7.2_
 
-- [ ] 4.2 Add enhanced loading states and progress indicators
+- [x] 4.2 Add enhanced loading states and progress indicators
   - Implement progress indicators with cancellation support
   - Add skeleton screens during analysis loading
   - Create optimistic UI updates for better perceived performance
