@@ -130,7 +130,7 @@ export const Section = forwardRef<HTMLElement, SectionProps>(function Section({
   headingId,
   'aria-label': ariaLabel, 
   'aria-labelledby': ariaLabelledby,
-  level,
+  level: _level,
   ...props 
 }, ref) {
   return (
