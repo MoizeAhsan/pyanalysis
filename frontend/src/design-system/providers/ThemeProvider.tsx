@@ -5,6 +5,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { ThemeProvider as MuiThemeProvider, CssBaseline } from '@mui/material';
 import { lightTheme, darkTheme, type ThemeMode } from '../themes';
+import { useHighContrast, getHighContrastTheme } from '@shared/hooks/useAccessibility';
 
 interface ThemeContextType {
   mode: ThemeMode;
@@ -12,6 +13,7 @@ interface ThemeContextType {
   toggleMode: () => void;
   systemPreference: 'light' | 'dark';
   effectiveMode: 'light' | 'dark';
+  isHighContrast: boolean;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
@@ -23,6 +25,8 @@ interface ThemeProviderProps {
 const THEME_STORAGE_KEY = 'python-analyzer-theme-mode';
 
 export function ThemeProvider({ children }: ThemeProviderProps) {
+  const { isHighContrast } = useHighContrast();
+  
   // Detect system preference
   const [systemPreference, setSystemPreference] = useState<'light' | 'dark'>(() => {
     if (typeof window !== 'undefined' && window.matchMedia) {
@@ -120,10 +124,16 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
     toggleMode,
     systemPreference,
     effectiveMode,
+    isHighContrast,
   };
 
   // Select the appropriate theme
-  const currentTheme = effectiveMode === 'dark' ? darkTheme : lightTheme;
+  let currentTheme = effectiveMode === 'dark' ? darkTheme : lightTheme;
+  
+  // Apply high contrast modifications if needed
+  if (isHighContrast) {
+    currentTheme = getHighContrastTheme(currentTheme);
+  }
 
   return (
     <ThemeContext.Provider value={contextValue}>

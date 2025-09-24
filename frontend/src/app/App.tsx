@@ -4,6 +4,7 @@ import { AnimatePresence } from 'framer-motion';
 import { AppShell } from './components/AppShell';
 import { AnimatedPage } from '@shared/components/AnimatedPage';
 import { useNotifications } from '@shared/components/NotificationSystem';
+import { AccessibilityButton } from '@shared/components/AccessibilitySettings';
 import {
   useAnalysisTriggered,
   useAnalysisData,
@@ -304,6 +305,9 @@ function App() {
       <AnimatePresence mode="wait" initial={false}>
         {renderContent()}
       </AnimatePresence>
+      
+      {/* Accessibility Settings Button */}
+      <AccessibilityButton />
     </AppShell>
   );
 }

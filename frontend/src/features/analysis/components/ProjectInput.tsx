@@ -31,6 +31,8 @@ import {
   Cancel,
 } from '@mui/icons-material';
 import EnhancedButton from '../../../components/EnhancedButton.jsx';
+import { StatusAnnouncer } from '@shared/components/LiveRegion';
+import { AriaDescription } from '@shared/components/AriaComponents';
 
 interface ProjectInputProps {
   onAnalysisStart: () => void;
@@ -512,12 +514,18 @@ const ProjectInput: React.FC<ProjectInputProps> = ({
           variant="outlined"
           error={pathValidation?.type === 'error'}
           helperText={pathValidation?.message}
+          aria-describedby={`${pathValidation ? 'path-validation-message' : ''} path-input-description`}
+          aria-invalid={pathValidation?.type === 'error'}
+          aria-required="true"
+          inputProps={{
+            'aria-label': 'Enter the absolute path to your Python project directory',
+          }}
           InputProps={{
             endAdornment: pathValidation && (
               <InputAdornment position="end">
                 {getValidationIcon() && (
                   <Tooltip title={pathValidation.message}>
-                    <span>{getValidationIcon()}</span>
+                    <span role="img" aria-label={pathValidation.type}>{getValidationIcon()}</span>
                   </Tooltip>
                 )}
               </InputAdornment>
@@ -555,24 +563,61 @@ const ProjectInput: React.FC<ProjectInputProps> = ({
           }}
         />
 
+        {/* Hidden descriptions for screen readers */}
+        <AriaDescription id="path-input-description">
+          Enter the full path to your Python project directory. The path should be absolute and contain Python files. Examples: /home/user/projects/my-python-app or C:\Users\user\projects\my-python-app
+        </AriaDescription>
+
+        {pathValidation && (
+          <AriaDescription id="path-validation-message">
+            Path validation: {pathValidation.message}
+          </AriaDescription>
+        )}
+
+        {/* Status announcer for analysis progress */}
+        <StatusAnnouncer
+          status={
+            isAnalyzing ? 'loading' :
+            localError ? 'error' :
+            localSuccess ? 'success' :
+            'idle'
+          }
+          loadingMessage={analysisProgress?.message || 'Analyzing project...'}
+          successMessage={localSuccess}
+          errorMessage={localError}
+        />
+
         {/* Recent Projects */}
         {recentProjects.length > 0 && (
-          <Box sx={{ mb: 2 }}>
+          <Box sx={{ mb: 2 }} role="region" aria-labelledby="recent-projects-heading">
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
               <IconButton
                 size="small"
                 onClick={() => setShowRecentProjects(!showRecentProjects)}
                 sx={{ color: 'primary.main' }}
+                aria-expanded={showRecentProjects}
+                aria-controls="recent-projects-list"
+                aria-label={`${showRecentProjects ? 'Hide' : 'Show'} recent projects`}
               >
                 <History />
               </IconButton>
-              <Typography variant="body2" color="primary.main" sx={{ fontWeight: 500 }}>
+              <Typography 
+                id="recent-projects-heading"
+                variant="body2" 
+                color="primary.main" 
+                sx={{ fontWeight: 500 }}
+                component="h3"
+              >
                 Recent Projects ({recentProjects.length})
               </Typography>
-              {showRecentProjects ? <ExpandLess /> : <ExpandMore />}
+              {showRecentProjects ? <ExpandLess aria-hidden="true" /> : <ExpandMore aria-hidden="true" />}
               <Box sx={{ flexGrow: 1 }} />
-              <Tooltip title="Clear recent projects">
-                <IconButton size="small" onClick={clearRecentProjects}>
+              <Tooltip title="Clear all recent projects">
+                <IconButton 
+                  size="small" 
+                  onClick={clearRecentProjects}
+                  aria-label="Clear all recent projects"
+                >
                   <Clear fontSize="small" />
                 </IconButton>
               </Tooltip>
@@ -588,11 +633,22 @@ const ProjectInput: React.FC<ProjectInputProps> = ({
                     ? 'rgba(255, 255, 255, 0.02)'
                     : 'rgba(0, 0, 0, 0.02)',
                 }}
+                role="region"
+                aria-label="Recent projects list"
               >
-                <List dense>
+                <List 
+                  dense 
+                  id="recent-projects-list"
+                  role="listbox"
+                  aria-label="Select a recent project"
+                >
                   {recentProjects.map((project, index) => (
                     <ListItem key={index} disablePadding>
-                      <ListItemButton onClick={() => handleRecentProjectSelect(project)}>
+                      <ListItemButton 
+                        onClick={() => handleRecentProjectSelect(project)}
+                        role="option"
+                        aria-label={`Select project: ${project.path}, last analyzed ${project.lastAnalyzed}`}
+                      >
                         <ListItemText
                           primary={project.path}
                           secondary={`Last analyzed: ${project.lastAnalyzed}`}
