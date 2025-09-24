@@ -46,6 +46,14 @@ class PerformanceMonitor {
     this.metrics.clear();
   }
 
+  // Track custom events for analytics
+  trackEvent(name: string, data?: Record<string, unknown>): void {
+    const timestamp = performance.now();
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`📊 Event: ${name}`, { timestamp, ...data });
+    }
+  }
+
   // Monitor Core Web Vitals
   observeWebVitals(): void {
     if (typeof window === 'undefined' || !('PerformanceObserver' in window)) {

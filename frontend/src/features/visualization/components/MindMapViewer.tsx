@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, memo } from 'react';
 import {
   Box,
   Paper,
@@ -53,7 +53,7 @@ interface MindMapViewerProps {
 type GraphType = 'cytoscape' | 'force' | 'vis';
 type LayoutType = 'cose-bilkent' | 'dagre' | 'breadthfirst' | 'circle' | 'grid' | 'concentric';
 
-const MindMapViewer: React.FC<MindMapViewerProps> = ({ data = null }) => {
+const MindMapViewer: React.FC<MindMapViewerProps> = memo(({ data }) => {
   const theme = useTheme();
   const [graphType, setGraphType] = useState<GraphType>('cytoscape');
   const [selectedNode, setSelectedNode] = useState<any>(null);
@@ -876,6 +876,8 @@ const MindMapViewer: React.FC<MindMapViewerProps> = ({ data = null }) => {
       />
     </Box>
   );
-};
+});
+
+MindMapViewer.displayName = 'MindMapViewer';
 
 export default MindMapViewer;

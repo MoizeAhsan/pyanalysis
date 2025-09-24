@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, useRef, memo } from 'react';
 import {
   Box,
   Paper,
@@ -58,7 +58,7 @@ interface CircularDependency {
   severity: 'high' | 'medium' | 'low';
 }
 
-const ArchitectureViewer: React.FC<ArchitectureViewerProps> = ({ data = null }) => {
+const ArchitectureViewer: React.FC<ArchitectureViewerProps> = memo(({ data = null }) => {
   const theme = useTheme();
   const [viewType, setViewType] = useState<ViewType>('dependency');
   const [layoutType, setLayoutType] = useState<LayoutType>('dagre');
@@ -999,6 +999,8 @@ const ArchitectureViewer: React.FC<ArchitectureViewerProps> = ({ data = null }) 
       </Paper>
     </Box>
   );
-};
+});
+
+ArchitectureViewer.displayName = 'ArchitectureViewer';
 
 export default ArchitectureViewer;
