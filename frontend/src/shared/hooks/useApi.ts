@@ -1,6 +1,13 @@
 import { useState, useCallback } from 'react';
 import { apiService } from '@shared/services/api';
-import type { AnalysisData, AppError } from '@shared/types';
+import type { ApiResponse, AnalysisData, ArchitecturalData, SearchResponse } from '@shared/services/api';
+
+interface AppError {
+  type: 'network' | 'validation' | 'server';
+  message: string;
+  recoverable: boolean;
+  retryAction?: () => void;
+}
 
 interface UseApiState<T> {
   data: T | null;
@@ -14,7 +21,7 @@ interface UseApiReturn<T, TArgs extends unknown[] = unknown[]> extends UseApiSta
 }
 
 function useApi<T = unknown, TArgs extends unknown[] = unknown[]>(
-  apiFunction: (...args: TArgs) => Promise<T>
+  apiFunction: (...args: TArgs) => Promise<ApiResponse<T>>
 ): UseApiReturn<T, TArgs> {
   const [state, setState] = useState<UseApiState<T>>({
     data: null,
@@ -28,12 +35,25 @@ function useApi<T = unknown, TArgs extends unknown[] = unknown[]>(
 
       try {
         const result = await apiFunction(...args);
-        setState({ data: result, loading: false, error: null });
-        return result;
+        
+        // Handle API response format: { success: boolean, message: string, data: T }
+        if (result.success) {
+          setState({ data: result.data, loading: false, error: null });
+          return result.data;
+        } else {
+          const appError: AppError = {
+            type: 'server',
+            message: result.message || 'Server returned an error',
+            recoverable: true,
+            retryAction: () => execute(...args),
+          };
+          setState({ data: null, loading: false, error: appError });
+          return null;
+        }
       } catch (error) {
         const appError: AppError = {
           type: 'network',
-          message: error instanceof Error ? error.message : 'An unknown error occurred',
+          message: apiService.getErrorMessage(error),
           recoverable: true,
           retryAction: () => execute(...args),
         };
@@ -58,14 +78,47 @@ function useApi<T = unknown, TArgs extends unknown[] = unknown[]>(
 
 // Specific hooks for common API operations
 export function useAnalyzeProject() {
-  return useApi<AnalysisData, [string]>((projectPath: string) => 
+  return useApi<{
+    project_name: string;
+    total_files: number;
+    total_lines: number;
+    modules_count: number;
+    classes_count: number;
+    functions_count: number;
+    total_elements: number;
+  }, [string]>((projectPath: string) => 
     apiService.analyzeProject(projectPath)
   );
 }
 
+export function useGetAnalysisData() {
+  return useApi<AnalysisData, []>(() => 
+    apiService.getAnalysisData()
+  );
+}
+
+export function useGetArchitecturalData() {
+  return useApi<ArchitecturalData, []>(() => 
+    apiService.getArchitecturalData()
+  );
+}
+
+export function useSearchElements() {
+  return useApi<SearchResponse, [string, string?, number?, number?, number?]>(
+    (query: string, elementType?: string, page?: number, pageSize?: number, maxResults?: number) => 
+      apiService.searchElements(query, elementType, page, pageSize, maxResults)
+  );
+}
+
 export function useHealthCheck() {
-  return useApi<{ status: string; version?: string }, []>(() => 
-    apiService.healthCheck()
+  return useApi<{ message: string }, []>(() => 
+    apiService.healthCheck().then(data => ({ success: true, message: 'OK', data }))
+  );
+}
+
+export function useResetAnalysis() {
+  return useApi<{ session_cleared: boolean }, []>(() => 
+    apiService.resetAnalysis()
   );
 }
 

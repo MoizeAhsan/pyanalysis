@@ -33,6 +33,7 @@ import {
 import EnhancedButton from '../../../components/EnhancedButton.jsx';
 import { StatusAnnouncer } from '@shared/components/LiveRegion';
 import { AriaDescription } from '@shared/components/AriaComponents';
+import { apiService } from '@shared/services/api';
 
 interface ProjectInputProps {
   onAnalysisStart: () => void;
@@ -231,18 +232,9 @@ const ProjectInput: React.FC<ProjectInputProps> = ({
     simulateProgressUpdates();
 
     try {
-      const response = await fetch('/api/analyze', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ project_path: projectPath }),
-        signal: abortControllerRef.current.signal,
-      });
+      const result = await apiService.analyzeProject(projectPath);
 
-      const data = await response.json();
-
-      if (response.ok && data.success) {
+      if (result.success) {
         setAnalysisProgress({
           stage: 'Complete',
           progress: 100,
@@ -257,14 +249,14 @@ const ProjectInput: React.FC<ProjectInputProps> = ({
           setShowOptimisticUI(false);
         }, 1500);
 
-        const successMessage = data.message || 'Analysis completed successfully';
+        const successMessage = result.message || 'Analysis completed successfully';
         setLocalSuccess(successMessage);
         saveToRecentProjects(projectPath);
         if (onAnalysisComplete) {
           onAnalysisComplete(successMessage);
         }
       } else {
-        const errorMessage = data.detail || data.message || 'Analysis failed';
+        const errorMessage = result.message || 'Analysis failed';
         setLocalError(errorMessage);
         setAnalysisProgress(null);
         setIsAnalyzing(false);
@@ -282,7 +274,7 @@ const ProjectInput: React.FC<ProjectInputProps> = ({
         return;
       }
 
-      const errorMessage = 'Failed to connect to analysis service. Make sure the backend is running.';
+      const errorMessage = apiService.getErrorMessage(err);
       setLocalError(errorMessage);
       setAnalysisProgress(null);
       setIsAnalyzing(false);
@@ -317,25 +309,21 @@ const ProjectInput: React.FC<ProjectInputProps> = ({
     setShowOptimisticUI(false);
 
     try {
-      const response = await fetch('/api/reset', {
-        method: 'POST',
-      });
+      const result = await apiService.resetAnalysis();
 
-      const data = await response.json();
-
-      if (response.ok && data.success) {
-        setLocalSuccess(data.message || 'Analysis reset successfully');
+      if (result.success) {
+        setLocalSuccess(result.message || 'Analysis reset successfully');
         setProjectPath('');
         setPathValidation(null);
         if (onReset) {
           onReset();
         }
       } else {
-        const errorMessage = data.detail || data.message || 'Reset failed';
+        const errorMessage = result.message || 'Reset failed';
         setLocalError(errorMessage);
       }
     } catch (err) {
-      const errorMessage = 'Failed to reset analysis. Make sure the backend is running.';
+      const errorMessage = apiService.getErrorMessage(err);
       setLocalError(errorMessage);
       console.error('Reset error:', err);
     }

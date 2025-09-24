@@ -1,14 +1,150 @@
-// Core data types
-export interface AnalysisData {
-  project_name: string;
-  total_files: number;
-  total_lines: number;
-  modules: ModuleData[];
-  dependencies: DependencyData[];
-  architecture: ArchitectureData;
-  mindmap: MindMapData;
+// Backend API Response Types (matching exact backend structure)
+export interface ApiResponse<T = any> {
+  success: boolean;
+  message: string;
+  data: T;
 }
 
+export interface ProjectInfo {
+  name: string;
+  path: string;
+  total_files: number;
+  total_lines: number;
+  languages: string[];
+  analysis_timestamp: string;
+}
+
+export interface Location {
+  file_path: string;
+  line_number: number;
+  column_number: number;
+  end_line: number;
+  end_column: number;
+}
+
+export interface Parameter {
+  name: string;
+  type_hint?: string;
+  default_value?: string;
+}
+
+export interface Usage {
+  location: Location;
+  context: string;
+  usage_type: string;
+}
+
+export interface CodeElement {
+  id: string;
+  name: string;
+  type: string;
+  location: Location;
+  docstring?: string;
+  parameters: Parameter[];
+  return_type?: string;
+  decorators: string[];
+  dependencies: string[];
+  usages: Usage[];
+  metadata: Record<string, any>;
+}
+
+export interface DependencyGraphNode {
+  id: string;
+  name: string;
+  type: string;
+  metadata: Record<string, any>;
+}
+
+export interface DependencyGraphEdge {
+  source: string;
+  target: string;
+  relationship_type: string;
+  weight: number;
+}
+
+export interface DependencyGraphMetrics {
+  node_count: number;
+  edge_count: number;
+  density: number;
+  avg_degree: number;
+}
+
+export interface DependencyGraph {
+  nodes: Record<string, DependencyGraphNode>;
+  edges: DependencyGraphEdge[];
+  metrics?: DependencyGraphMetrics;
+}
+
+export interface ArchitecturalPattern {
+  name: string;
+  type: string;
+  confidence: number;
+  elements: string[];
+  description: string;
+}
+
+export interface AnalysisData {
+  has_data: boolean;
+  project_info?: ProjectInfo;
+  modules: CodeElement[];
+  classes: CodeElement[];
+  functions: CodeElement[];
+  dependency_graph?: DependencyGraph;
+  architectural_patterns: ArchitecturalPattern[];
+  statistics: {
+    total_elements: number;
+    modules_count: number;
+    classes_count: number;
+    functions_count: number;
+    patterns_count: number;
+  };
+}
+
+export interface ArchitecturalData {
+  has_data: boolean;
+  project_info?: ProjectInfo;
+  modules: CodeElement[];
+  dependency_graph?: DependencyGraph;
+  architectural_patterns: ArchitecturalPattern[];
+  circular_dependencies: string[][];
+  statistics: {
+    modules_count: number;
+    classes_count: number;
+    functions_count: number;
+    patterns_count: number;
+  };
+}
+
+export interface SearchMatchResult {
+  element: CodeElement;
+  match_type: 'name' | 'docstring' | 'file_path';
+  match_text: string;
+  // Enhanced client-side fields
+  fuzzyScore?: number;
+  nameMatches?: any[];
+  docMatches?: any[];
+  relevanceScore?: number;
+}
+
+export interface SearchResponse {
+  has_data: boolean;
+  results: SearchMatchResult[];
+  query: string;
+  element_type?: string;
+  pagination?: {
+    page: number;
+    page_size: number;
+    total_results: number;
+    total_pages: number;
+    has_next: boolean;
+    has_prev: boolean;
+    start_index: number;
+    end_index: number;
+  };
+  truncated?: boolean;
+}
+
+// Legacy types for backward compatibility - gradually migrate away from these
 export interface ModuleData {
   name: string;
   path: string;
@@ -94,17 +230,6 @@ export interface MindMapEdge {
   type: 'contains' | 'imports' | 'inherits';
 }
 
-// UI-specific types
-export interface CodeElement {
-  id: string;
-  name: string;
-  type: 'module' | 'class' | 'function' | 'variable';
-  path: string;
-  line_number?: number;
-  description?: string;
-  metadata?: Record<string, unknown>;
-}
-
 export interface SearchResult {
   element: CodeElement;
   score: number;
@@ -142,4 +267,39 @@ export interface PerformanceMetric {
   endTime?: number;
   duration?: number;
   metadata?: Record<string, unknown>;
+}
+
+// Analysis request types
+export interface AnalyzeRequest {
+  project_path: string;
+}
+
+export interface AnalyzeStats {
+  project_name: string;
+  total_files: number;
+  total_lines: number;
+  modules_count: number;
+  classes_count: number;
+  functions_count: number;
+  total_elements: number;
+}
+
+// Visualization data transformation helpers
+export interface VisualizationNode {
+  id: string;
+  label: string;
+  type: 'module' | 'class' | 'function';
+  size?: number;
+  color?: string;
+  x?: number;
+  y?: number;
+  metadata?: Record<string, any>;
+}
+
+export interface VisualizationEdge {
+  source: string;
+  target: string;
+  type: string;
+  weight?: number;
+  color?: string;
 }
