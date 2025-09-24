@@ -58,6 +58,57 @@ class ApiService {
     await this.client.delete(`/analysis/${analysisId}`);
   }
 
+  // Search endpoints
+  async searchElements(
+    query: string,
+    elementType?: string | null,
+    page: number = 1,
+    pageSize: number = 20,
+    maxResults: number = 100
+  ): Promise<{
+    success: boolean;
+    message: string;
+    data: {
+      has_data: boolean;
+      results: Array<{
+        element: any;
+        match_type: string;
+        match_text: string;
+      }>;
+      query: string;
+      element_type?: string;
+      pagination?: {
+        page: number;
+        page_size: number;
+        total_results: number;
+        total_pages: number;
+        has_next: boolean;
+        has_prev: boolean;
+        start_index: number;
+        end_index: number;
+      };
+    };
+  }> {
+    const params = new URLSearchParams({
+      q: query,
+      page: page.toString(),
+      page_size: pageSize.toString(),
+      max_results: maxResults.toString(),
+    });
+
+    if (elementType) {
+      params.append('element_type', elementType);
+    }
+
+    const response = await this.client.get(`/search?${params.toString()}`);
+    return response.data;
+  }
+
+  async getAnalysisData(): Promise<any> {
+    const response = await this.client.get('/data');
+    return response.data;
+  }
+
   // Health check
   async healthCheck(): Promise<{ status: string; version?: string }> {
     const response = await this.client.get('/health');
