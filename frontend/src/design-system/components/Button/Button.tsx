@@ -1,6 +1,6 @@
 /**
  * Enhanced Button Component
- * Extends Material-UI Button with additional features and consistent styling
+ * Extends Material-UI Button with additional features, consistent styling, and smooth animations
  */
 
 import { forwardRef } from 'react';
@@ -10,7 +10,9 @@ import {
   CircularProgress,
   Box,
 } from '@mui/material';
+import { motion } from 'framer-motion';
 import { spacingTokens } from '../../tokens';
+import { useMotionSafeAnimations } from '../../../shared/hooks/useMotionSafeAnimations';
 
 export interface ButtonProps extends Omit<MuiButtonProps, 'size'> {
   /** Button size */
@@ -25,6 +27,8 @@ export interface ButtonProps extends Omit<MuiButtonProps, 'size'> {
   fullWidth?: boolean;
   /** Custom loading text */
   loadingText?: string;
+  /** Whether to enable smooth animations */
+  animated?: boolean;
 }
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
@@ -38,11 +42,13 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       endIcon,
       size = 'medium',
       variant = 'contained',
+      animated = true,
       ...props
     },
     ref
   ) => {
     const isDisabled = disabled || loading;
+    const { isReducedMotion, touchHover } = useMotionSafeAnimations();
 
     const sizeStyles = {
       small: {
@@ -62,7 +68,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       },
     };
 
-    return (
+    const buttonContent = (
       <MuiButton
         ref={ref}
         variant={variant}
@@ -86,12 +92,18 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
           fontWeight: 500,
           position: 'relative',
           transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-          '&:hover': {
-            transform: 'translateY(-1px)',
-            boxShadow: (theme) => theme.shadows[4],
+          // Only apply hover transforms on devices that support hover
+          '@media (hover: hover)': {
+            ...(animated && !isReducedMotion && {
+              '&:hover': {
+                transform: 'translateY(-1px)',
+                boxShadow: (theme) => theme.shadows[4],
+              }
+            }),
           },
+          // Touch-friendly active state
           '&:active': {
-            transform: 'translateY(0)',
+            transform: 'translateY(0) scale(0.98)',
           },
           '&.Mui-disabled': {
             transform: 'none',
@@ -114,6 +126,20 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         )}
       </MuiButton>
     );
+
+    if (animated && !isDisabled && !isReducedMotion) {
+      return (
+        <motion.div
+          whileHover={{ scale: 1.02 }}
+          {...touchHover}
+          style={{ display: 'inline-block' }}
+        >
+          {buttonContent}
+        </motion.div>
+      );
+    }
+
+    return buttonContent;
   }
 );
 

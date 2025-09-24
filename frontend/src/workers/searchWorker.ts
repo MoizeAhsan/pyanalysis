@@ -18,7 +18,7 @@ export interface SearchWorkerResponse {
 }
 
 // In-memory search index
-let searchIndex: Map<string, any> = new Map();
+let searchIndex: any = null;
 let isIndexing = false;
 
 // Handle messages from main thread

@@ -36,6 +36,7 @@ import {
   Dashboard as DashboardIcon,
   PlayArrow,
 } from '@mui/icons-material';
+import { motion } from 'framer-motion';
 import { ThemeSwitcher } from '@design-system/components/ThemeSwitcher';
 import { FocusManager, AriaUtils } from '@shared/utils/accessibility';
 import { useKeyboardNavigation } from '@shared/hooks/useKeyboardNavigation';
@@ -248,84 +249,89 @@ export function AppShell({ children, currentView = 'home', onViewChange }: AppSh
     return (
       <React.Fragment key={item.id}>
         <ListItem disablePadding sx={{ display: 'block' }}>
-          <ListItemButton
-            {...itemProps}
-            onClick={() => handleItemClick(item.id, hasChildren)}
-            disabled={item.disabled || false}
-            selected={Boolean(isSelected || isChildSelected)}
-            sx={{
-              minHeight: 48,
-              pl: 2 + depth * 2,
-              pr: 2,
-              borderRadius: 1,
-              mx: 1,
-              mb: 0.5,
-              transition: 'all 0.2s ease-in-out',
-              '&:hover': {
-                backgroundColor: 'action.hover',
-                transform: 'translateX(4px)',
-              },
-              '&:focus-visible': {
-                outline: `2px solid ${theme.palette.primary.main}`,
-                outlineOffset: 2,
-                backgroundColor: 'action.focus',
-              },
-              '&.Mui-selected': {
-                backgroundColor: 'primary.main',
-                color: 'primary.contrastText',
+          <motion.div
+            {...(!item.disabled && {
+              whileHover: { x: 4, transition: { duration: 0.15, ease: [0, 0, 0.2, 1] } },
+              whileTap: { scale: 0.98, transition: { duration: 0.15, ease: [0, 0, 0.2, 1] } }
+            })}
+            style={{ borderRadius: 8, margin: '0 8px 4px 8px' }}
+          >
+            <ListItemButton
+              {...itemProps}
+              onClick={() => handleItemClick(item.id, hasChildren)}
+              disabled={item.disabled || false}
+              selected={Boolean(isSelected || isChildSelected)}
+              sx={{
+                minHeight: 48,
+                pl: 2 + depth * 2,
+                pr: 2,
+                borderRadius: 1,
+                transition: 'all 0.2s ease-in-out',
                 '&:hover': {
-                  backgroundColor: 'primary.dark',
+                  backgroundColor: 'action.hover',
                 },
                 '&:focus-visible': {
-                  outline: `2px solid ${theme.palette.primary.contrastText}`,
+                  outline: `2px solid ${theme.palette.primary.main}`,
+                  outlineOffset: 2,
+                  backgroundColor: 'action.focus',
                 },
-                '& .MuiListItemIcon-root': {
+                '&.Mui-selected': {
+                  backgroundColor: 'primary.main',
                   color: 'primary.contrastText',
+                  '&:hover': {
+                    backgroundColor: 'primary.dark',
+                  },
+                  '&:focus-visible': {
+                    outline: `2px solid ${theme.palette.primary.contrastText}`,
+                  },
+                  '& .MuiListItemIcon-root': {
+                    color: 'primary.contrastText',
+                  },
                 },
-              },
-              '&.Mui-disabled': {
-                opacity: 0.5,
-              },
-            }}
-            aria-label={`${item.label}${hasChildren ? (isExpanded ? ', expanded' : ', collapsed') : ''}${item.disabled ? ', disabled' : ''}`}
-            aria-expanded={hasChildren ? isExpanded : undefined}
-            aria-current={isSelected ? 'page' : undefined}
-            aria-describedby={item.disabled ? `${item.id}-disabled-desc` : undefined}
-          >
-            <ListItemIcon
-              sx={{
-                minWidth: 40,
-                color: 'inherit',
-                transition: 'transform 0.2s ease-in-out',
+                '&.Mui-disabled': {
+                  opacity: 0.5,
+                },
               }}
-              aria-hidden="true"
+              aria-label={`${item.label}${hasChildren ? (isExpanded ? ', expanded' : ', collapsed') : ''}${item.disabled ? ', disabled' : ''}`}
+              aria-expanded={hasChildren ? isExpanded : undefined}
+              aria-current={isSelected ? 'page' : undefined}
+              aria-describedby={item.disabled ? `${item.id}-disabled-desc` : undefined}
             >
-              {item.icon}
-            </ListItemIcon>
-            <ListItemText
-              primary={item.label}
-              sx={{
-                '& .MuiTypography-root': {
-                  fontWeight: isSelected ? 600 : 400,
-                  fontSize: depth > 0 ? '0.875rem' : '1rem',
-                },
-              }}
-            />
-            {hasChildren && (
-              <Box
-                component="span"
-                sx={{ 
+              <ListItemIcon
+                sx={{
+                  minWidth: 40,
                   color: 'inherit',
-                  display: 'flex',
-                  alignItems: 'center',
-                  ml: 1,
+                  transition: 'transform 0.2s ease-in-out',
                 }}
                 aria-hidden="true"
               >
-                {isExpanded ? <ExpandLess /> : <ExpandMore />}
-              </Box>
-            )}
-          </ListItemButton>
+                {item.icon}
+              </ListItemIcon>
+              <ListItemText
+                primary={item.label}
+                sx={{
+                  '& .MuiTypography-root': {
+                    fontWeight: isSelected ? 600 : 400,
+                    fontSize: depth > 0 ? '0.875rem' : '1rem',
+                  },
+                }}
+              />
+              {hasChildren && (
+                <Box
+                  component="span"
+                  sx={{ 
+                    color: 'inherit',
+                    display: 'flex',
+                    alignItems: 'center',
+                    ml: 1,
+                  }}
+                  aria-hidden="true"
+                >
+                  {isExpanded ? <ExpandLess /> : <ExpandMore />}
+                </Box>
+              )}
+            </ListItemButton>
+          </motion.div>
           
           {/* Hidden description for disabled items */}
           {item.disabled && (
