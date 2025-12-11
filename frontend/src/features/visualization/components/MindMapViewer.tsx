@@ -182,9 +182,9 @@ const MindMapViewer: React.FC<MindMapViewerProps> = memo(({ data }) => {
     if (!data) return null;
 
     const modules = data.modules || [];
-    const classes = modules.flatMap(m => m.classes || []);
-    const functions = modules.flatMap(m => m.functions || []);
-    const dependencies = data.dependencies || [];
+    const classes = data.classes || [];
+    const functions = data.functions || [];
+    const dependencies = data.dependency_graph?.edges || [];
     const nodes: any[] = [];
     const edges: any[] = [];
     const nodeIds = new Set<string>();
@@ -194,18 +194,19 @@ const MindMapViewer: React.FC<MindMapViewerProps> = memo(({ data }) => {
       const nodeId = module.name;
       if (!nodeIds.has(nodeId)) {
         nodeIds.add(nodeId);
-        const fileName = module.path ?
-          module.path.split('/').pop()?.replace('.py', '') :
-          module.name;
+        const filePath = module.location?.file_path;
+        const fileName = filePath
+          ? filePath.split('/').pop()?.replace('.py', '')
+          : module.name;
 
         nodes.push({
           id: nodeId,
           label: fileName,
           name: module.name,
           type: 'module',
-          file_path: module.path,
-          line_number: 1,
-          docstring: `Module with ${module.functions.length} functions and ${module.classes.length} classes`
+          file_path: filePath,
+          line_number: module.location?.line_number || 1,
+          docstring: module.docstring || `Module: ${module.name}`
         });
       }
     });
@@ -220,10 +221,11 @@ const MindMapViewer: React.FC<MindMapViewerProps> = memo(({ data }) => {
           label: cls.name,
           name: cls.name,
           type: 'class',
-          line_number: cls.line_number,
+          file_path: cls.location?.file_path,
+          line_number: cls.location?.line_number,
           docstring: cls.docstring,
-          parameters: cls.methods?.map(m => m.name) || [],
-          decorators: []
+          parameters: cls.parameters?.map((p: { name: string }) => p.name) || [],
+          decorators: cls.decorators || []
         });
       }
     });
@@ -238,17 +240,18 @@ const MindMapViewer: React.FC<MindMapViewerProps> = memo(({ data }) => {
           label: func.name,
           name: func.name,
           type: 'function',
-          line_number: func.line_number,
+          file_path: func.location?.file_path,
+          line_number: func.location?.line_number,
           docstring: func.docstring,
           parameters: func.parameters,
           return_type: func.return_type,
-          decorators: []
+          decorators: func.decorators || []
         });
       }
     });
 
-    // Add edges from dependencies
-    dependencies.forEach((dep, index) => {
+    // Add edges from dependency graph
+    dependencies.forEach((dep: { source: string; target: string; relationship_type: string; weight?: number }, index: number) => {
       if (nodeIds.has(dep.source) && nodeIds.has(dep.target)) {
         edges.push({
           id: `e${index}`,
@@ -256,42 +259,43 @@ const MindMapViewer: React.FC<MindMapViewerProps> = memo(({ data }) => {
           target: dep.target,
           from: dep.source,
           to: dep.target,
-          relationship_type: dep.type,
+          relationship_type: dep.relationship_type,
           weight: dep.weight || 1
         });
       }
     });
 
-    // If no dependency edges, create basic relationships
+    // If no dependency edges, create basic relationships based on file paths
     if (edges.length === 0) {
-      modules.forEach(module => {
-        // Connect module to its classes
-        module.classes.forEach((cls, index) => {
-          if (nodeIds.has(module.name) && nodeIds.has(cls.name)) {
-            edges.push({
-              id: `contains_class_${index}`,
-              source: module.name,
-              target: cls.name,
-              from: module.name,
-              to: cls.name,
-              relationship_type: 'contains'
-            });
-          }
-        });
+      // Group classes and functions by their file path to connect to modules
+      classes.forEach((cls, index: number) => {
+        const classFilePath = cls.location?.file_path;
+        const matchingModule = modules.find(m => m.location?.file_path === classFilePath);
+        if (matchingModule && nodeIds.has(matchingModule.name) && nodeIds.has(cls.name)) {
+          edges.push({
+            id: `contains_class_${index}`,
+            source: matchingModule.name,
+            target: cls.name,
+            from: matchingModule.name,
+            to: cls.name,
+            relationship_type: 'contains'
+          });
+        }
+      });
 
-        // Connect module to its functions
-        module.functions.forEach((func, index) => {
-          if (nodeIds.has(module.name) && nodeIds.has(func.name)) {
-            edges.push({
-              id: `contains_func_${index}`,
-              source: module.name,
-              target: func.name,
-              from: module.name,
-              to: func.name,
-              relationship_type: 'contains'
-            });
-          }
-        });
+      functions.forEach((func, index: number) => {
+        const funcFilePath = func.location?.file_path;
+        const matchingModule = modules.find(m => m.location?.file_path === funcFilePath);
+        if (matchingModule && nodeIds.has(matchingModule.name) && nodeIds.has(func.name)) {
+          edges.push({
+            id: `contains_func_${index}`,
+            source: matchingModule.name,
+            target: func.name,
+            from: matchingModule.name,
+            to: func.name,
+            relationship_type: 'contains'
+          });
+        }
       });
     }
 

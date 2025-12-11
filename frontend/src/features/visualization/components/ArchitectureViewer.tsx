@@ -165,8 +165,8 @@ const ArchitectureViewer: React.FC<ArchitectureViewerProps> = memo(({ data = nul
     if (!data) return null;
 
     const modules = data.modules || [];
-    const classes = modules.flatMap(m => m.classes || []);
-    const dependencies = data.dependencies || [];
+    const classes = data.classes || [];
+    const dependencies = data.dependency_graph?.edges || [];
     const nodes: any[] = [];
     const edges: any[] = [];
     const nodeIds = new Set<string>();
@@ -181,22 +181,24 @@ const ArchitectureViewer: React.FC<ArchitectureViewerProps> = memo(({ data = nul
       const nodeId = module.name;
       if (!nodeIds.has(nodeId)) {
         nodeIds.add(nodeId);
-        const fileName = module.path ?
-          module.path.split('/').pop()?.replace('.py', '') :
-          module.name;
+        const filePath = module.location?.file_path;
+        const fileName = filePath
+          ? filePath.split('/').pop()?.replace('.py', '')
+          : module.name;
 
+        const moduleDeps = module.dependencies || [];
         nodes.push({
           id: nodeId,
           label: fileName,
           name: module.name,
           type: 'module',
-          file_path: module.path,
-          line_number: 1,
-          docstring: `Module with ${module.functions.length} functions and ${module.classes.length} classes`,
-          dependencies: module.imports?.map(imp => imp.module) || [],
-          classes_count: module.classes.length,
-          functions_count: module.functions.length,
-          complexity: module.imports.length + module.classes.length + module.functions.length
+          file_path: filePath,
+          line_number: module.location?.line_number || 1,
+          docstring: module.docstring || `Module: ${module.name}`,
+          dependencies: moduleDeps,
+          classes_count: 0, // Will be calculated separately if needed
+          functions_count: 0,
+          complexity: moduleDeps.length
         });
       }
     });
@@ -208,17 +210,19 @@ const ArchitectureViewer: React.FC<ArchitectureViewerProps> = memo(({ data = nul
         const nodeId = cls.name;
         if (!nodeIds.has(nodeId)) {
           nodeIds.add(nodeId);
+          const clsParams = cls.parameters || [];
           nodes.push({
             id: nodeId,
             label: cls.name,
             name: cls.name,
             type: 'class',
-            line_number: cls.line_number,
+            file_path: cls.location?.file_path,
+            line_number: cls.location?.line_number,
             docstring: cls.docstring,
-            dependencies: [],
-            parameters: cls.methods?.map(m => m.name) || [],
-            decorators: [],
-            complexity: cls.methods.length + cls.attributes.length
+            dependencies: cls.dependencies || [],
+            parameters: clsParams.map((p: { name: string }) => p.name),
+            decorators: cls.decorators || [],
+            complexity: clsParams.length
           });
         }
       });
@@ -226,18 +230,18 @@ const ArchitectureViewer: React.FC<ArchitectureViewerProps> = memo(({ data = nul
 
     // Process edges with performance optimization
     const limitedEdges = dependencies.slice(0, maxEdges);
-    limitedEdges.forEach((edge, index) => {
+    limitedEdges.forEach((edge: { source: string; target: string; relationship_type: string; weight?: number }, index: number) => {
       const shouldInclude =
         nodeIds.has(edge.source) &&
         nodeIds.has(edge.target) &&
-        (showImports || edge.type !== 'import');
+        (showImports || edge.relationship_type !== 'import');
 
       if (shouldInclude) {
         edges.push({
           id: `e${index}`,
           source: edge.source,
           target: edge.target,
-          relationship_type: edge.type,
+          relationship_type: edge.relationship_type,
           weight: edge.weight || 1,
           isCircular: false
         });
