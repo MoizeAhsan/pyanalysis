@@ -5,13 +5,9 @@ Tests the end-to-end functionality with a sample Python project
 """
 
 import os
-import sys
 import tempfile
 import shutil
 import requests
-import time
-import subprocess
-from pathlib import Path
 
 
 def create_sample_project():
@@ -264,7 +260,7 @@ def main():
     # Summary
     print("\n" + "=" * 50)
     print("Integration Test Summary:")
-    print(f"✓ Sample project: Created")
+    print("✓ Sample project: Created")
     print(
         f"{'✓' if backend_ok else '✗'} Backend API: {'Working' if backend_ok else 'Failed'}"
     )
@@ -274,10 +270,10 @@ def main():
 
     if backend_ok and frontend_ok:
         print("\n🎉 Integration test PASSED!")
-        print(f"You can now test the full application by:")
-        print(f"1. Opening http://localhost:3000 in your browser")
+        print("You can now test the full application by:")
+        print("1. Opening http://localhost:3000 in your browser")
         print(f"2. Entering the project path: {project_path}")
-        print(f"3. Clicking 'Analyze Project'")
+        print("3. Clicking 'Analyze Project'")
     else:
         print("\n❌ Integration test FAILED!")
         print(

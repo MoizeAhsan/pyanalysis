@@ -5,8 +5,6 @@ Tests the application with the actual backend project
 """
 
 import requests
-import json
-import os
 from pathlib import Path
 
 
@@ -33,7 +31,7 @@ def run_backend_project_test():
 
         if "data" in data:
             stats = data["data"]
-            print(f"\nProject Statistics:")
+            print("\nProject Statistics:")
             print(f"  - Project: {stats.get('project_name', 'Unknown')}")
             print(f"  - Total files: {stats.get('total_files', 0)}")
             print(f"  - Total lines: {stats.get('total_lines', 0)}")
@@ -55,7 +53,7 @@ def run_backend_project_test():
         if data["success"] and data["data"]["has_data"]:
             analysis_data = data["data"]
 
-            print(f"Detailed Analysis Results:")
+            print("Detailed Analysis Results:")
             print(f"  - Project: {analysis_data['project_info']['name']}")
             print(f"  - Path: {analysis_data['project_info']['path']}")
             print(
@@ -96,7 +94,7 @@ def run_backend_project_test():
             # Show dependency graph info
             dep_graph = analysis_data.get("dependency_graph")
             if dep_graph:
-                print(f"\n  Dependency Graph:")
+                print("\n  Dependency Graph:")
                 print(f"    - Nodes: {len(dep_graph.get('nodes', {}))}")
                 print(f"    - Edges: {len(dep_graph.get('edges', []))}")
                 if dep_graph.get("metrics"):

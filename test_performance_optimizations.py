@@ -5,7 +5,6 @@ Test script to verify performance optimizations are working
 
 import time
 import tempfile
-import os
 from pathlib import Path
 
 # Add backend to path
