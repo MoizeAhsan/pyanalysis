@@ -1,10 +1,20 @@
 import axios, { AxiosInstance, AxiosResponse } from 'axios';
+import pako from 'pako';
 
 // Backend API response types
 interface ApiResponse<T = any> {
   success: boolean;
   message: string;
   data: T;
+}
+
+// Compressed response structure from backend
+interface CompressedResponse {
+  compressed: boolean;
+  data: string | any;
+  original_size?: number;
+  compressed_size?: number;
+  compression_ratio?: number;
 }
 
 interface ProjectInfo {
@@ -209,16 +219,63 @@ class ApiService {
     return response.data;
   }
 
+  // Decompress data if it was compressed by the backend
+  private decompressData<T>(data: CompressedResponse | T): T {
+    // Check if data is a compressed response
+    if (data && typeof data === 'object' && 'compressed' in data) {
+      const compressedData = data as CompressedResponse;
+      if (compressedData.compressed && typeof compressedData.data === 'string') {
+        try {
+          // Decode base64 to binary
+          const binaryString = atob(compressedData.data);
+          const bytes = new Uint8Array(binaryString.length);
+          for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+          }
+          
+          // Decompress using pako
+          const decompressed = pako.inflate(bytes, { to: 'string' });
+          
+          // Parse JSON
+          return JSON.parse(decompressed) as T;
+        } catch (error) {
+          console.error('Failed to decompress data:', error);
+          // Return the compressed data as-is if decompression fails
+          return compressedData.data as T;
+        }
+      }
+      // Not compressed, return the data directly
+      return compressedData.data as T;
+    }
+    return data as T;
+  }
+
   // Get full analysis data
   async getAnalysisData(): Promise<ApiResponse<AnalysisData>> {
     const response = await this.client.get('/api/data');
-    return response.data;
+    const apiResponse = response.data as ApiResponse<CompressedResponse | AnalysisData>;
+    
+    // Decompress data if needed
+    const decompressedData = this.decompressData<AnalysisData>(apiResponse.data);
+    
+    return {
+      ...apiResponse,
+      data: decompressedData
+    };
   }
 
   // Get architectural overview data
   async getArchitecturalData(): Promise<ApiResponse<ArchitecturalData>> {
     const response = await this.client.get('/api/architecture');
-    return response.data;
+    const apiResponse = response.data as ApiResponse<CompressedResponse | ArchitecturalData>;
+    
+    // Decompress data if needed
+    const decompressedData = this.decompressData<ArchitecturalData>(apiResponse.data);
+    
+    return {
+      ...apiResponse,
+      data: decompressedData
+    };
   }
 
   // Search endpoints

@@ -23,6 +23,7 @@ import {
   DataArray
 } from '@mui/icons-material';
 import { performanceMonitor } from '@shared/utils';
+import { apiService } from '@shared/services/api';
 import type { AnalysisData } from '@shared/types';
 
 interface AnalysisResultsProps {
@@ -39,75 +40,55 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = memo(({
   const [data, setData] = useState<AnalysisData | null>(null);
   const [currentTab, setCurrentTab] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [isFetching, setIsFetching] = useState(false);
 
-  // Mock data for demonstration - replace with actual API call
-  const mockAnalysisData: AnalysisData = {
-    project_name: "Sample Python Project",
-    total_files: 25,
-    total_lines: 5432,
-    modules: [
-      {
-        name: "app",
-        path: "/src/app.py",
-        type: "module",
-        lines_of_code: 234,
-        functions: [
-          { name: "main", line_number: 10, parameters: [] },
-          { name: "init_app", line_number: 25, parameters: ["config"] }
-        ],
-        classes: [
-          { name: "Application", line_number: 50, methods: [], attributes: [], inheritance: [] }
-        ],
-        imports: [
-          { module: "flask", line_number: 1 },
-          { module: "os", line_number: 2 }
-        ]
-      },
-      {
-        name: "models",
-        path: "/src/models.py",
-        type: "module",
-        lines_of_code: 156,
-        functions: [],
-        classes: [
-          { name: "User", line_number: 15, methods: [], attributes: [], inheritance: [] },
-          { name: "Post", line_number: 45, methods: [], attributes: [], inheritance: [] }
-        ],
-        imports: []
-      }
-    ],
-    dependencies: [
-      { source: "app", target: "flask", type: "import" },
-      { source: "models", target: "sqlalchemy", type: "import" },
-      { source: "utils", target: "requests", type: "import" }
-    ],
-    architecture: {
-      nodes: [],
-      edges: [],
-      layers: []
-    },
-    mindmap: {
-      nodes: [],
-      edges: []
+  // Clear local state when analysis is reset (analysisTriggered becomes false)
+  useEffect(() => {
+    if (!analysisTriggered) {
+      setData(null);
+      setError(null);
+      setCurrentTab(0);
+      setIsFetching(false);
     }
-  };
+  }, [analysisTriggered]);
 
+  // Fetch analysis data when analysis completes
   useEffect(() => {
     if (analysisTriggered && !loading) {
-      performanceMonitor.startTiming('fetch-analysis-data');
-      
-      // Simulate API call
-      setTimeout(() => {
+      const fetchAnalysisData = async () => {
+        setIsFetching(true);
+        setError(null);
+        performanceMonitor.startTiming('fetch-analysis-data');
+        
         try {
-          setData(mockAnalysisData);
-          onDataLoaded(mockAnalysisData);
-          setError(null);
-          performanceMonitor.endTiming('fetch-analysis-data');
+          const response = await apiService.getAnalysisData();
+          
+          if (response.success && response.data) {
+            const analysisData = response.data;
+            
+            // Check if we have actual data
+            if (!analysisData.has_data) {
+              setError('No analysis data available. Please analyze a project first.');
+              setData(null);
+            } else {
+              setData(analysisData);
+              onDataLoaded(analysisData);
+            }
+          } else {
+            setError(response.message || 'Failed to load analysis data');
+            setData(null);
+          }
         } catch (err) {
-          setError('Failed to load analysis data');
+          const errorMessage = apiService.getErrorMessage(err);
+          setError(errorMessage);
+          setData(null);
+        } finally {
+          setIsFetching(false);
           performanceMonitor.endTiming('fetch-analysis-data');
         }
-      }, 1000);
+      };
+
+      fetchAnalysisData();
     }
   }, [analysisTriggered, loading, onDataLoaded]);
 
@@ -115,12 +96,12 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = memo(({
     setCurrentTab(newValue);
   }, []);
 
-  if (loading) {
+  if (loading || isFetching) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 8 }}>
         <CircularProgress size={60} thickness={4} />
         <Typography variant="h6" sx={{ ml: 2 }}>
-          Analyzing project...
+          {loading ? 'Analyzing project...' : 'Loading analysis data...'}
         </Typography>
       </Box>
     );
@@ -142,8 +123,17 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = memo(({
     </div>
   );
 
-  const totalFunctions = data.modules.reduce((sum, module) => sum + module.functions.length, 0);
-  const totalClasses = data.modules.reduce((sum, module) => sum + module.classes.length, 0);
+  // Use statistics from API response
+  const modulesCount = data.statistics?.modules_count ?? data.modules.length;
+  const classesCount = data.statistics?.classes_count ?? data.classes.length;
+  const functionsCount = data.statistics?.functions_count ?? data.functions.length;
+  const totalElements = data.statistics?.total_elements ?? (modulesCount + classesCount + functionsCount);
+  const dependencyCount = data.dependency_graph?.edges?.length ?? 0;
+
+  // Get project info
+  const projectName = data.project_info?.name ?? 'Unknown Project';
+  const totalFiles = data.project_info?.total_files ?? 0;
+  const totalLines = data.project_info?.total_lines ?? 0;
 
   return (
     <Box sx={{ mt: 4 }}>
@@ -162,10 +152,10 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = memo(({
                   Project
                 </Typography>
                 <Typography variant="h6">
-                  {data.project_name}
+                  {projectName}
                 </Typography>
                 <Typography variant="body2" color="textSecondary">
-                  {data.total_files} files • {data.total_lines.toLocaleString()} lines
+                  {totalFiles} files • {totalLines.toLocaleString()} lines
                 </Typography>
               </CardContent>
             </Card>
@@ -178,12 +168,12 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = memo(({
                   Code Elements
                 </Typography>
                 <Typography variant="h6">
-                  {data.modules.length + totalClasses + totalFunctions}
+                  {totalElements}
                 </Typography>
                 <Box sx={{ mt: 1 }}>
-                  <Chip label={`${data.modules.length} Modules`} size="small" color="primary" sx={{ mr: 0.5, mb: 0.5 }} />
-                  <Chip label={`${totalClasses} Classes`} size="small" color="success" sx={{ mr: 0.5, mb: 0.5 }} />
-                  <Chip label={`${totalFunctions} Functions`} size="small" color="warning" sx={{ mr: 0.5, mb: 0.5 }} />
+                  <Chip label={`${modulesCount} Modules`} size="small" color="primary" sx={{ mr: 0.5, mb: 0.5 }} />
+                  <Chip label={`${classesCount} Classes`} size="small" color="success" sx={{ mr: 0.5, mb: 0.5 }} />
+                  <Chip label={`${functionsCount} Functions`} size="small" color="warning" sx={{ mr: 0.5, mb: 0.5 }} />
                 </Box>
               </CardContent>
             </Card>
@@ -196,7 +186,7 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = memo(({
                   Dependencies
                 </Typography>
                 <Typography variant="h6">
-                  {data.dependencies.length}
+                  {dependencyCount}
                 </Typography>
                 <Typography variant="body2" color="textSecondary">
                   Import relationships
@@ -209,13 +199,13 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = memo(({
             <Card>
               <CardContent>
                 <Typography color="textSecondary" gutterBottom>
-                  Performance
+                  Patterns
                 </Typography>
                 <Typography variant="h6">
-                  Optimized
+                  {data.architectural_patterns?.length ?? 0}
                 </Typography>
                 <Typography variant="body2" color="textSecondary">
-                  Virtualized rendering
+                  Architectural patterns
                 </Typography>
               </CardContent>
             </Card>
@@ -237,15 +227,15 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = memo(({
 
           <TabPanel value={currentTab} index={0}>
             <Typography variant="h6" gutterBottom>
-              Modules ({data.modules.length})
+              Modules ({modulesCount})
             </Typography>
             <Box sx={{ maxHeight: 500, overflow: 'auto' }}>
               <List>
                 {data.modules.map((module, index) => (
-                  <ListItem key={index} divider>
+                  <ListItem key={module.id || index} divider>
                     <ListItemText
                       primary={module.name}
-                      secondary={`${module.path} • ${module.lines_of_code} LOC • ${module.functions.length} functions • ${module.classes.length} classes`}
+                      secondary={`${module.location?.file_path ?? 'Unknown path'} • Line ${module.location?.line_number ?? 0}`}
                     />
                   </ListItem>
                 ))}
@@ -255,55 +245,51 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = memo(({
 
           <TabPanel value={currentTab} index={1}>
             <Typography variant="h6" gutterBottom>
-              Functions ({totalFunctions})
+              Functions ({functionsCount})
             </Typography>
             <Box sx={{ maxHeight: 500, overflow: 'auto' }}>
               <List>
-                {data.modules.flatMap(module => 
-                  module.functions.map((func, index) => (
-                    <ListItem key={`${module.name}-${index}`} divider>
-                      <ListItemText
-                        primary={func.name}
-                        secondary={`${module.name} • Line ${func.line_number} • ${func.parameters.length} parameters`}
-                      />
-                    </ListItem>
-                  ))
-                )}
+                {data.functions.map((func, index) => (
+                  <ListItem key={func.id || index} divider>
+                    <ListItemText
+                      primary={func.name}
+                      secondary={`${func.location?.file_path ?? 'Unknown'} • Line ${func.location?.line_number ?? 0} • ${func.parameters?.length ?? 0} parameters`}
+                    />
+                  </ListItem>
+                ))}
               </List>
             </Box>
           </TabPanel>
 
           <TabPanel value={currentTab} index={2}>
             <Typography variant="h6" gutterBottom>
-              Classes ({totalClasses})
+              Classes ({classesCount})
             </Typography>
             <Box sx={{ maxHeight: 500, overflow: 'auto' }}>
               <List>
-                {data.modules.flatMap(module => 
-                  module.classes.map((cls, index) => (
-                    <ListItem key={`${module.name}-${index}`} divider>
-                      <ListItemText
-                        primary={cls.name}
-                        secondary={`${module.name} • Line ${cls.line_number} • ${cls.methods.length} methods`}
-                      />
-                    </ListItem>
-                  ))
-                )}
+                {data.classes.map((cls, index) => (
+                  <ListItem key={cls.id || index} divider>
+                    <ListItemText
+                      primary={cls.name}
+                      secondary={`${cls.location?.file_path ?? 'Unknown'} • Line ${cls.location?.line_number ?? 0}`}
+                    />
+                  </ListItem>
+                ))}
               </List>
             </Box>
           </TabPanel>
 
           <TabPanel value={currentTab} index={3}>
             <Typography variant="h6" gutterBottom>
-              Dependencies ({data.dependencies.length})
+              Dependencies ({dependencyCount})
             </Typography>
             <Box sx={{ maxHeight: 500, overflow: 'auto' }}>
               <List>
-                {data.dependencies.map((dep, index) => (
+                {(data.dependency_graph?.edges ?? []).map((edge, index) => (
                   <ListItem key={index} divider>
                     <ListItemText
-                      primary={`${dep.source} → ${dep.target}`}
-                      secondary={`Type: ${dep.type}${dep.weight ? ` • Weight: ${dep.weight}` : ''}`}
+                      primary={`${edge.source} → ${edge.target}`}
+                      secondary={`Type: ${edge.relationship_type}${edge.weight ? ` • Weight: ${edge.weight}` : ''}`}
                     />
                   </ListItem>
                 ))}
