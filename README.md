@@ -75,6 +75,6 @@ This project is currently in development. See the implementation tasks in `.kiro
 
 ## Requirements
 
-- Python 3.8+
-- Node.js 16+
+- Python 3.12+
+- Node.js 20+
 - Modern web browser with JavaScript enabled
