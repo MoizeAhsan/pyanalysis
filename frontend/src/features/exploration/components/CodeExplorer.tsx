@@ -78,16 +78,45 @@ const CodeExplorer: React.FC<CodeExplorerProps> = memo(({
 
     const displayData = data || sampleData;
 
+    // Combine modules, classes, and functions into a single code_elements array
+    const codeElements = useMemo(() => {
+        if (!displayData) return [];
+        
+        // Check if data has the new structure (modules, classes, functions)
+        if (displayData.modules || displayData.classes || displayData.functions) {
+            const modules = (displayData.modules || []).map((el: CodeElement) => ({
+                ...el,
+                type: 'module',
+                elementType: 'module'
+            }));
+            const classes = (displayData.classes || []).map((el: CodeElement) => ({
+                ...el,
+                type: 'class',
+                elementType: 'class'
+            }));
+            const functions = (displayData.functions || []).map((el: CodeElement) => ({
+                ...el,
+                type: 'function',
+                elementType: 'function'
+            }));
+            return [...modules, ...classes, ...functions];
+        }
+        
+        // Fallback to old code_elements structure
+        return displayData.code_elements || [];
+    }, [displayData]);
+
     // Process and filter elements
     const processedElements = useMemo(() => {
-        if (!displayData || !displayData.code_elements) {
+        if (!codeElements || codeElements.length === 0) {
             return { all: [], modules: 0, classes: 0, functions: 0 };
         }
 
-        const elements = displayData.code_elements.map((el: any) => ({
+        const elements = codeElements.map((el: any) => ({
             ...el,
-            elementType: el.type,
-            icon: el.type === 'module' ? Folder : el.type === 'class' ? Class : Functions
+            elementType: el.type || el.elementType,
+            icon: (el.type === 'module' || el.elementType === 'module') ? Folder : 
+                  (el.type === 'class' || el.elementType === 'class') ? Class : Functions
         }));
 
         // Filter by type

@@ -3,7 +3,14 @@ import { Box, IconButton, Tooltip, Typography } from '@mui/material';
 import { ZoomIn, ZoomOut, CenterFocusStrong, Fullscreen, FullscreenExit } from '@mui/icons-material';
 
 // Lazy load cytoscape and extensions
+let cytoscapeInstance: any = null;
+
 const loadCytoscape = async () => {
+  // Return cached instance if already loaded
+  if (cytoscapeInstance) {
+    return cytoscapeInstance;
+  }
+
   const [
     { default: cytoscape },
     dagre,
@@ -14,10 +21,20 @@ const loadCytoscape = async () => {
     import('cytoscape-cose-bilkent')
   ]);
 
-  // Register extensions
-  cytoscape.use(dagre as any);
-  cytoscape.use(coseBilkent as any);
+  // Register extensions (only once)
+  try {
+    cytoscape.use(dagre as any);
+  } catch {
+    // Extension may already be registered
+  }
+  
+  try {
+    cytoscape.use(coseBilkent as any);
+  } catch {
+    // Extension may already be registered
+  }
 
+  cytoscapeInstance = cytoscape;
   return cytoscape;
 };
 
@@ -173,7 +190,15 @@ const CytoscapeGraph: React.FC<CytoscapeGraphProps> = ({
     let mounted = true;
 
     const initializeCytoscape = async () => {
-      if (!containerRef.current) return;
+      if (!containerRef.current) {
+        return;
+      }
+
+      // Don't initialize with empty elements - wait for data
+      if (!elements || elements.length === 0) {
+        setIsLoading(false); // Don't show loading if there's no data to load
+        return;
+      }
 
       try {
         setIsLoading(true);
@@ -382,11 +407,11 @@ const CytoscapeGraph: React.FC<CytoscapeGraphProps> = ({
         cyRef.current = null;
       }
     };
-  }, []);
+  }, [elements.length, layout, stylesheet, getVisibleElements, collapsedNodes, getNodeChildren]);
 
-  // Update elements when they change
+  // Update elements when collapsed state changes (not for element changes - that triggers reinit)
   useEffect(() => {
-    if (!cyRef.current || isLoading) return;
+    if (!cyRef.current || isLoading || collapsedNodes.size === 0) return;
 
     const visibleElements = getVisibleElements(elements, collapsedNodes);
     const elementsWithClasses = visibleElements.map(el => {
@@ -429,7 +454,7 @@ const CytoscapeGraph: React.FC<CytoscapeGraphProps> = ({
         cyRef.current.pan(currentPan);
       }
     });
-  }, [elements, layout, collapsedNodes, getVisibleElements, getNodeChildren, isLoading]);
+  }, [collapsedNodes, getVisibleElements, getNodeChildren, isLoading]);
 
   if (error) {
     return (
@@ -439,10 +464,21 @@ const CytoscapeGraph: React.FC<CytoscapeGraphProps> = ({
     );
   }
 
-  if (isLoading) {
+  // Show loading only when we have elements to load and are actively loading
+  if (isLoading && elements && elements.length > 0) {
     return (
       <Box sx={{ ...(style as any), display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <Typography>Loading visualization...</Typography>
+      </Box>
+    );
+  }
+
+  // Show message when no elements provided
+  if (!elements || elements.length === 0) {
+    return (
+      <Box sx={{ ...(style as any), display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 1 }}>
+        <Typography variant="h6" color="text.secondary">No data to visualize</Typography>
+        <Typography variant="body2" color="text.secondary">Analyze a project to see the visualization</Typography>
       </Box>
     );
   }

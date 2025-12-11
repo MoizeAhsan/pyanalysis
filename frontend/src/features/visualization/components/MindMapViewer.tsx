@@ -399,9 +399,10 @@ const MindMapViewer: React.FC<MindMapViewerProps> = memo(({ data }) => {
   }), []);
 
   const renderVisualization = useCallback(() => {
-    const graphData = convertedData || sampleData;
+    // Use convertedData if it has nodes, otherwise fallback to sample data
+    const graphData = (convertedData && convertedData.cytoscape.length > 0) ? convertedData : sampleData;
 
-    if (!graphData) {
+    if (!graphData || graphData.cytoscape.length === 0) {
       return (
         <Box sx={{
           textAlign: 'center',

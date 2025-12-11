@@ -533,9 +533,10 @@ const ArchitectureViewer: React.FC<ArchitectureViewerProps> = memo(({ data = nul
   }), []);
 
   const renderArchitecturalView = useCallback(() => {
-    const graphData = processedData || sampleArchitecturalData;
+    // Use processedData if it has nodes, otherwise fallback to sample data
+    const graphData = (processedData && processedData.nodes.length > 0) ? processedData : sampleArchitecturalData;
 
-    if (!graphData) {
+    if (!graphData || graphData.nodes.length === 0) {
       return (
         <Box sx={{ textAlign: 'center', py: 8 }}>
           <Typography variant="h6" color="text.secondary">
