@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Box, IconButton, Tooltip, Typography } from '@mui/material';
 import { ZoomIn, ZoomOut, CenterFocusStrong, Fullscreen, FullscreenExit } from '@mui/icons-material';
 
-// Lazy load cytoscape and extensions
+// Lazy load cytoscape (built-in layouts only - no extensions needed)
 let cytoscapeInstance: any = null;
 
 const loadCytoscape = async () => {
@@ -11,29 +11,7 @@ const loadCytoscape = async () => {
     return cytoscapeInstance;
   }
 
-  const [
-    { default: cytoscape },
-    dagre,
-    coseBilkent
-  ] = await Promise.all([
-    import('cytoscape'),
-    import('cytoscape-dagre'),
-    import('cytoscape-cose-bilkent')
-  ]);
-
-  // Register extensions (only once)
-  try {
-    cytoscape.use(dagre as any);
-  } catch {
-    // Extension may already be registered
-  }
-  
-  try {
-    cytoscape.use(coseBilkent as any);
-  } catch {
-    // Extension may already be registered
-  }
-
+  const { default: cytoscape } = await import('cytoscape');
   cytoscapeInstance = cytoscape;
   return cytoscape;
 };
@@ -191,12 +169,18 @@ const CytoscapeGraph: React.FC<CytoscapeGraphProps> = ({
 
     const initializeCytoscape = async () => {
       if (!containerRef.current) {
+        // Container might not be ready yet, retry after a short delay
+        setTimeout(() => {
+          if (mounted && containerRef.current) {
+            initializeCytoscape();
+          }
+        }, 100);
         return;
       }
 
-      // Don't initialize with empty elements - wait for data
+      // Don't initialize with empty elements
       if (!elements || elements.length === 0) {
-        setIsLoading(false); // Don't show loading if there's no data to load
+        setIsLoading(false);
         return;
       }
 
@@ -206,7 +190,7 @@ const CytoscapeGraph: React.FC<CytoscapeGraphProps> = ({
 
         const cytoscape = await loadCytoscape();
 
-        if (!mounted) return;
+        if (!mounted || !containerRef.current) return;
 
         const defaultStylesheet = [
           {
@@ -319,12 +303,21 @@ const CytoscapeGraph: React.FC<CytoscapeGraphProps> = ({
           return el;
         });
 
+        // Use safe layout - map to built-in layouts only
+        // Built-in: grid, circle, concentric, breadthfirst, cose, random, preset, null
+        const layoutMap: Record<string, string> = {
+          'cose-bilkent': 'cose',
+          'dagre': 'breadthfirst',  // breadthfirst is similar to dagre's tree layout
+        };
+        const safeLayoutName = layoutMap[layout.name] || layout.name;
+        const safeLayout = { ...layout, name: safeLayoutName };
+
         cyRef.current = cytoscape({
           container: containerRef.current,
           elements: elementsWithClasses,
           style: [...defaultStylesheet, ...stylesheet],
           layout: {
-            ...layout,
+            ...safeLayout,
             animationDuration: 500,
             fit: true,
             padding: 50
@@ -407,7 +400,9 @@ const CytoscapeGraph: React.FC<CytoscapeGraphProps> = ({
         cyRef.current = null;
       }
     };
-  }, [elements.length, layout, stylesheet, getVisibleElements, collapsedNodes, getNodeChildren]);
+    // Only re-initialize when elements array identity changes or layout changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [elements, layout.name]);
 
   // Update elements when collapsed state changes (not for element changes - that triggers reinit)
   useEffect(() => {
@@ -464,15 +459,6 @@ const CytoscapeGraph: React.FC<CytoscapeGraphProps> = ({
     );
   }
 
-  // Show loading only when we have elements to load and are actively loading
-  if (isLoading && elements && elements.length > 0) {
-    return (
-      <Box sx={{ ...(style as any), display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <Typography>Loading visualization...</Typography>
-      </Box>
-    );
-  }
-
   // Show message when no elements provided
   if (!elements || elements.length === 0) {
     return (
@@ -497,7 +483,25 @@ const CytoscapeGraph: React.FC<CytoscapeGraphProps> = ({
         backgroundColor: 'white'
       })
     }}>
-      {showControls && (
+      {/* Loading overlay - shown on top of container while loading */}
+      {isLoading && (
+        <Box sx={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: 'rgba(255, 255, 255, 0.8)',
+          zIndex: 1001
+        }}>
+          <Typography>Loading visualization...</Typography>
+        </Box>
+      )}
+
+      {showControls && !isLoading && (
         <Box sx={{
           position: 'absolute',
           top: 10,
@@ -537,7 +541,7 @@ const CytoscapeGraph: React.FC<CytoscapeGraphProps> = ({
         </Box>
       )}
 
-      {enableCollapse && showControls && (
+      {enableCollapse && showControls && !isLoading && (
         <Box sx={{
           position: 'absolute',
           bottom: 10,

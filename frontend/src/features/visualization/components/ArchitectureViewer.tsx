@@ -51,7 +51,7 @@ interface ArchitectureViewerProps {
 }
 
 type ViewType = 'dependency' | 'imports' | 'hierarchy';
-type LayoutType = 'dagre' | 'breadthfirst' | 'cose-bilkent' | 'concentric';
+type LayoutType = 'breadthfirst' | 'cose' | 'concentric' | 'circle';
 
 interface CircularDependency {
   cycle: string[];
@@ -61,7 +61,7 @@ interface CircularDependency {
 const ArchitectureViewer: React.FC<ArchitectureViewerProps> = memo(({ data = null }) => {
   const theme = useTheme();
   const [viewType, setViewType] = useState<ViewType>('dependency');
-  const [layoutType, setLayoutType] = useState<LayoutType>('dagre');
+  const [layoutType, setLayoutType] = useState<LayoutType>('breadthfirst');
   const [selectedNode, setSelectedNode] = useState<any>(null);
   const [showCircularDeps, setShowCircularDeps] = useState(true);
   const [showImports, setShowImports] = useState(true);
@@ -303,16 +303,6 @@ const ArchitectureViewer: React.FC<ArchitectureViewerProps> = memo(({ data = nul
     };
 
     switch (layoutName) {
-      case 'dagre':
-        return {
-          ...baseConfig,
-          name: 'dagre',
-          rankDir: 'TB',
-          nodeSep: Math.max(50, 100 - (visibleNodeCount / 10)),
-          edgeSep: 50,
-          rankSep: Math.max(100, 150 - (visibleNodeCount / 20)),
-          spacingFactor: visibleNodeCount > 100 ? 1.2 : 1.5
-        } as any;
       case 'breadthfirst':
         return {
           ...baseConfig,
@@ -320,20 +310,20 @@ const ArchitectureViewer: React.FC<ArchitectureViewerProps> = memo(({ data = nul
           directed: true,
           spacingFactor: visibleNodeCount > 100 ? 1.5 : 2,
           avoidOverlap: true,
-          nodeDimensionsIncludeLabels: visibleNodeCount < 50
+          nodeDimensionsIncludeLabels: visibleNodeCount < 50,
+          circle: false
         } as any;
-      case 'cose-bilkent':
+      case 'cose':
         return {
           ...baseConfig,
-          name: 'cose-bilkent',
-          nodeRepulsion: Math.max(8000, 12000 - (visibleNodeCount * 20)),
-          idealEdgeLength: Math.max(100, 150 - (visibleNodeCount / 10)),
-          edgeElasticity: 0.2,
+          name: 'cose',
+          nodeRepulsion: () => Math.max(8000, 12000 - (visibleNodeCount * 20)),
+          idealEdgeLength: () => Math.max(100, 150 - (visibleNodeCount / 10)),
+          edgeElasticity: () => 0.2,
           nestingFactor: 0.1,
           gravity: 0.3,
           numIter: Math.max(1000, 2500 - (visibleNodeCount * 5)),
-          tile: true,
-          quality: visibleNodeCount > 200 ? 'draft' : 'proof'
+          randomize: false
         } as any;
       case 'concentric':
         return {
@@ -351,8 +341,15 @@ const ArchitectureViewer: React.FC<ArchitectureViewerProps> = memo(({ data = nul
           avoidOverlap: true,
           minNodeSpacing: Math.max(80, 120 - (visibleNodeCount / 10))
         } as any;
+      case 'circle':
+        return {
+          ...baseConfig,
+          name: 'circle',
+          avoidOverlap: true,
+          spacingFactor: 1.5
+        } as any;
       default:
-        return { ...baseConfig, name: 'dagre' } as any;
+        return { ...baseConfig, name: 'breadthfirst' } as any;
     }
   }, [visibleNodeCount]);
 
@@ -630,10 +627,10 @@ const ArchitectureViewer: React.FC<ArchitectureViewerProps> = memo(({ data = nul
                 label="Layout"
                 onChange={(e) => setLayoutType(e.target.value as LayoutType)}
               >
-                <MenuItem value="dagre">Hierarchical</MenuItem>
                 <MenuItem value="breadthfirst">Tree</MenuItem>
-                <MenuItem value="cose-bilkent">Force-Directed</MenuItem>
+                <MenuItem value="cose">Force-Directed</MenuItem>
                 <MenuItem value="concentric">Concentric</MenuItem>
+                <MenuItem value="circle">Circular</MenuItem>
               </Select>
             </FormControl>
 

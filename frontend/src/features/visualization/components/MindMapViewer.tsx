@@ -51,13 +51,13 @@ interface MindMapViewerProps {
 }
 
 type GraphType = 'cytoscape' | 'force' | 'vis';
-type LayoutType = 'cose-bilkent' | 'dagre' | 'breadthfirst' | 'circle' | 'grid' | 'concentric';
+type LayoutType = 'cose' | 'breadthfirst' | 'circle' | 'grid' | 'concentric';
 
 const MindMapViewer: React.FC<MindMapViewerProps> = memo(({ data }) => {
   const theme = useTheme();
   const [graphType, setGraphType] = useState<GraphType>('cytoscape');
   const [selectedNode, setSelectedNode] = useState<any>(null);
-  const [layoutType, setLayoutType] = useState<LayoutType>('cose-bilkent');
+  const [layoutType, setLayoutType] = useState<LayoutType>('breadthfirst');
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [showExportDialog, setShowExportDialog] = useState(false);
@@ -101,35 +101,18 @@ const MindMapViewer: React.FC<MindMapViewerProps> = memo(({ data }) => {
     };
 
     switch (layoutName) {
-      case 'cose-bilkent':
+      case 'cose':
         return {
           ...baseConfig,
-          name: 'cose-bilkent',
-          nodeRepulsion: 8000,
-          idealEdgeLength: 120,
-          edgeElasticity: 0.3,
+          name: 'cose',
+          nodeRepulsion: () => 8000,
+          idealEdgeLength: () => 120,
+          edgeElasticity: () => 0.3,
           nestingFactor: 0.2,
           gravity: 0.4,
-          numIter: 3000,
-          tile: true,
-          tilingPaddingVertical: 15,
-          tilingPaddingHorizontal: 15,
-          quality: 'proof',
+          numIter: 1000,
           randomize: false,
-          nodeDimensionsIncludeLabels: true,
-          uniformNodeDimensions: false,
-          packComponents: true,
-          stepSize: 30
-        };
-      case 'dagre':
-        return {
-          ...baseConfig,
-          name: 'dagre',
-          rankDir: 'TB',
-          nodeSep: 80,
-          edgeSep: 20,
-          rankSep: 100,
-          spacingFactor: 1.2
+          nodeDimensionsIncludeLabels: true
         };
       case 'breadthfirst':
         return {
@@ -138,7 +121,8 @@ const MindMapViewer: React.FC<MindMapViewerProps> = memo(({ data }) => {
           directed: true,
           spacingFactor: 1.5,
           avoidOverlap: true,
-          nodeDimensionsIncludeLabels: true
+          nodeDimensionsIncludeLabels: true,
+          circle: false
         };
       case 'circle':
         return {
@@ -173,7 +157,7 @@ const MindMapViewer: React.FC<MindMapViewerProps> = memo(({ data }) => {
           minNodeSpacing: 80
         };
       default:
-        return { ...baseConfig, name: 'cose-bilkent' } as any;
+        return { ...baseConfig, name: 'dagre' } as any;
     }
   }, []);
 
@@ -542,9 +526,8 @@ const MindMapViewer: React.FC<MindMapViewerProps> = memo(({ data }) => {
                   label="Layout"
                   onChange={(e) => setLayoutType(e.target.value as LayoutType)}
                 >
-                  <MenuItem value="cose-bilkent">Hierarchical (CoSE)</MenuItem>
-                  <MenuItem value="dagre">Tree (Dagre)</MenuItem>
-                  <MenuItem value="breadthfirst">Breadth First</MenuItem>
+                  <MenuItem value="breadthfirst">Tree</MenuItem>
+                  <MenuItem value="cose">Force-Directed</MenuItem>
                   <MenuItem value="circle">Circular</MenuItem>
                   <MenuItem value="grid">Grid</MenuItem>
                   <MenuItem value="concentric">Concentric</MenuItem>
