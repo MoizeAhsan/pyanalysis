@@ -268,15 +268,17 @@ export function AppShell({ children, currentView = 'home', onViewChange }: AppSh
     const itemProps = flatIndex !== undefined ? getItemProps(flatIndex) : {};
 
     return (
-      <React.Fragment key={item.id}>
-        <ListItem disablePadding sx={{ display: 'block' }}>
-          <motion.div
-            {...(!item.disabled && {
-              whileHover: { x: 4, transition: { duration: 0.15, ease: [0, 0, 0.2, 1] } },
-              whileTap: { scale: 0.98, transition: { duration: 0.15, ease: [0, 0, 0.2, 1] } }
-            })}
-            style={{ borderRadius: 8, margin: '0 8px 4px 8px' }}
-          >
+      <ListItem 
+        key={item.id} 
+        disablePadding 
+        sx={{ display: 'block' }}
+        component={motion.li}
+        {...(!item.disabled && {
+          whileHover: { x: 4, transition: { duration: 0.15, ease: [0, 0, 0.2, 1] } },
+          whileTap: { scale: 0.98, transition: { duration: 0.15, ease: [0, 0, 0.2, 1] } }
+        })}
+        style={{ borderRadius: 8, margin: '0 8px 4px 8px' }}
+      >
             <ListItemButton
               {...itemProps}
               onClick={() => handleItemClick(item.id, hasChildren)}
@@ -352,7 +354,6 @@ export function AppShell({ children, currentView = 'home', onViewChange }: AppSh
                 </Box>
               )}
             </ListItemButton>
-          </motion.div>
           
           {/* Hidden description for disabled items */}
           {item.disabled && (
@@ -369,26 +370,23 @@ export function AppShell({ children, currentView = 'home', onViewChange }: AppSh
               This feature is currently disabled
             </Box>
           )}
-        </ListItem>
 
         {hasChildren && (
           <Collapse 
             in={isExpanded} 
             timeout="auto" 
             unmountOnExit
-            aria-label={`${item.label} submenu`}
           >
             <List 
-              component="div" 
+              component="ul" 
               disablePadding
-              role="group"
-              aria-labelledby={`${item.id}-label`}
+              aria-label={`${item.label} submenu`}
             >
               {item.children?.map(child => renderNavigationItem(child, depth + 1))}
             </List>
           </Collapse>
         )}
-      </React.Fragment>
+      </ListItem>
     );
   };
 
@@ -419,7 +417,7 @@ export function AppShell({ children, currentView = 'home', onViewChange }: AppSh
         <Typography
           id="navigation-drawer-title"
           variant="h6"
-          component="h2"
+          component="div"
           sx={{
             fontWeight: 700,
             color: 'primary.main',
@@ -454,8 +452,7 @@ export function AppShell({ children, currentView = 'home', onViewChange }: AppSh
         {...navigationContainerRef}
       >
         <List 
-          component="nav" 
-          role="menubar"
+          component="ul"
           aria-label="Main navigation menu"
           sx={{
             '& .MuiListItemButton-root': {
@@ -479,7 +476,6 @@ export function AppShell({ children, currentView = 'home', onViewChange }: AppSh
           variant="caption"
           color="text.secondary"
           sx={{ display: 'block', textAlign: 'center' }}
-          role="contentinfo"
         >
           Python Code Analyzer v1.0
         </Typography>
@@ -665,6 +661,23 @@ export function AppShell({ children, currentView = 'home', onViewChange }: AppSh
 
       {/* Keyboard Help Dialog */}
       <KeyboardHelpComponent />
+      
+      {/* Footer - contentinfo landmark at top level */}
+      <Box
+        component="footer"
+        role="contentinfo"
+        sx={{
+          position: 'fixed',
+          bottom: 0,
+          right: 0,
+          p: 1,
+          fontSize: '0.75rem',
+          color: 'text.disabled',
+          display: { xs: 'none', md: 'block' },
+        }}
+      >
+        v1.0
+      </Box>
     </Box>
   );
 }

@@ -8,7 +8,7 @@ import tempfile
 import os
 
 
-def test_empty_project():
+def run_empty_project_test():
     """Test with an empty directory"""
     with tempfile.TemporaryDirectory() as temp_dir:
         print(f"Testing empty directory: {temp_dir}")
@@ -26,7 +26,7 @@ def test_empty_project():
             print(f"  Error: {response.json()}")
 
 
-def test_project_with_syntax_errors():
+def run_syntax_errors_test():
     """Test with Python files that have syntax errors"""
     with tempfile.TemporaryDirectory() as temp_dir:
         # Create a file with syntax error
@@ -57,7 +57,7 @@ def test_project_with_syntax_errors():
             print(f"  Error: {response.json()}")
 
 
-def test_reset_functionality():
+def run_reset_functionality_test():
     """Test the reset functionality thoroughly"""
     print("Testing reset functionality...")
 
@@ -89,7 +89,7 @@ def test_reset_functionality():
     return has_data_before and not has_data_after
 
 
-def test_concurrent_requests():
+def run_concurrent_requests_test():
     """Test handling of concurrent requests"""
     print("Testing concurrent request handling...")
 
@@ -136,16 +136,16 @@ def main():
 
     try:
         print("\n1. Testing empty project...")
-        test_empty_project()
+        run_empty_project_test()
 
         print("\n2. Testing project with syntax errors...")
-        test_project_with_syntax_errors()
+        run_syntax_errors_test()
 
         print("\n3. Testing reset functionality...")
-        reset_ok = test_reset_functionality()
+        reset_ok = run_reset_functionality_test()
 
         print("\n4. Testing concurrent requests...")
-        concurrent_ok = test_concurrent_requests()
+        concurrent_ok = run_concurrent_requests_test()
 
         print("\n" + "=" * 50)
         print("Edge Case Test Summary:")

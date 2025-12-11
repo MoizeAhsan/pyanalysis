@@ -29,8 +29,8 @@ export function AnimatedPage({
   const { slideUp } = useMotionSafeAnimations();
   const animationVariants = variants || slideUp;
 
+  // Separate key from other props to avoid React warning about spreading key
   const motionProps = {
-    key: pageKey,
     variants: animationVariants,
     initial: "initial" as const,
     animate: "animate" as const,
@@ -39,21 +39,21 @@ export function AnimatedPage({
     ...(exitAnimation && { exit: "exit" as const }),
   };
 
-  const content = (
-    <motion.div {...motionProps}>
-      {children}
-    </motion.div>
-  );
-
   if (pageKey && exitAnimation) {
     return (
       <AnimatePresence mode="wait" initial={false}>
-        {content}
+        <motion.div key={pageKey} {...motionProps}>
+          {children}
+        </motion.div>
       </AnimatePresence>
     );
   }
 
-  return content;
+  return (
+    <motion.div {...motionProps}>
+      {children}
+    </motion.div>
+  );
 }
 
 // Preset page animation components for different use cases

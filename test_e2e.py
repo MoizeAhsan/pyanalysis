@@ -10,7 +10,7 @@ import os
 from pathlib import Path
 
 
-def test_with_backend_project():
+def run_backend_project_test():
     """Test the analyzer with the actual backend project"""
     base_url = "http://localhost:8000/api"
     backend_path = str(Path("backend").absolute())
@@ -113,7 +113,7 @@ def test_with_backend_project():
         return False
 
 
-def test_error_handling():
+def run_error_handling_test():
     """Test error handling with invalid inputs"""
     base_url = "http://localhost:8000/api"
 
@@ -145,10 +145,10 @@ def main():
 
     try:
         # Test with backend project
-        success1 = test_with_backend_project()
+        success1 = run_backend_project_test()
 
         # Test error handling
-        success2 = test_error_handling()
+        success2 = run_error_handling_test()
 
         print("\n" + "=" * 60)
         print("End-to-End Test Summary:")

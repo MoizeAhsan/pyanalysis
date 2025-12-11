@@ -99,14 +99,10 @@ export function useKeyboardNavigation(
     focusItem,
     containerProps: {
       ref: containerRef,
-      role: 'menu',
-      'aria-orientation': orientation === 'both' ? undefined : orientation,
     },
     getItemProps: (index: number) => ({
       ref: setItemRef(index),
-      role: 'menuitem',
       tabIndex: index === currentIndex ? 0 : -1,
-      'aria-selected': index === currentIndex,
     }),
   };
 }

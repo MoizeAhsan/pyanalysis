@@ -153,7 +153,7 @@ class UserService:
     return temp_dir
 
 
-def test_backend_api(project_path):
+def run_backend_api_tests(project_path):
     """Test the backend API endpoints"""
     base_url = "http://localhost:8000/api"
 
@@ -255,7 +255,7 @@ def main():
 
     # Test backend
     print("\n2. Testing backend API...")
-    backend_ok = test_backend_api(project_path)
+    backend_ok = run_backend_api_tests(project_path)
 
     # Test frontend
     print("\n3. Testing frontend accessibility...")

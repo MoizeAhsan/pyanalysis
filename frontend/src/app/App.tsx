@@ -124,6 +124,7 @@ function App() {
           </Typography>
           <Typography
             variant="h6"
+            component="p"
             color="text.secondary"
             sx={{
               maxWidth: { xs: '100%', sm: 600 },

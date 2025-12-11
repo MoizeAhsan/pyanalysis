@@ -502,22 +502,24 @@ const ProjectInput: React.FC<ProjectInputProps> = ({
           variant="outlined"
           error={pathValidation?.type === 'error'}
           helperText={pathValidation?.message}
-          aria-describedby={`${pathValidation ? 'path-validation-message' : ''} path-input-description`}
-          aria-invalid={pathValidation?.type === 'error'}
-          aria-required="true"
-          inputProps={{
-            'aria-label': 'Enter the absolute path to your Python project directory',
-          }}
-          InputProps={{
-            endAdornment: pathValidation && (
-              <InputAdornment position="end">
-                {getValidationIcon() && (
-                  <Tooltip title={pathValidation.message}>
-                    <span role="img" aria-label={pathValidation.type}>{getValidationIcon()}</span>
-                  </Tooltip>
-                )}
-              </InputAdornment>
-            ),
+          slotProps={{
+            htmlInput: {
+              'aria-label': 'Enter the absolute path to your Python project directory',
+              'aria-describedby': `${pathValidation ? 'path-validation-message' : ''} path-input-description`,
+              'aria-invalid': pathValidation?.type === 'error',
+              'aria-required': true,
+            },
+            input: {
+              endAdornment: pathValidation && (
+                <InputAdornment position="end">
+                  {getValidationIcon() && (
+                    <Tooltip title={pathValidation.message}>
+                      <span role="img" aria-label={pathValidation.type}>{getValidationIcon()}</span>
+                    </Tooltip>
+                  )}
+                </InputAdornment>
+              ),
+            },
           }}
           sx={{
             mb: 2,
