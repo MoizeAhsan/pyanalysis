@@ -26,7 +26,7 @@ import {
 import CollapsibleSection from './CollapsibleSection';
 import LazyList from './LazyList';
 import VirtualList from './VirtualList';
-import apiService from '../services/api';
+import { apiService } from '@shared/services/api';
 import { usePerformanceMonitor } from '../utils/performance';
 
 const AnalysisResults = ({ analysisTriggered, onDataLoaded, loading: parentLoading = false }) => {

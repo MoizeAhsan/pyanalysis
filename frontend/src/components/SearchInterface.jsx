@@ -32,7 +32,7 @@ import {
   LocationOn as LocationIcon
 } from '@mui/icons-material';
 import { debounce } from 'lodash';
-import apiService from '../services/api';
+import { apiService } from '@shared/services/api';
 
 const SearchInterface = ({ data, onElementSelect }) => {
   const [query, setQuery] = useState('');
@@ -97,7 +97,7 @@ const SearchInterface = ({ data, onElementSelect }) => {
 
   // Effect to trigger search when query or type changes
   useEffect(() => {
-    if (data && data.data && data.data.has_data) {
+    if (data && data.has_data) {
       debouncedSearch(query, elementType, 1);
       setCurrentPage(1); // Reset to first page on new search
     }
@@ -200,7 +200,7 @@ const SearchInterface = ({ data, onElementSelect }) => {
     }
   };
 
-  if (!data || !data.data || !data.data.has_data) {
+  if (!data || !data.has_data) {
     return (
       <Paper sx={{ p: 3, textAlign: 'center' }}>
         <Typography variant="h6" color="text.secondary">

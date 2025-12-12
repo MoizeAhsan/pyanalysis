@@ -201,7 +201,7 @@ export const EnhancedSearchInterface: React.FC<EnhancedSearchInterfaceProps> = (
 
   // Effect to trigger search when query or filters change
   useEffect(() => {
-    if (data?.data?.has_data) {
+    if (data?.has_data) {
       debouncedSearch(state.query, state.elementType, 1);
       setState(prev => ({ ...prev, currentPage: 1 }));
     }
@@ -404,7 +404,7 @@ export const EnhancedSearchInterface: React.FC<EnhancedSearchInterfaceProps> = (
     );
   };
 
-  if (!data?.data?.has_data) {
+  if (!data?.has_data) {
     return (
       <Paper sx={{ p: 3, textAlign: 'center' }}>
         <Typography variant="h6" color="text.secondary">
