@@ -65,12 +65,20 @@ const ForceGraph: React.FC<ForceGraphProps> = ({
 }) => {
   const svgRef = useRef<SVGSVGElement>(null);
   const simulationRef = useRef<any>(null);
+  const onNodeClickRef = useRef(onNodeClick);
+  const onLinkClickRef = useRef(onLinkClick);
   const [isSimulationRunning, setIsSimulationRunning] = useState(true);
   const [zoomLevel, setZoomLevel] = useState(1);
   const [selectedNode, setSelectedNode] = useState<ForceGraphNode | null>(null);
   const [hoveredNode, setHoveredNode] = useState<ForceGraphNode | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Keep refs updated
+  useEffect(() => {
+    onNodeClickRef.current = onNodeClick;
+    onLinkClickRef.current = onLinkClick;
+  }, [onNodeClick, onLinkClick]);
 
   // Enhanced color scheme for different node types
   const getNodeColor = useCallback((d: ForceGraphNode) => {
@@ -221,7 +229,7 @@ const ForceGraph: React.FC<ForceGraphProps> = ({
           .attr("stroke-opacity", 0.6)
           .attr("marker-end", (d: ForceGraphLink) => `url(#arrow-${d.relationship_type || d.type || 'default'})`)
           .style("cursor", "pointer")
-          .on("click", (_event: any, d: ForceGraphLink) => onLinkClick(d))
+          .on("click", (_event: any, d: ForceGraphLink) => onLinkClickRef.current(d))
           .on("mouseover", function(_event: any, d: ForceGraphLink) {
             d3.select(this)
               .attr("stroke-opacity", 1)
@@ -258,7 +266,7 @@ const ForceGraph: React.FC<ForceGraphProps> = ({
           .style("cursor", "pointer")
           .on("click", (_event: any, d: ForceGraphNode) => {
             setSelectedNode(d);
-            onNodeClick(d);
+            onNodeClickRef.current(d);
           })
           .on("mouseover", (_event: any, d: ForceGraphNode) => {
             setHoveredNode(d);
@@ -386,8 +394,10 @@ const ForceGraph: React.FC<ForceGraphProps> = ({
         simulationRef.current.stop();
       }
     };
-  }, [graphData, width, height, onNodeClick, onLinkClick, showLabels, enableZoom, enableDrag, 
-      linkDistance, chargeStrength, collisionRadius, getNodeColor, getNodeSize, getLinkStyle]);
+    // Only re-initialize when data or dimensions change
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [graphData.nodes.length, graphData.links.length, width, height, showLabels, enableZoom, enableDrag, 
+      linkDistance, chargeStrength, collisionRadius]);
 
   // Update node colors when selection changes
   useEffect(() => {
@@ -405,7 +415,7 @@ const ForceGraph: React.FC<ForceGraphProps> = ({
 
   if (error) {
     return (
-      <Box sx={{ textAlign: 'center', py: 4 }}>
+      <Box sx={{ width, height, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <Typography variant="body2" color="error">
           {error}
         </Typography>
@@ -413,19 +423,9 @@ const ForceGraph: React.FC<ForceGraphProps> = ({
     );
   }
 
-  if (isLoading) {
-    return (
-      <Box sx={{ textAlign: 'center', py: 4 }}>
-        <Typography variant="body2" color="text.secondary">
-          Loading force graph visualization...
-        </Typography>
-      </Box>
-    );
-  }
-
   if (!graphData.nodes.length) {
     return (
-      <Box sx={{ textAlign: 'center', py: 4 }}>
+      <Box sx={{ width, height, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <Typography variant="body2" color="text.secondary">
           No data available for force graph visualization
         </Typography>
@@ -434,47 +434,69 @@ const ForceGraph: React.FC<ForceGraphProps> = ({
   }
 
   return (
-    <Box sx={{ position: 'relative' }}>
+    <Box sx={{ position: 'relative', width, height }}>
+      {/* Loading Overlay */}
+      {isLoading && (
+        <Box sx={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: 'rgba(255, 255, 255, 0.8)',
+          zIndex: 1001
+        }}>
+          <Typography variant="body2" color="text.secondary">
+            Loading force graph visualization...
+          </Typography>
+        </Box>
+      )}
+
       {/* Control Panel */}
-      <Box sx={{ 
-        position: 'absolute', 
-        top: 10, 
-        right: 10, 
-        zIndex: 1000,
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 1,
-        backgroundColor: 'rgba(255, 255, 255, 0.9)',
-        borderRadius: 1,
-        p: 1
-      }}>
-        <Tooltip title="Zoom In">
-          <IconButton size="small" onClick={handleZoomIn}>
-            <ZoomIn />
-          </IconButton>
-        </Tooltip>
-        <Tooltip title="Zoom Out">
-          <IconButton size="small" onClick={handleZoomOut}>
-            <ZoomOut />
-          </IconButton>
-        </Tooltip>
-        <Tooltip title="Reset View">
-          <IconButton size="small" onClick={handleResetView}>
-            <CenterFocusStrong />
-          </IconButton>
-        </Tooltip>
-        <Tooltip title={isSimulationRunning ? "Pause Simulation" : "Resume Simulation"}>
-          <IconButton size="small" onClick={toggleSimulation}>
-            {isSimulationRunning ? <Pause /> : <PlayArrow />}
-          </IconButton>
-        </Tooltip>
-        <Typography variant="caption" sx={{ textAlign: 'center', mt: 1 }}>
-          Zoom: {Math.round(zoomLevel * 100)}%
-        </Typography>
-      </Box>
+      {!isLoading && (
+        <Box sx={{ 
+          position: 'absolute', 
+          top: 10, 
+          right: 10, 
+          zIndex: 1000,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 1,
+          backgroundColor: 'rgba(255, 255, 255, 0.9)',
+          borderRadius: 1,
+          p: 1
+        }}>
+          <Tooltip title="Zoom In">
+            <IconButton size="small" onClick={handleZoomIn}>
+              <ZoomIn />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Zoom Out">
+            <IconButton size="small" onClick={handleZoomOut}>
+              <ZoomOut />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Reset View">
+            <IconButton size="small" onClick={handleResetView}>
+              <CenterFocusStrong />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title={isSimulationRunning ? "Pause Simulation" : "Resume Simulation"}>
+            <IconButton size="small" onClick={toggleSimulation}>
+              {isSimulationRunning ? <Pause /> : <PlayArrow />}
+            </IconButton>
+          </Tooltip>
+          <Typography variant="caption" sx={{ textAlign: 'center', mt: 1 }}>
+            Zoom: {Math.round(zoomLevel * 100)}%
+          </Typography>
+        </Box>
+      )}
 
       {/* Selected Node Info */}
-      {selectedNode && (
+      {selectedNode && !isLoading && (
         <Box sx={{ 
           position: 'absolute', 
           top: 10, 

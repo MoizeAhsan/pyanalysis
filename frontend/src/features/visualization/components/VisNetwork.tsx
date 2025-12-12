@@ -49,8 +49,20 @@ const VisNetwork: React.FC<VisNetworkProps> = ({
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const networkRef = useRef<any>(null);
+  const nodesRef = useRef(nodes);
+  const edgesRef = useRef(edges);
+  const onNodeClickRef = useRef(onNodeClick);
+  const onEdgeClickRef = useRef(onEdgeClick);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Keep refs updated
+  useEffect(() => {
+    nodesRef.current = nodes;
+    edgesRef.current = edges;
+    onNodeClickRef.current = onNodeClick;
+    onEdgeClickRef.current = onEdgeClick;
+  }, [nodes, edges, onNodeClick, onEdgeClick]);
 
   const getNodeColor = (type?: string): string => {
     switch (type) {
@@ -267,15 +279,15 @@ const VisNetwork: React.FC<VisNetworkProps> = ({
         networkRef.current.on('click', (params: any) => {
           if (params.nodes.length > 0) {
             const nodeId = params.nodes[0];
-            const node = nodes.find((n: VisNode) => n.id === nodeId);
+            const node = nodesRef.current.find((n: VisNode) => n.id === nodeId);
             if (node) {
-              onNodeClick(node);
+              onNodeClickRef.current(node);
             }
           } else if (params.edges.length > 0) {
             const edgeId = params.edges[0];
-            const edge = edges.find((e: VisEdge) => (e.id || `edge-${edges.indexOf(e)}`) === edgeId);
+            const edge = edgesRef.current.find((e: VisEdge) => (e.id || `edge-${edgesRef.current.indexOf(e)}`) === edgeId);
             if (edge) {
-              onEdgeClick(edge);
+              onEdgeClickRef.current(edge);
             }
           }
         });
@@ -331,20 +343,14 @@ const VisNetwork: React.FC<VisNetworkProps> = ({
         networkRef.current = null;
       }
     };
-  }, [nodes, edges, options, onNodeClick, onEdgeClick]);
+    // Only re-initialize when data length changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nodes.length, edges.length]);
 
   if (error) {
     return (
       <Box sx={{ ...(style as any), display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <Typography color="error">{error}</Typography>
-      </Box>
-    );
-  }
-
-  if (isLoading) {
-    return (
-      <Box sx={{ ...(style as any), display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <Typography>Loading network visualization...</Typography>
       </Box>
     );
   }
@@ -360,11 +366,30 @@ const VisNetwork: React.FC<VisNetworkProps> = ({
   }
 
   return (
-    <div 
-      ref={containerRef} 
-      style={style}
-      className="vis-network-container"
-    />
+    <Box sx={{ position: 'relative', ...(style as any) }}>
+      {/* Loading Overlay */}
+      {isLoading && (
+        <Box sx={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: 'rgba(255, 255, 255, 0.8)',
+          zIndex: 1001
+        }}>
+          <Typography>Loading network visualization...</Typography>
+        </Box>
+      )}
+      <div 
+        ref={containerRef} 
+        style={{ width: '100%', height: '100%' }}
+        className="vis-network-container"
+      />
+    </Box>
   );
 };
 
