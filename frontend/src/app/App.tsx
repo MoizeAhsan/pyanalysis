@@ -98,48 +98,73 @@ function App() {
   // Memoize the main content components to prevent unnecessary re-renders
   const homeContent = useMemo(() => (
     <AnimatedPage pageKey="home">
-      <Container maxWidth="xl" className="fade-in" sx={{ px: { xs: 1, sm: 2, md: 3 } }}>
+      <Container maxWidth="xl" className="fade-in" sx={{ px: { xs: 1.5, sm: 2, md: 3 } }}>
         <Box sx={{
-          mb: { xs: 2, sm: 3, md: 4 },
+          mb: { xs: 1.5, sm: 2, md: 3 },
           textAlign: 'center',
           animation: 'fadeIn 0.8s cubic-bezier(0.4, 0, 0.2, 1)'
         }}>
+          {/* Short title for mobile */}
+          <Typography
+            variant="h4"
+            component="h2"
+            gutterBottom
+            sx={{
+              display: { xs: 'block', sm: 'none' },
+              fontWeight: 700,
+              fontSize: '1.1rem',
+              lineHeight: 1.3,
+              background: 'linear-gradient(135deg, #1976d2 0%, #42a5f5 100%)',
+              backgroundClip: 'text',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              mb: 1,
+              px: 1,
+              width: '100%',
+              textAlign: 'center',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap'
+            }}
+          >
+            Py Project Explorer
+          </Typography>
+          {/* Full title for larger screens */}
           <Typography
             variant="h3"
             component="h2"
             gutterBottom
             sx={{
+              display: { xs: 'none', sm: 'block' },
               fontWeight: 700,
               color: 'primary.main',
-              fontSize: { xs: '1.5rem', sm: '2rem', md: '2.5rem', lg: '3rem' },
-              lineHeight: { xs: 1.3, sm: 1.2 },
+              fontSize: { sm: '1.75rem', md: '2.25rem', lg: '3rem' },
+              lineHeight: 1.2,
               background: 'linear-gradient(135deg, #1976d2 0%, #42a5f5 100%)',
               backgroundClip: 'text',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
-              mb: { xs: 1.5, sm: 2 },
-              px: { xs: 1, sm: 0 }
+              mb: 2
             }}
             className="responsive-title"
           >
             Visual Python Project Explorer
           </Typography>
+          {/* Subtitle - hidden on very small screens */}
           <Typography
-            variant="h6"
+            variant="body1"
             component="p"
             color="text.secondary"
             sx={{
-              maxWidth: { xs: '100%', sm: 600 },
+              display: { xs: 'none', sm: 'block' },
+              maxWidth: 600,
               mx: 'auto',
-              fontSize: { xs: '0.875rem', sm: '1rem', md: '1.25rem' },
-              lineHeight: 1.6,
-              fontWeight: 400,
-              px: { xs: 2, sm: 0 }
+              fontSize: { sm: '0.9rem', md: '1rem' },
+              lineHeight: 1.5,
+              fontWeight: 400
             }}
-            className="responsive-subtitle"
           >
             Analyze Python projects with interactive mind maps and architectural overviews.
-            Get insights into your code structure, dependencies, and relationships.
           </Typography>
         </Box>
 

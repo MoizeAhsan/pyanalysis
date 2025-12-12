@@ -560,12 +560,16 @@ export function AppShell({ children, currentView = 'home', onViewChange }: AppSh
               fontWeight: 700,
               display: 'flex',
               alignItems: 'center',
-              gap: 1,
-              fontSize: { xs: '1.1rem', sm: '1.25rem' },
+              gap: { xs: 0.5, sm: 1 },
+              fontSize: { xs: '0.95rem', sm: '1.1rem', md: '1.25rem' },
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis'
             }}
           >
-            <span role="img" aria-label="Python snake" style={{ fontSize: '1.5em' }}>🐍</span>
-            Python Code Analyzer
+            <span role="img" aria-label="Python snake" style={{ fontSize: '1.3em' }}>🐍</span>
+            <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>Python Code Analyzer</Box>
+            <Box component="span" sx={{ display: { xs: 'inline', sm: 'none' } }}>PyAnalyzer</Box>
           </Typography>
 
           {/* Theme Switcher */}
@@ -649,8 +653,8 @@ export function AppShell({ children, currentView = 'home', onViewChange }: AppSh
         
         {/* Page Content */}
         <Box sx={{ 
-          p: { xs: 1.5, sm: 2, md: 3, lg: 4 },
-          pb: { xs: 10, sm: 3, md: 4 }, // Extra bottom padding on mobile for safe area
+          p: { xs: 1, sm: 2, md: 3 },
+          pb: { xs: 8, sm: 3, md: 4 }, // Extra bottom padding on mobile for safe area
         }}>
           {children}
         </Box>

@@ -142,13 +142,14 @@ function NotificationContainer() {
       <Box
         sx={{
           position: 'fixed',
-          top: 88, // Below app bar
-          right: 16,
+          top: { xs: 70, sm: 88 }, // Smaller offset on mobile
+          right: { xs: 8, sm: 16 },
+          left: { xs: 8, sm: 'auto' },
           zIndex: 9999,
           pointerEvents: 'none',
         }}
       >
-        <Stack spacing={1} sx={{ maxWidth: 400 }}>
+        <Stack spacing={1} sx={{ maxWidth: { xs: '100%', sm: 400 } }}>
           {notifications.map((notification) => (
             <NotificationItem
               key={notification.id}
@@ -190,12 +191,19 @@ function NotificationItem({ notification, onClose }: NotificationItemProps) {
         icon={getIcon()}
         sx={{
           pointerEvents: 'auto',
-          minWidth: 300,
-          maxWidth: 400,
+          minWidth: { xs: 'auto', sm: 280 },
+          maxWidth: { xs: '100%', sm: 400 },
           boxShadow: 3,
           borderRadius: 2,
+          fontSize: { xs: '0.8rem', sm: '0.875rem' },
+          py: { xs: 0.5, sm: 1 },
           '& .MuiAlert-message': {
             width: '100%',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+          },
+          '& .MuiAlert-icon': {
+            fontSize: { xs: '1.25rem', sm: '1.5rem' },
           },
         }}
         action={

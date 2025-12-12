@@ -624,8 +624,8 @@ const ArchitectureViewer: React.FC<ArchitectureViewerProps> = memo(({ data = nul
             </Box>
           </Box>
 
-          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
-            <FormControl size="small" sx={{ minWidth: 120 }}>
+          <Box sx={{ display: 'flex', gap: { xs: 1, sm: 2 }, alignItems: 'center', flexWrap: 'wrap', width: { xs: '100%', md: 'auto' } }}>
+            <FormControl size="small" sx={{ minWidth: { xs: 100, sm: 120 } }}>
               <InputLabel>Layout</InputLabel>
               <Select
                 value={layoutType}
@@ -633,13 +633,13 @@ const ArchitectureViewer: React.FC<ArchitectureViewerProps> = memo(({ data = nul
                 onChange={(e) => setLayoutType(e.target.value as LayoutType)}
               >
                 <MenuItem value="breadthfirst">Tree</MenuItem>
-                <MenuItem value="cose">Force-Directed</MenuItem>
+                <MenuItem value="cose">Force</MenuItem>
                 <MenuItem value="concentric">Concentric</MenuItem>
                 <MenuItem value="circle">Circular</MenuItem>
               </Select>
             </FormControl>
 
-            <Box sx={{ display: 'flex', gap: 1 }}>
+            <Box sx={{ display: 'flex', gap: 0.5 }}>
               <Tooltip title="Refresh">
                 <IconButton onClick={handleRefresh} size="small">
                   <Refresh />
@@ -660,17 +660,19 @@ const ArchitectureViewer: React.FC<ArchitectureViewerProps> = memo(({ data = nul
               size="small"
               sx={{
                 '& .MuiToggleButton-root': {
-                  px: { xs: 1, sm: 2 },
-                  fontSize: { xs: '0.75rem', sm: '0.875rem' }
+                  px: { xs: 0.75, sm: 2 },
+                  py: { xs: 0.5, sm: 1 },
+                  fontSize: { xs: '0.7rem', sm: '0.875rem' },
+                  minWidth: { xs: 'auto', sm: 'unset' }
                 }
               }}
             >
               <ToggleButton value="dependency" aria-label="dependency view">
-                <AccountTree sx={{ mr: { xs: 0.5, sm: 1 }, fontSize: { xs: '1rem', sm: '1.25rem' } }} />
-                <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>Dependencies</Box>
+                <AccountTree sx={{ mr: { xs: 0, sm: 1 }, fontSize: { xs: '0.9rem', sm: '1.25rem' } }} />
+                <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>Deps</Box>
               </ToggleButton>
               <ToggleButton value="imports" aria-label="imports view">
-                <ImportExport sx={{ mr: { xs: 0.5, sm: 1 }, fontSize: { xs: '1rem', sm: '1.25rem' } }} />
+                <ImportExport sx={{ mr: { xs: 0, sm: 1 }, fontSize: { xs: '0.9rem', sm: '1.25rem' } }} />
                 <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>Imports</Box>
               </ToggleButton>
             </ToggleButtonGroup>
@@ -680,24 +682,26 @@ const ArchitectureViewer: React.FC<ArchitectureViewerProps> = memo(({ data = nul
         {/* Enhanced Controls with Performance Settings */}
         <Box sx={{ 
           mb: 2, 
-          p: 2, 
+          p: { xs: 1, sm: 2 }, 
           backgroundColor: alpha(theme.palette.background.default, 0.5), 
           borderRadius: 1,
           border: `1px solid ${alpha(theme.palette.divider, 0.1)}`
         }}>
-          <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap', alignItems: 'center' }}>
+          <Box sx={{ display: 'flex', gap: { xs: 1, sm: 3 }, flexWrap: 'wrap', alignItems: 'center', flexDirection: { xs: 'column', sm: 'row' }, '& .MuiFormControlLabel-root': { m: 0 } }}>
             <FormControlLabel
               control={
                 <Switch
                   checked={showCircularDeps}
                   onChange={(e) => setShowCircularDeps(e.target.checked)}
                   color="error"
+                  size="small"
                 />
               }
               label={
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Loop color="error" fontSize="small" />
-                  Show Circular Dependencies
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
+                  <Loop color="error" sx={{ fontSize: { xs: '1rem', sm: '1.25rem' } }} />
+                  <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>Circular Deps</Box>
+                  <Box component="span" sx={{ display: { xs: 'inline', sm: 'none' } }}>Cycles</Box>
                 </Box>
               }
             />
@@ -707,12 +711,14 @@ const ArchitectureViewer: React.FC<ArchitectureViewerProps> = memo(({ data = nul
                   checked={showImports}
                   onChange={(e) => setShowImports(e.target.checked)}
                   color="primary"
+                  size="small"
                 />
               }
               label={
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <ImportExport color="primary" fontSize="small" />
-                  Show Import Relationships
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
+                  <ImportExport color="primary" sx={{ fontSize: { xs: '1rem', sm: '1.25rem' } }} />
+                  <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>Import Relationships</Box>
+                  <Box component="span" sx={{ display: { xs: 'inline', sm: 'none' } }}>Imports</Box>
                 </Box>
               }
             />
@@ -722,12 +728,14 @@ const ArchitectureViewer: React.FC<ArchitectureViewerProps> = memo(({ data = nul
                   checked={showModulesOnly}
                   onChange={(e) => setShowModulesOnly(e.target.checked)}
                   color="secondary"
+                  size="small"
                 />
               }
               label={
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <FilterList color="secondary" fontSize="small" />
-                  Modules Only
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
+                  <FilterList color="secondary" sx={{ fontSize: { xs: '1rem', sm: '1.25rem' } }} />
+                  <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>Modules Only</Box>
+                  <Box component="span" sx={{ display: { xs: 'inline', sm: 'none' } }}>Modules</Box>
                 </Box>
               }
             />
@@ -735,13 +743,13 @@ const ArchitectureViewer: React.FC<ArchitectureViewerProps> = memo(({ data = nul
         </Box>
 
         {/* Main Content */}
-        <Box sx={{ display: 'flex', gap: 2, flex: 1 }}>
-          <Box sx={{ flex: 1 }}>
+        <Box sx={{ display: 'flex', gap: 2, flex: 1, flexDirection: { xs: 'column', md: 'row' } }}>
+          <Box sx={{ flex: 1, minHeight: { xs: 300, sm: 400 } }}>
             {renderArchitecturalView()}
           </Box>
 
           {/* Enhanced Side Panel with Virtualized Lists */}
-          <Box sx={{ width: 320, display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <Box sx={{ width: { xs: '100%', md: 320 }, display: 'flex', flexDirection: 'column', gap: 2 }}>
             {/* Performance Stats */}
             <Card sx={{ backgroundColor: alpha(theme.palette.info.main, 0.05) }}>
               <CardContent sx={{ p: 2 }}>

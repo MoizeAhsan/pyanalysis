@@ -360,9 +360,9 @@ const ProjectInput: React.FC<ProjectInputProps> = ({
     <Paper
       elevation={3}
       sx={{
-        p: { xs: 3, sm: 4 },
-        mb: { xs: 3, sm: 4 },
-        borderRadius: 3,
+        p: { xs: 2, sm: 3, md: 4 },
+        mb: { xs: 2, sm: 3, md: 4 },
+        borderRadius: { xs: 2, sm: 3 },
         background: (theme) => theme.palette.mode === 'dark'
           ? 'linear-gradient(135deg, #1e1e1e 0%, #2d2d2d 100%)'
           : 'linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%)',
@@ -370,11 +370,12 @@ const ProjectInput: React.FC<ProjectInputProps> = ({
           ? 'rgba(144, 202, 249, 0.12)'
           : 'rgba(25, 118, 210, 0.08)'}`,
         transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+        mx: { xs: 0, sm: 'auto' },
         '&:hover': {
           boxShadow: (theme) => theme.palette.mode === 'dark'
             ? '0px 8px 32px rgba(144, 202, 249, 0.15)'
             : '0px 8px 32px rgba(25, 118, 210, 0.12)',
-          transform: 'translateY(-2px)',
+          transform: { xs: 'none', sm: 'translateY(-2px)' },
         }
       }}
       className="hover-lift"
@@ -389,14 +390,15 @@ const ProjectInput: React.FC<ProjectInputProps> = ({
           display: 'flex',
           alignItems: 'center',
           gap: 1,
-          mb: 3
+          mb: { xs: 2, sm: 3 },
+          fontSize: { xs: '1.1rem', sm: '1.25rem', md: '1.5rem' }
         }}
       >
-        <FolderOpen sx={{ fontSize: '1.2em' }} />
+        <FolderOpen sx={{ fontSize: { xs: '1.1em', sm: '1.2em' } }} />
         Project Analysis
       </Typography>
 
-      <Box sx={{ mb: 3 }}>
+      <Box sx={{ mb: { xs: 2, sm: 3 } }}>
         {/* Progress Indicator */}
         {analysisProgress && (
           <Fade in={true}>
@@ -496,10 +498,11 @@ const ProjectInput: React.FC<ProjectInputProps> = ({
         <TextField
           fullWidth
           label="Python Project Path"
-          placeholder="/path/to/your/python/project"
+          placeholder="/path/to/python/project"
           value={projectPath}
           onChange={(e) => setProjectPath(e.target.value)}
           variant="outlined"
+          size="medium"
           error={pathValidation?.type === 'error'}
           helperText={pathValidation?.message}
           slotProps={{
@@ -508,6 +511,7 @@ const ProjectInput: React.FC<ProjectInputProps> = ({
               'aria-describedby': `${pathValidation ? 'path-validation-message' : ''} path-input-description`,
               'aria-invalid': pathValidation?.type === 'error',
               'aria-required': true,
+              style: { fontSize: '0.875rem' }
             },
             input: {
               endAdornment: pathValidation && (
@@ -522,9 +526,10 @@ const ProjectInput: React.FC<ProjectInputProps> = ({
             },
           }}
           sx={{
-            mb: 2,
+            mb: { xs: 1.5, sm: 2 },
             '& .MuiOutlinedInput-root': {
-              borderRadius: 2,
+              borderRadius: { xs: 1.5, sm: 2 },
+              fontSize: { xs: '0.875rem', sm: '1rem' },
               backgroundColor: (theme) => theme.palette.mode === 'dark'
                 ? 'rgba(255, 255, 255, 0.05)'
                 : 'rgba(255, 255, 255, 0.8)',
@@ -661,7 +666,7 @@ const ProjectInput: React.FC<ProjectInputProps> = ({
 
         <Box sx={{
           display: 'flex',
-          gap: 2,
+          gap: { xs: 1.5, sm: 2 },
           flexDirection: { xs: 'column', sm: 'row' },
           alignItems: { xs: 'stretch', sm: 'center' },
           '& > *': {
@@ -677,9 +682,9 @@ const ProjectInput: React.FC<ProjectInputProps> = ({
               size="large"
               hoverEffect="lift"
               sx={{
-                py: 1.5,
-                px: 3,
-                fontSize: '1rem',
+                py: { xs: 1.25, sm: 1.5 },
+                px: { xs: 2, sm: 3 },
+                fontSize: { xs: '0.875rem', sm: '1rem' },
                 background: 'linear-gradient(45deg, #d32f2f 30%, #f44336 90%)',
                 boxShadow: '0px 4px 16px rgba(211, 47, 47, 0.3)',
               }}
@@ -691,7 +696,7 @@ const ProjectInput: React.FC<ProjectInputProps> = ({
               variant="contained"
               startIcon={
                 isAnalyzing ? (
-                  <CircularProgress size={20} color="inherit" />
+                  <CircularProgress size={18} color="inherit" />
                 ) : (
                   <FolderOpen />
                 )
@@ -702,9 +707,9 @@ const ProjectInput: React.FC<ProjectInputProps> = ({
               hoverEffect="lift"
               disabled={pathValidation?.type === 'error' || isAnalyzing}
               sx={{
-                py: 1.5,
-                px: 3,
-                fontSize: '1rem',
+                py: { xs: 1.25, sm: 1.5 },
+                px: { xs: 2, sm: 3 },
+                fontSize: { xs: '0.875rem', sm: '1rem' },
                 background: (theme) => {
                   if (isAnalyzing) {
                     return theme.palette.mode === 'dark'
@@ -739,9 +744,9 @@ const ProjectInput: React.FC<ProjectInputProps> = ({
             size="large"
             hoverEffect="lift"
             sx={{
-              py: 1.5,
-              px: 3,
-              fontSize: '1rem',
+              py: { xs: 1.25, sm: 1.5 },
+              px: { xs: 2, sm: 3 },
+              fontSize: { xs: '0.875rem', sm: '1rem' },
               borderWidth: 2,
               borderColor: isAnalyzing ? 'grey.400' : 'primary.main',
               color: isAnalyzing ? 'grey.400' : 'primary.main',
