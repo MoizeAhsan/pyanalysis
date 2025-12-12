@@ -270,6 +270,8 @@ export function AccessibilityButton() {
             right: 0,
             minWidth: 400,
             maxWidth: 500,
+            maxHeight: 'calc(90vh - 120px)',
+            overflowY: 'auto',
             boxShadow: 6,
             borderRadius: 2,
           }}
