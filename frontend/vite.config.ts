@@ -13,6 +13,7 @@ export default defineConfig({
   root: '.',
   publicDir: 'public',
   resolve: {
+    extensions: ['.mjs', '.js', '.mts', '.ts', '.jsx', '.tsx', '.json'],
     alias: {
       '@': resolve(__dirname, './src'),
       '@components': resolve(__dirname, './src/components'),

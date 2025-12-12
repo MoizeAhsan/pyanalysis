@@ -454,7 +454,7 @@ const CodeExplorer = ({ data = null, selectedElement: propSelectedElement = null
                 initialBatchSize={15}
                 batchSize={20}
                 maxItems={200}
-                sx={{ maxHeight: '600px', overflow: 'auto' }}
+                sx={{ p: 0 }}
             />
         );
     };
@@ -721,11 +721,19 @@ const CodeExplorer = ({ data = null, selectedElement: propSelectedElement = null
                     Code Explorer
                 </Typography>
 
-                <Box sx={{ display: 'flex', gap: 3, height: '800px' }}>
+                <Box sx={{ display: 'flex', gap: 3, height: 'calc(100vh - 250px)', minHeight: '500px', maxHeight: '800px' }}>
                     {/* Left Panel - Element List */}
-                    <Box sx={{ width: '400px', borderRight: '1px solid #e0e0e0', pr: 2 }}>
+                    <Box sx={{ 
+                        width: '400px', 
+                        minWidth: '350px',
+                        borderRight: '1px solid #e0e0e0', 
+                        pr: 2,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        overflow: 'hidden'
+                    }}>
                         {/* Search and Filters */}
-                        <Box sx={{ mb: 3 }}>
+                        <Box sx={{ mb: 3, flexShrink: 0 }}>
                             <TextField
                                 fullWidth
                                 size="small"
@@ -770,7 +778,7 @@ const CodeExplorer = ({ data = null, selectedElement: propSelectedElement = null
                         </Box>
 
                         {/* Statistics */}
-                        <Box sx={{ mb: 3, p: 2, backgroundColor: '#f5f5f5', borderRadius: 1 }}>
+                        <Box sx={{ mb: 3, p: 2, backgroundColor: '#f5f5f5', borderRadius: 1, flexShrink: 0 }}>
                             <Typography variant="subtitle2" gutterBottom>
                                 Statistics
                             </Typography>
@@ -796,12 +804,50 @@ const CodeExplorer = ({ data = null, selectedElement: propSelectedElement = null
                             </Box>
                         </Box>
 
-                        {/* Element List */}
-                        {renderElementList(processedElements.all)}
+                        {/* Element List with proper scrolling */}
+                        <Box sx={{ 
+                            flex: 1,
+                            overflow: 'auto',
+                            minHeight: 0,
+                            '&::-webkit-scrollbar': {
+                                width: '8px',
+                            },
+                            '&::-webkit-scrollbar-track': {
+                                backgroundColor: '#f1f1f1',
+                                borderRadius: '4px',
+                            },
+                            '&::-webkit-scrollbar-thumb': {
+                                backgroundColor: '#c1c1c1',
+                                borderRadius: '4px',
+                                '&:hover': {
+                                    backgroundColor: '#a8a8a8',
+                                },
+                            },
+                        }}>
+                            {renderElementList(processedElements.all)}
+                        </Box>
                     </Box>
 
                     {/* Right Panel - Element Details */}
-                    <Box sx={{ flex: 1, overflow: 'auto' }}>
+                    <Box sx={{ 
+                        flex: 1, 
+                        overflow: 'auto',
+                        minHeight: 0,
+                        '&::-webkit-scrollbar': {
+                            width: '8px',
+                        },
+                        '&::-webkit-scrollbar-track': {
+                            backgroundColor: '#f1f1f1',
+                            borderRadius: '4px',
+                        },
+                        '&::-webkit-scrollbar-thumb': {
+                            backgroundColor: '#c1c1c1',
+                            borderRadius: '4px',
+                            '&:hover': {
+                                backgroundColor: '#a8a8a8',
+                            },
+                        },
+                    }}>
                         {renderSelectedElementDetails()}
                     </Box>
                 </Box>
