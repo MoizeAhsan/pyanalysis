@@ -114,8 +114,8 @@ const ExportDialog: React.FC<ExportDialogProps> = ({
         quality,
         ...(customDimensions && { width, height }),
         ...(includeBackground && { backgroundColor }),
-        // Pass graph data for vector SVG export
-        ...(format === 'svg' && { graphData: data })
+        // Pass graph data and layout type for vector SVG export
+        ...(format === 'svg' && { graphData: data, layoutType })
       });
 
       switch (format) {
@@ -139,7 +139,7 @@ const ExportDialog: React.FC<ExportDialogProps> = ({
     } finally {
       setIsExporting(false);
     }
-  }, [element, format, filename, quality, customDimensions, width, height, backgroundColor, includeBackground, data, onClose]);
+  }, [element, format, filename, quality, customDimensions, width, height, backgroundColor, includeBackground, data, layoutType, onClose]);
 
   const handleGenerateShareableURL = useCallback(async () => {
     setIsGeneratingURL(true);

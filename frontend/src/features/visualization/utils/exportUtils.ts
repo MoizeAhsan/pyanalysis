@@ -8,6 +8,7 @@ export interface ExportOptions {
   backgroundColor?: string;
   filename?: string;
   graphData?: any; // Graph data for vector SVG export
+  layoutType?: string; // Layout type: tree, force, circular, grid, etc.
 }
 
 export interface ShareableState {
@@ -37,6 +38,19 @@ const NODE_SHAPES: Record<string, string> = {
   default: 'ellipse'
 };
 
+// Layout type labels for display
+const LAYOUT_LABELS: Record<string, string> = {
+  dagre: 'Hierarchical Tree',
+  breadthfirst: 'Breadth-First Tree',
+  circle: 'Circular',
+  concentric: 'Concentric',
+  grid: 'Grid',
+  cose: 'Force-Directed (CoSE)',
+  force: 'Force-Directed',
+  random: 'Random',
+  preset: 'Custom'
+};
+
 /**
  * Generate a proper vector SVG from graph data
  */
@@ -44,11 +58,7 @@ const generateVectorSVG = (
   graphData: any,
   options: Partial<ExportOptions>
 ): string => {
-  const width = options.width || 1920;
-  const height = options.height || 1080;
-  const bgColor = options.backgroundColor || '#ffffff';
-  
-  // Extract nodes and edges from cytoscape format
+  // Extract nodes and edges from various formats
   let nodes: any[] = [];
   let edges: any[] = [];
   
@@ -66,12 +76,39 @@ const generateVectorSVG = (
   if (nodes.length === 0) {
     throw new Error('No graph data available for SVG export');
   }
+
+  // Calculate optimal dimensions based on node count
+  const nodeCount = nodes.length;
+  const layoutType = options.layoutType || 'dagre';
   
-  // Calculate layout positions using a simple hierarchical layout
-  const nodePositions = calculateNodePositions(nodes, edges, width, height);
+  // Dynamic sizing based on node count and layout type - larger dimensions for readable labels
+  // Each node needs approximately 250x200 pixels of space for proper label display
+  const nodesPerRow = Math.ceil(Math.sqrt(nodeCount));
+  const baseDimension = Math.max(1600, nodesPerRow * 250);
+  const width = options.width || (layoutType === 'circle' || layoutType === 'concentric' 
+    ? Math.max(baseDimension, 2400) 
+    : Math.max(baseDimension * 1.4, 2400));
+  const height = options.height || (layoutType === 'circle' || layoutType === 'concentric'
+    ? Math.max(baseDimension, 2400)
+    : Math.max(baseDimension, 1800));
+  
+  const bgColor = options.backgroundColor || '#ffffff';
+  
+  // Calculate layout positions based on selected layout type
+  const nodePositions = calculateLayoutPositions(nodes, edges, width, height, layoutType);
   
   // Build SVG elements
   const svgElements: string[] = [];
+  
+  // Add title and metadata
+  const layoutLabel = LAYOUT_LABELS[layoutType] || layoutType;
+  svgElements.push(`
+    <text x="20" y="30" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#333333">
+      Layout: ${escapeXml(layoutLabel)} | Nodes: ${nodeCount} | Edges: ${edges.length}
+    </text>`);
+  
+  // Add legend
+  svgElements.push(generateLegend(width));
   
   // Add edges first (so they render behind nodes)
   edges.forEach((edge: any) => {
@@ -85,14 +122,20 @@ const generateVectorSVG = (
       const edgeColor = getEdgeColor(edgeType);
       const dashArray = edgeType === 'contains' ? '5,5' : 'none';
       
-      // Draw edge line
-      svgElements.push(`
+      // Draw curved edge for circular layouts, straight for others
+      if (layoutType === 'circle' || layoutType === 'concentric') {
+        svgElements.push(generateCurvedEdge(sourcePos, targetPos, edgeColor, dashArray));
+      } else {
+        svgElements.push(`
     <line x1="${sourcePos.x}" y1="${sourcePos.y}" x2="${targetPos.x}" y2="${targetPos.y}" 
-          stroke="${edgeColor}" stroke-width="2" stroke-dasharray="${dashArray}" opacity="0.6"/>
-    <!-- Arrow marker -->
-    <polygon points="${getArrowPoints(sourcePos, targetPos)}" fill="${edgeColor}" opacity="0.8"/>`);
+          stroke="${edgeColor}" stroke-width="1.5" stroke-dasharray="${dashArray}" opacity="0.5"/>
+    <polygon points="${getArrowPoints(sourcePos, targetPos)}" fill="${edgeColor}" opacity="0.7"/>`);
+      }
     }
   });
+  
+  // Calculate dynamic node size based on total nodes - ensure minimum readable size
+  const nodeSizeScale = Math.max(0.7, Math.min(1.2, 80 / nodeCount));
   
   // Add nodes
   nodes.forEach((node: any) => {
@@ -105,19 +148,32 @@ const generateVectorSVG = (
     if (pos) {
       const color = NODE_COLORS[type] || NODE_COLORS.default;
       const shape = NODE_SHAPES[type] || NODE_SHAPES.default;
-      const nodeWidth = type === 'module' ? 120 : 90;
-      const nodeHeight = type === 'module' ? 50 : 70;
+      
+      // Larger base sizes for better readability
+      const baseWidth = type === 'module' ? 160 : 120;
+      const baseHeight = type === 'module' ? 55 : 80;
+      const nodeWidth = baseWidth * nodeSizeScale;
+      const nodeHeight = baseHeight * nodeSizeScale;
       
       // Draw node shape
       svgElements.push(getNodeShape(shape, pos.x, pos.y, nodeWidth, nodeHeight, color, type));
       
-      // Draw label with text wrapping
-      const truncatedLabel = label.length > 15 ? label.substring(0, 12) + '...' : label;
-      svgElements.push(`
-    <text x="${pos.x}" y="${pos.y}" text-anchor="middle" dominant-baseline="middle"
-          font-family="Arial, sans-serif" font-size="11" font-weight="bold" fill="#ffffff">
-      <tspan x="${pos.x}" dy="0">${escapeXml(truncatedLabel)}</tspan>
+      // Smart label handling - use multi-line for long labels
+      const fontSize = Math.max(10, Math.min(14, 12 * nodeSizeScale));
+      const charsPerLine = Math.floor(nodeWidth / (fontSize * 0.6));
+      const labelLines = wrapLabel(label, charsPerLine);
+      
+      // Render multi-line label
+      const lineHeight = fontSize * 1.2;
+      const startY = pos.y - ((labelLines.length - 1) * lineHeight) / 2;
+      
+      labelLines.forEach((line, lineIndex) => {
+        svgElements.push(`
+    <text x="${pos.x}" y="${startY + lineIndex * lineHeight}" text-anchor="middle" dominant-baseline="middle"
+          font-family="Arial, sans-serif" font-size="${fontSize}" font-weight="bold" fill="#ffffff">
+      ${escapeXml(line)}
     </text>`);
+      });
     }
   });
   
@@ -128,6 +184,9 @@ const generateVectorSVG = (
     <style>
       .node-shadow { filter: drop-shadow(2px 2px 3px rgba(0,0,0,0.3)); }
     </style>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#666"/>
+    </marker>
   </defs>
   <rect width="100%" height="100%" fill="${bgColor}"/>
   <g class="graph-content">
@@ -137,17 +196,319 @@ const generateVectorSVG = (
 };
 
 /**
- * Calculate node positions using a hierarchical layout
+ * Generate legend for the SVG
  */
-const calculateNodePositions = (
+const generateLegend = (width: number): string => {
+  const legendX = width - 200;
+  const legendY = 20;
+  
+  return `
+    <g class="legend" transform="translate(${legendX}, ${legendY})">
+      <rect x="0" y="0" width="180" height="130" fill="#f5f5f5" stroke="#ddd" rx="5"/>
+      <text x="10" y="20" font-family="Arial" font-size="12" font-weight="bold" fill="#333">Legend</text>
+      
+      <rect x="10" y="30" width="20" height="14" rx="3" fill="${NODE_COLORS.module}"/>
+      <text x="35" y="42" font-family="Arial" font-size="10" fill="#333">Module</text>
+      
+      <ellipse cx="20" cy="57" rx="10" ry="7" fill="${NODE_COLORS.class}"/>
+      <text x="35" y="60" font-family="Arial" font-size="10" fill="#333">Class</text>
+      
+      <polygon points="20,68 30,75 20,82 10,75" fill="${NODE_COLORS.function}"/>
+      <text x="35" y="78" font-family="Arial" font-size="10" fill="#333">Function</text>
+      
+      <line x1="10" y1="95" x2="30" y2="95" stroke="${getEdgeColor('imports')}" stroke-width="2"/>
+      <text x="35" y="98" font-family="Arial" font-size="10" fill="#333">Imports</text>
+      
+      <line x1="10" y1="110" x2="30" y2="110" stroke="${getEdgeColor('contains')}" stroke-width="2" stroke-dasharray="5,5"/>
+      <text x="35" y="113" font-family="Arial" font-size="10" fill="#333">Contains</text>
+    </g>`;
+};
+
+/**
+ * Generate a curved edge for circular layouts
+ */
+const generateCurvedEdge = (
+  source: { x: number; y: number },
+  target: { x: number; y: number },
+  color: string,
+  dashArray: string
+): string => {
+  // Calculate control point for quadratic curve
+  const midX = (source.x + target.x) / 2;
+  const midY = (source.y + target.y) / 2;
+  const dx = target.x - source.x;
+  const dy = target.y - source.y;
+  const len = Math.sqrt(dx * dx + dy * dy);
+  
+  // Offset control point perpendicular to the line
+  const offset = Math.min(len * 0.2, 50);
+  const cx = midX - (dy / len) * offset;
+  const cy = midY + (dx / len) * offset;
+  
+  return `
+    <path d="M ${source.x} ${source.y} Q ${cx} ${cy} ${target.x} ${target.y}" 
+          fill="none" stroke="${color}" stroke-width="1.5" stroke-dasharray="${dashArray}" opacity="0.5"/>`;
+};
+
+/**
+ * Calculate node positions based on layout type
+ */
+const calculateLayoutPositions = (
+  nodes: any[],
+  edges: any[],
+  width: number,
+  height: number,
+  layoutType: string
+): Map<string, { x: number; y: number }> => {
+  switch (layoutType) {
+    case 'circle':
+      return calculateCircularLayout(nodes, width, height);
+    case 'concentric':
+      return calculateConcentricLayout(nodes, edges, width, height);
+    case 'grid':
+      return calculateGridLayout(nodes, width, height);
+    case 'cose':
+    case 'force':
+      return calculateForceLayout(nodes, edges, width, height);
+    case 'breadthfirst':
+      return calculateBreadthFirstLayout(nodes, edges, width, height);
+    case 'dagre':
+    default:
+      return calculateHierarchicalLayout(nodes, edges, width, height);
+  }
+};
+
+/**
+ * Circular layout - nodes arranged in a circle
+ */
+const calculateCircularLayout = (
+  nodes: any[],
+  width: number,
+  height: number
+): Map<string, { x: number; y: number }> => {
+  const positions = new Map<string, { x: number; y: number }>();
+  const centerX = width / 2;
+  const centerY = height / 2;
+  const radius = Math.min(width, height) / 2 - 100;
+  const nodeCount = nodes.length;
+  
+  nodes.forEach((node, index) => {
+    const id = node.data?.id || node.id;
+    const angle = (2 * Math.PI * index) / nodeCount - Math.PI / 2;
+    positions.set(id, {
+      x: centerX + radius * Math.cos(angle),
+      y: centerY + radius * Math.sin(angle)
+    });
+  });
+  
+  return positions;
+};
+
+/**
+ * Concentric layout - nodes arranged in concentric circles by type
+ */
+const calculateConcentricLayout = (
   nodes: any[],
   edges: any[],
   width: number,
   height: number
 ): Map<string, { x: number; y: number }> => {
   const positions = new Map<string, { x: number; y: number }>();
+  const centerX = width / 2;
+  const centerY = height / 2;
   
-  // Build adjacency info to determine hierarchy levels
+  // Group nodes by type
+  const nodesByType = new Map<string, any[]>();
+  const typeOrder = ['module', 'class', 'function', 'variable', 'default'];
+  
+  nodes.forEach(node => {
+    const type = node.data?.type || node.type || 'default';
+    if (!nodesByType.has(type)) nodesByType.set(type, []);
+    nodesByType.get(type)!.push(node);
+  });
+  
+  // Calculate radii for each ring
+  const maxRadius = Math.min(width, height) / 2 - 80;
+  const rings = typeOrder.filter(t => nodesByType.has(t) && nodesByType.get(t)!.length > 0);
+  const ringSpacing = maxRadius / (rings.length + 1);
+  
+  rings.forEach((type, ringIndex) => {
+    const nodesInRing = nodesByType.get(type) || [];
+    const radius = ringSpacing * (ringIndex + 1);
+    
+    nodesInRing.forEach((node, nodeIndex) => {
+      const id = node.data?.id || node.id;
+      const angle = (2 * Math.PI * nodeIndex) / nodesInRing.length - Math.PI / 2;
+      positions.set(id, {
+        x: centerX + radius * Math.cos(angle),
+        y: centerY + radius * Math.sin(angle)
+      });
+    });
+  });
+  
+  return positions;
+};
+
+/**
+ * Grid layout - nodes arranged in a grid
+ */
+const calculateGridLayout = (
+  nodes: any[],
+  width: number,
+  height: number
+): Map<string, { x: number; y: number }> => {
+  const positions = new Map<string, { x: number; y: number }>();
+  const nodeCount = nodes.length;
+  const cols = Math.ceil(Math.sqrt(nodeCount * (width / height)));
+  const rows = Math.ceil(nodeCount / cols);
+  
+  const padding = 80;
+  const cellWidth = (width - padding * 2) / cols;
+  const cellHeight = (height - padding * 2) / rows;
+  
+  nodes.forEach((node, index) => {
+    const id = node.data?.id || node.id;
+    const col = index % cols;
+    const row = Math.floor(index / cols);
+    
+    positions.set(id, {
+      x: padding + col * cellWidth + cellWidth / 2,
+      y: padding + row * cellHeight + cellHeight / 2 + 50 // offset for title
+    });
+  });
+  
+  return positions;
+};
+
+/**
+ * Force-directed layout simulation
+ */
+const calculateForceLayout = (
+  nodes: any[],
+  edges: any[],
+  width: number,
+  height: number
+): Map<string, { x: number; y: number }> => {
+  const positions = new Map<string, { x: number; y: number }>();
+  const nodeCount = nodes.length;
+  
+  // Initialize random positions
+  const nodePositions: Array<{ id: string; x: number; y: number; vx: number; vy: number }> = 
+    nodes.map((node, i) => ({
+      id: node.data?.id || node.id,
+      x: width / 2 + (Math.random() - 0.5) * width * 0.5,
+      y: height / 2 + (Math.random() - 0.5) * height * 0.5,
+      vx: 0,
+      vy: 0
+    }));
+  
+  // Create adjacency map
+  const adjacency = new Map<string, Set<string>>();
+  edges.forEach(edge => {
+    const source = edge.data?.source || edge.source;
+    const target = edge.data?.target || edge.target;
+    if (!adjacency.has(source)) adjacency.set(source, new Set());
+    if (!adjacency.has(target)) adjacency.set(target, new Set());
+    adjacency.get(source)!.add(target);
+    adjacency.get(target)!.add(source);
+  });
+  
+  // Simulation parameters
+  const iterations = 100;
+  const repulsionStrength = 5000;
+  const attractionStrength = 0.01;
+  const damping = 0.9;
+  const padding = 100;
+  
+  // Run simulation
+  for (let iter = 0; iter < iterations; iter++) {
+    // Apply repulsion between all nodes
+    for (let i = 0; i < nodePositions.length; i++) {
+      for (let j = i + 1; j < nodePositions.length; j++) {
+        const dx = nodePositions[j].x - nodePositions[i].x;
+        const dy = nodePositions[j].y - nodePositions[i].y;
+        const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+        const force = repulsionStrength / (dist * dist);
+        
+        const fx = (dx / dist) * force;
+        const fy = (dy / dist) * force;
+        
+        nodePositions[i].vx -= fx;
+        nodePositions[i].vy -= fy;
+        nodePositions[j].vx += fx;
+        nodePositions[j].vy += fy;
+      }
+    }
+    
+    // Apply attraction along edges
+    edges.forEach(edge => {
+      const sourceId = edge.data?.source || edge.source;
+      const targetId = edge.data?.target || edge.target;
+      const sourceNode = nodePositions.find(n => n.id === sourceId);
+      const targetNode = nodePositions.find(n => n.id === targetId);
+      
+      if (sourceNode && targetNode) {
+        const dx = targetNode.x - sourceNode.x;
+        const dy = targetNode.y - sourceNode.y;
+        const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+        
+        const force = dist * attractionStrength;
+        const fx = (dx / dist) * force;
+        const fy = (dy / dist) * force;
+        
+        sourceNode.vx += fx;
+        sourceNode.vy += fy;
+        targetNode.vx -= fx;
+        targetNode.vy -= fy;
+      }
+    });
+    
+    // Update positions and apply damping
+    nodePositions.forEach(node => {
+      node.x += node.vx;
+      node.y += node.vy;
+      node.vx *= damping;
+      node.vy *= damping;
+      
+      // Keep within bounds
+      node.x = Math.max(padding, Math.min(width - padding, node.x));
+      node.y = Math.max(padding + 50, Math.min(height - padding, node.y));
+    });
+  }
+  
+  // Store final positions
+  nodePositions.forEach(node => {
+    positions.set(node.id, { x: node.x, y: node.y });
+  });
+  
+  return positions;
+};
+
+/**
+ * Breadth-first tree layout
+ */
+const calculateBreadthFirstLayout = (
+  nodes: any[],
+  edges: any[],
+  width: number,
+  height: number
+): Map<string, { x: number; y: number }> => {
+  return calculateHierarchicalLayout(nodes, edges, width, height, true);
+};
+
+/**
+ * Hierarchical/Tree layout (Dagre-style)
+ */
+const calculateHierarchicalLayout = (
+  nodes: any[],
+  edges: any[],
+  width: number,
+  height: number,
+  horizontal: boolean = false
+): Map<string, { x: number; y: number }> => {
+  const positions = new Map<string, { x: number; y: number }>();
+  
+  // Build adjacency info
   const children = new Map<string, string[]>();
   const parents = new Map<string, string[]>();
   
@@ -162,13 +523,15 @@ const calculateNodePositions = (
     parents.get(targetId)!.push(sourceId);
   });
   
-  // Find root nodes (no parents) and assign levels
+  // Assign levels via BFS
   const levels = new Map<string, number>();
   const nodeIds = nodes.map((n: any) => n.data?.id || n.id);
-  
-  // BFS to assign levels
   const rootNodes = nodeIds.filter((id: string) => !parents.has(id) || parents.get(id)!.length === 0);
-  const queue: Array<{ id: string; level: number }> = rootNodes.map(id => ({ id, level: 0 }));
+  
+  // If no roots found, use all nodes as roots (disconnected graph)
+  const startNodes = rootNodes.length > 0 ? rootNodes : nodeIds.slice(0, Math.max(1, Math.ceil(nodeIds.length / 10)));
+  
+  const queue: Array<{ id: string; level: number }> = startNodes.map(id => ({ id, level: 0 }));
   const visited = new Set<string>();
   
   while (queue.length > 0) {
@@ -185,35 +548,55 @@ const calculateNodePositions = (
     });
   }
   
-  // Handle nodes not reached by BFS
+  // Handle unvisited nodes
   nodeIds.forEach((id: string) => {
     if (!levels.has(id)) {
       levels.set(id, 0);
     }
   });
   
-  // Group nodes by level
+  // Group by level
   const levelGroups = new Map<number, string[]>();
   levels.forEach((level, id) => {
     if (!levelGroups.has(level)) levelGroups.set(level, []);
     levelGroups.get(level)!.push(id);
   });
   
-  // Calculate positions
+  // Calculate positions with proper spacing
   const maxLevel = Math.max(...Array.from(levels.values()), 0);
-  const padding = 100;
-  const availableWidth = width - padding * 2;
-  const availableHeight = height - padding * 2;
-  const levelHeight = maxLevel > 0 ? availableHeight / (maxLevel + 1) : availableHeight / 2;
+  const padding = 80;
+  const titleOffset = 60;
+  const legendOffset = 220;
+  
+  const availableWidth = width - padding * 2 - legendOffset;
+  const availableHeight = height - padding * 2 - titleOffset;
+  
+  // Calculate spacing based on max nodes per level
+  const maxNodesInLevel = Math.max(...Array.from(levelGroups.values()).map(arr => arr.length));
+  const levelSpacing = horizontal 
+    ? availableWidth / (maxLevel + 1)
+    : availableHeight / (maxLevel + 1);
   
   levelGroups.forEach((nodeIdsAtLevel, level) => {
-    const y = padding + level * levelHeight + levelHeight / 2;
-    const nodeSpacing = availableWidth / (nodeIdsAtLevel.length + 1);
+    const nodeCount = nodeIdsAtLevel.length;
     
-    nodeIdsAtLevel.forEach((id, index) => {
-      const x = padding + (index + 1) * nodeSpacing;
-      positions.set(id, { x, y });
-    });
+    if (horizontal) {
+      const x = padding + level * levelSpacing + levelSpacing / 2;
+      const nodeSpacing = availableHeight / (nodeCount + 1);
+      
+      nodeIdsAtLevel.forEach((id, index) => {
+        const y = padding + titleOffset + (index + 1) * nodeSpacing;
+        positions.set(id, { x, y });
+      });
+    } else {
+      const y = padding + titleOffset + level * levelSpacing + levelSpacing / 2;
+      const nodeSpacing = availableWidth / (nodeCount + 1);
+      
+      nodeIdsAtLevel.forEach((id, index) => {
+        const x = padding + (index + 1) * nodeSpacing;
+        positions.set(id, { x, y });
+      });
+    }
   });
   
   return positions;
@@ -256,6 +639,67 @@ const getNodeShape = (
     <ellipse cx="${x}" cy="${y}" rx="${width/2}" ry="${height/2}" 
              fill="${color}" stroke="${borderColor}" stroke-width="2" class="node-shadow"/>`;
   }
+};
+
+/**
+ * Wrap a label into multiple lines
+ */
+const wrapLabel = (label: string, maxCharsPerLine: number): string[] => {
+  if (!label) return [''];
+  
+  // Clean up common prefixes/suffixes for better display
+  let cleanLabel = label
+    .replace(/^_+/, '')  // Remove leading underscores
+    .replace(/_+$/, ''); // Remove trailing underscores
+  
+  // If it fits on one line, return as-is
+  if (cleanLabel.length <= maxCharsPerLine) {
+    return [cleanLabel];
+  }
+  
+  // Try to split on underscores or camelCase boundaries
+  const parts: string[] = [];
+  
+  // Split by underscore first
+  if (cleanLabel.includes('_')) {
+    const underscoreParts = cleanLabel.split('_');
+    let currentLine = '';
+    
+    underscoreParts.forEach((part, i) => {
+      const separator = i > 0 ? '_' : '';
+      if ((currentLine + separator + part).length <= maxCharsPerLine) {
+        currentLine += separator + part;
+      } else {
+        if (currentLine) parts.push(currentLine);
+        currentLine = part;
+      }
+    });
+    if (currentLine) parts.push(currentLine);
+  } else {
+    // Split by camelCase or just break at max length
+    let remaining = cleanLabel;
+    while (remaining.length > maxCharsPerLine) {
+      // Try to find a good break point (lowercase followed by uppercase)
+      let breakPoint = maxCharsPerLine;
+      for (let i = maxCharsPerLine - 1; i > maxCharsPerLine / 2; i--) {
+        if (remaining[i] && remaining[i].match(/[a-z]/) && 
+            remaining[i + 1] && remaining[i + 1].match(/[A-Z]/)) {
+          breakPoint = i + 1;
+          break;
+        }
+      }
+      parts.push(remaining.substring(0, breakPoint));
+      remaining = remaining.substring(breakPoint);
+    }
+    if (remaining) parts.push(remaining);
+  }
+  
+  // Limit to max 3 lines
+  if (parts.length > 3) {
+    return [parts[0], parts[1], parts.slice(2).join('').substring(0, maxCharsPerLine - 2) + '..'];
+  }
+  
+  return parts.length > 0 ? parts : [cleanLabel.substring(0, maxCharsPerLine)];
 };
 
 /**
