@@ -38,6 +38,7 @@ import {
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import { ThemeSwitcher } from '@design-system/components/ThemeSwitcher';
+import { useThemeToggle } from '@design-system/providers/ThemeProvider';
 import { FocusManager, AriaUtils } from '@shared/utils/accessibility';
 import { useKeyboardNavigation } from '@shared/hooks/useKeyboardNavigation';
 import { useKeyboardDetection } from '@shared/hooks/useKeyboardDetection';
@@ -121,6 +122,7 @@ const DRAWER_WIDTH = 280;
 
 export function AppShell({ children, currentView = 'home', onViewChange }: AppShellProps) {
   const theme = useTheme();
+  const { toggleMode } = useThemeToggle();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [mobileOpen, setMobileOpen] = useState(false);
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set(['analysis']));
@@ -212,9 +214,10 @@ export function AppShell({ children, currentView = 'home', onViewChange }: AppSh
     onHome: () => onViewChange?.('home'),
     onSearch: () => onViewChange?.('search'),
     onHelp: showHelp,
+    onToggleTheme: toggleMode,
     onToggleNavigation: handleDrawerToggle,
     onMainContent: () => mainContentRef.current?.focus(),
-  }), [onViewChange, showHelp, handleDrawerToggle]);
+  }), [onViewChange, showHelp, toggleMode, handleDrawerToggle]);
   
   useKeyboardShortcuts({ shortcuts });
 
