@@ -480,7 +480,7 @@ const CytoscapeGraph: React.FC<CytoscapeGraphProps> = ({
         width: '100vw',
         height: '100vh',
         zIndex: 9999,
-        backgroundColor: 'white'
+        backgroundColor: 'background.default'
       })
     }}>
       {/* Loading overlay - shown on top of container while loading */}
@@ -494,7 +494,9 @@ const CytoscapeGraph: React.FC<CytoscapeGraphProps> = ({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          backgroundColor: 'rgba(255, 255, 255, 0.8)',
+          backgroundColor: (theme) => theme.palette.mode === 'dark' 
+            ? 'rgba(18, 18, 18, 0.8)' 
+            : 'rgba(255, 255, 255, 0.8)',
           zIndex: 1001
         }}>
           <Typography>Loading visualization...</Typography>
@@ -510,7 +512,9 @@ const CytoscapeGraph: React.FC<CytoscapeGraphProps> = ({
           display: 'flex',
           flexDirection: 'column',
           gap: 1,
-          backgroundColor: 'rgba(255, 255, 255, 0.95)',
+          backgroundColor: (theme) => theme.palette.mode === 'dark' 
+            ? 'rgba(30, 30, 30, 0.95)' 
+            : 'rgba(255, 255, 255, 0.95)',
           borderRadius: 1,
           p: 1,
           boxShadow: 2
@@ -547,7 +551,9 @@ const CytoscapeGraph: React.FC<CytoscapeGraphProps> = ({
           bottom: 10,
           left: 10,
           zIndex: 1000,
-          backgroundColor: 'rgba(255, 255, 255, 0.9)',
+          backgroundColor: (theme) => theme.palette.mode === 'dark' 
+            ? 'rgba(30, 30, 30, 0.9)' 
+            : 'rgba(255, 255, 255, 0.9)',
           borderRadius: 1,
           p: 1,
           fontSize: '0.75rem',

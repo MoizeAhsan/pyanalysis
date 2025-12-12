@@ -145,9 +145,15 @@ export function AnimatedSkeleton({
       style={{
         width,
         height,
-        backgroundColor: '#f0f0f0',
         borderRadius,
-        backgroundImage: 'linear-gradient(90deg, #f0f0f0 0%, #e0e0e0 50%, #f0f0f0 100%)',
+      }}
+      sx={{
+        backgroundColor: (theme: any) => theme.palette.mode === 'dark'
+          ? 'rgba(255, 255, 255, 0.05)'
+          : '#f0f0f0',
+        backgroundImage: (theme: any) => theme.palette.mode === 'dark'
+          ? 'linear-gradient(90deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0.05) 100%)'
+          : 'linear-gradient(90deg, #f0f0f0 0%, #e0e0e0 50%, #f0f0f0 100%)',
         backgroundSize: '200% 100%',
         animation: 'shimmer 1.5s ease-in-out infinite',
       }}

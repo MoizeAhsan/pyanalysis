@@ -220,9 +220,16 @@ const SearchInterface = ({ data, onElementSelect }) => {
         p: { xs: 2, sm: 3 }, 
         mb: 2,
         borderRadius: 3,
-        background: 'linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%)',
-        border: '1px solid rgba(25, 118, 210, 0.08)',
-        boxShadow: '0px 4px 16px rgba(0, 0, 0, 0.08)',
+        background: (theme) => theme.palette.mode === 'dark' 
+          ? 'linear-gradient(135deg, rgba(30, 30, 30, 1) 0%, rgba(40, 40, 40, 1) 100%)'
+          : 'linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%)',
+        border: '1px solid',
+        borderColor: (theme) => theme.palette.mode === 'dark' 
+          ? 'rgba(25, 118, 210, 0.2)' 
+          : 'rgba(25, 118, 210, 0.08)',
+        boxShadow: (theme) => theme.palette.mode === 'dark'
+          ? '0px 4px 16px rgba(0, 0, 0, 0.3)'
+          : '0px 4px 16px rgba(0, 0, 0, 0.08)',
       }}>
         <Box sx={{ 
           display: 'flex', 
@@ -258,18 +265,26 @@ const SearchInterface = ({ data, onElementSelect }) => {
             sx={{
               '& .MuiOutlinedInput-root': {
                 borderRadius: 2,
-                backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                backgroundColor: (theme) => theme.palette.mode === 'dark' 
+                  ? 'rgba(255, 255, 255, 0.05)' 
+                  : 'rgba(255, 255, 255, 0.9)',
                 transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
                 '&:hover': {
-                  backgroundColor: 'rgba(255, 255, 255, 1)',
+                  backgroundColor: (theme) => theme.palette.mode === 'dark' 
+                    ? 'rgba(255, 255, 255, 0.08)' 
+                    : 'rgba(255, 255, 255, 1)',
                   '& .MuiOutlinedInput-notchedOutline': {
                     borderColor: 'primary.main',
                     borderWidth: '2px',
                   },
                 },
                 '&.Mui-focused': {
-                  backgroundColor: 'rgba(255, 255, 255, 1)',
-                  boxShadow: '0 0 0 3px rgba(25, 118, 210, 0.1)',
+                  backgroundColor: (theme) => theme.palette.mode === 'dark' 
+                    ? 'rgba(255, 255, 255, 0.08)' 
+                    : 'rgba(255, 255, 255, 1)',
+                  boxShadow: (theme) => theme.palette.mode === 'dark'
+                    ? '0 0 0 3px rgba(25, 118, 210, 0.3)'
+                    : '0 0 0 3px rgba(25, 118, 210, 0.1)',
                 },
               }
             }}

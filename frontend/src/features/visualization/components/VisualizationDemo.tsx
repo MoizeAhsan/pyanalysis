@@ -188,7 +188,7 @@ const VisualizationDemo: React.FC = () => {
             <Paper sx={{ 
               width: { xs: '100%', lg: 300 }, 
               p: 2,
-              backgroundColor: '#f8f9fa'
+              backgroundColor: 'action.hover'
             }}>
               <Typography variant="h6" gutterBottom>
                 Selected Node
@@ -211,7 +211,7 @@ const VisualizationDemo: React.FC = () => {
           )}
         </Box>
 
-        <Box sx={{ mt: 3, p: 2, backgroundColor: '#f5f5f5', borderRadius: 1 }}>
+        <Box sx={{ mt: 3, p: 2, backgroundColor: 'action.hover', borderRadius: 1 }}>
           <Typography variant="subtitle2" gutterBottom>
             💡 Performance Features:
           </Typography>

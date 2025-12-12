@@ -116,7 +116,9 @@ const LoadingSpinner = ({
           left: 0,
           right: 0,
           bottom: 0,
-          backgroundColor: 'rgba(255, 255, 255, 0.9)',
+          backgroundColor: (theme) => theme.palette.mode === 'dark' 
+            ? 'rgba(18, 18, 18, 0.9)' 
+            : 'rgba(255, 255, 255, 0.9)',
           backdropFilter: 'blur(4px)',
           zIndex: 9999,
           display: 'flex',
@@ -147,7 +149,9 @@ export const ShimmerLoader = ({
         width,
         height,
         borderRadius,
-        background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)',
+        background: (theme) => theme.palette.mode === 'dark'
+          ? 'linear-gradient(90deg, rgba(255,255,255,0.05) 25%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0.05) 75%)'
+          : 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)',
         backgroundSize: '200px 100%',
         animation: 'shimmer 1.5s infinite',
         '@keyframes shimmer': {
@@ -230,7 +234,7 @@ export const ProgressLoader = ({
           sx={{
             height: 8,
             borderRadius: 4,
-            backgroundColor: 'grey.200',
+            backgroundColor: 'action.hover',
             overflow: 'hidden',
             position: 'relative',
           }}
@@ -239,7 +243,13 @@ export const ProgressLoader = ({
             sx={{
               height: '100%',
               borderRadius: 4,
-              background: `linear-gradient(90deg, ${color === 'primary' ? '#1976d2' : color} 0%, ${color === 'primary' ? '#42a5f5' : color} 100%)`,
+              background: (theme) => {
+                const primaryColor = theme.palette.primary.main;
+                const lightColor = theme.palette.primary.light;
+                return color === 'primary' 
+                  ? `linear-gradient(90deg, ${primaryColor} 0%, ${lightColor} 100%)`
+                  : color;
+              },
               width: `${progress}%`,
               transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
               position: 'relative',

@@ -378,7 +378,9 @@ const VisNetwork: React.FC<VisNetworkProps> = ({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          backgroundColor: 'rgba(255, 255, 255, 0.8)',
+          backgroundColor: (theme) => theme.palette.mode === 'dark' 
+            ? 'rgba(18, 18, 18, 0.8)' 
+            : 'rgba(255, 255, 255, 0.8)',
           zIndex: 1001
         }}>
           <Typography>Loading network visualization...</Typography>

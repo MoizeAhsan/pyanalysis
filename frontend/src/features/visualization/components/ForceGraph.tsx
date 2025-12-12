@@ -446,7 +446,9 @@ const ForceGraph: React.FC<ForceGraphProps> = ({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          backgroundColor: 'rgba(255, 255, 255, 0.8)',
+          backgroundColor: (theme) => theme.palette.mode === 'dark' 
+            ? 'rgba(18, 18, 18, 0.8)' 
+            : 'rgba(255, 255, 255, 0.8)',
           zIndex: 1001
         }}>
           <Typography variant="body2" color="text.secondary">
@@ -465,7 +467,9 @@ const ForceGraph: React.FC<ForceGraphProps> = ({
           display: 'flex',
           flexDirection: 'column',
           gap: 1,
-          backgroundColor: 'rgba(255, 255, 255, 0.9)',
+          backgroundColor: (theme) => theme.palette.mode === 'dark' 
+            ? 'rgba(30, 30, 30, 0.9)' 
+            : 'rgba(255, 255, 255, 0.9)',
           borderRadius: 1,
           p: 1
         }}>
@@ -502,7 +506,9 @@ const ForceGraph: React.FC<ForceGraphProps> = ({
           top: 10, 
           left: 10, 
           zIndex: 1000,
-          backgroundColor: 'rgba(255, 255, 255, 0.95)',
+          backgroundColor: (theme) => theme.palette.mode === 'dark' 
+            ? 'rgba(30, 30, 30, 0.95)' 
+            : 'rgba(255, 255, 255, 0.95)',
           borderRadius: 1,
           p: 2,
           maxWidth: 300,
@@ -532,9 +538,7 @@ const ForceGraph: React.FC<ForceGraphProps> = ({
         width={width}
         height={height}
         style={{ 
-          border: '1px solid #ddd', 
           borderRadius: '4px',
-          backgroundColor: '#fafafa'
         }}
       />
     </Box>

@@ -296,8 +296,8 @@ const CodeExplorer: React.FC<CodeExplorerProps> = memo(({
                         sx={{
                             borderLeft: `4px solid ${getElementColor(element.elementType || element.type)}`,
                             mb: 1,
-                            backgroundColor: selectedElement?.id === element.id ? '#f5f5f5' : 'transparent',
-                            '&:hover': { backgroundColor: '#f0f0f0' }
+                            backgroundColor: selectedElement?.id === element.id ? 'action.selected' : 'transparent',
+                            '&:hover': { backgroundColor: 'action.hover' }
                         }}
                     >
                         <ListItemIcon>
@@ -489,7 +489,7 @@ const CodeExplorer: React.FC<CodeExplorerProps> = memo(({
                                                             sx={{
                                                                 fontFamily: 'monospace',
                                                                 fontSize: '0.7rem',
-                                                                backgroundColor: '#f5f5f5',
+                                                                backgroundColor: 'action.hover',
                                                                 padding: '2px 4px',
                                                                 borderRadius: '2px',
                                                                 mt: 0.5,
@@ -585,7 +585,7 @@ const CodeExplorer: React.FC<CodeExplorerProps> = memo(({
                                                 variant="body2"
                                                 sx={{
                                                     fontFamily: 'monospace',
-                                                    backgroundColor: '#f5f5f5',
+                                                    backgroundColor: 'action.hover',
                                                     padding: 2,
                                                     borderRadius: 1,
                                                     whiteSpace: 'pre-wrap',
@@ -611,8 +611,8 @@ const CodeExplorer: React.FC<CodeExplorerProps> = memo(({
                                                             primary={
                                                                 <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
                                                                     <strong>{param.name}</strong>
-                                                                    {param.type_hint && <span style={{ color: '#666' }}>: {param.type_hint}</span>}
-                                                                    {param.default_value && <span style={{ color: '#888' }}> = {param.default_value}</span>}
+                                                                    {param.type_hint && <span style={{ opacity: 0.7 }}>: {param.type_hint}</span>}
+                                                                    {param.default_value && <span style={{ opacity: 0.5 }}> = {param.default_value}</span>}
                                                                 </Typography>
                                                             }
                                                         />
@@ -628,7 +628,7 @@ const CodeExplorer: React.FC<CodeExplorerProps> = memo(({
                                             title="Return Type"
                                             defaultExpanded={true}
                                         >
-                                            <Typography variant="body2" sx={{ fontFamily: 'monospace', color: '#666' }}>
+                                            <Typography variant="body2" sx={{ fontFamily: 'monospace' }} color="text.secondary">
                                                 {selectedElement.return_type}
                                             </Typography>
                                         </CollapsibleSection>
@@ -681,7 +681,7 @@ const CodeExplorer: React.FC<CodeExplorerProps> = memo(({
                                             batchSize={15}
                                             maxItems={100}
                                             renderItem={(usage: Usage, index: number) => (
-                                                <ListItem key={index} sx={{ border: '1px solid #e0e0e0', borderRadius: 1, mb: 1 }}>
+                                                <ListItem key={index} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, mb: 1 }}>
                                                     <ListItemIcon>
                                                         <LocationOn color="action" />
                                                     </ListItemIcon>
@@ -710,10 +710,11 @@ const CodeExplorer: React.FC<CodeExplorerProps> = memo(({
                                                                     sx={{
                                                                         fontFamily: 'monospace',
                                                                         fontSize: '0.8rem',
-                                                                        backgroundColor: '#f8f8f8',
+                                                                        backgroundColor: 'action.hover',
                                                                         padding: 1,
                                                                         borderRadius: 1,
-                                                                        border: '1px solid #e0e0e0',
+                                                                        border: '1px solid',
+                                                                        borderColor: 'divider',
                                                                         whiteSpace: 'pre-wrap',
                                                                         wordBreak: 'break-all'
                                                                     }}
@@ -806,7 +807,8 @@ const CodeExplorer: React.FC<CodeExplorerProps> = memo(({
                     <Box sx={{ 
                         width: '400px', 
                         minWidth: '350px',
-                        borderRight: '1px solid #e0e0e0', 
+                        borderRight: '1px solid',
+                        borderColor: 'divider', 
                         pr: 2,
                         display: 'flex',
                         flexDirection: 'column',
@@ -858,7 +860,7 @@ const CodeExplorer: React.FC<CodeExplorerProps> = memo(({
                         </Box>
 
                         {/* Statistics */}
-                        <Box sx={{ mb: 3, p: 2, backgroundColor: '#f5f5f5', borderRadius: 1, flexShrink: 0 }}>
+                        <Box sx={{ mb: 3, p: 2, backgroundColor: 'action.hover', borderRadius: 1, flexShrink: 0 }}>
                             <Typography variant="subtitle2" gutterBottom>
                                 Statistics
                             </Typography>
@@ -893,14 +895,14 @@ const CodeExplorer: React.FC<CodeExplorerProps> = memo(({
                                 width: '8px',
                             },
                             '&::-webkit-scrollbar-track': {
-                                backgroundColor: '#f1f1f1',
+                                backgroundColor: 'action.hover',
                                 borderRadius: '4px',
                             },
                             '&::-webkit-scrollbar-thumb': {
-                                backgroundColor: '#c1c1c1',
+                                backgroundColor: 'action.disabled',
                                 borderRadius: '4px',
                                 '&:hover': {
-                                    backgroundColor: '#a8a8a8',
+                                    backgroundColor: 'action.active',
                                 },
                             },
                         }}>
@@ -927,14 +929,14 @@ const CodeExplorer: React.FC<CodeExplorerProps> = memo(({
                             width: '8px',
                         },
                         '&::-webkit-scrollbar-track': {
-                            backgroundColor: '#f1f1f1',
+                            backgroundColor: 'action.hover',
                             borderRadius: '4px',
                         },
                         '&::-webkit-scrollbar-thumb': {
-                            backgroundColor: '#c1c1c1',
+                            backgroundColor: 'action.disabled',
                             borderRadius: '4px',
                             '&:hover': {
-                                backgroundColor: '#a8a8a8',
+                                backgroundColor: 'action.active',
                             },
                         },
                     }}>

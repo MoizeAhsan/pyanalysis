@@ -65,7 +65,7 @@ const VirtualizedSearchResults: React.FC<VirtualizedSearchResultsProps> = memo((
       <>
         {parts.map((part, index) =>
           regex.test(part) ? (
-            <span key={index} style={{ backgroundColor: '#ffeb3b', fontWeight: 'bold' }}>
+            <span key={index} style={{ backgroundColor: 'rgba(255, 235, 59, 0.5)', fontWeight: 'bold' }}>
               {part}
             </span>
           ) : (

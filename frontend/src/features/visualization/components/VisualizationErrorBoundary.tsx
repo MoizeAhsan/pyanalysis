@@ -87,7 +87,7 @@ class VisualizationErrorBoundary extends Component<Props, State> {
               sx={{
                 mt: 3,
                 p: 2,
-                backgroundColor: '#f5f5f5',
+                backgroundColor: 'action.hover',
                 borderRadius: 1,
                 maxWidth: 800,
                 overflow: 'auto'
