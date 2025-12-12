@@ -93,8 +93,14 @@ const ExportDialog: React.FC<ExportDialogProps> = ({
   }, [graphType, filename]);
 
   const handleExport = useCallback(async () => {
-    if (!element && format !== 'json') {
+    if (!element && format !== 'json' && format !== 'svg') {
       setExportError('No visualization element available for export');
+      return;
+    }
+
+    // SVG export requires graph data for proper vector output
+    if (format === 'svg' && !data) {
+      setExportError('No graph data available for SVG export');
       return;
     }
 
@@ -107,7 +113,9 @@ const ExportDialog: React.FC<ExportDialogProps> = ({
         ...(filename && { filename }),
         quality,
         ...(customDimensions && { width, height }),
-        ...(includeBackground && { backgroundColor })
+        ...(includeBackground && { backgroundColor }),
+        // Pass graph data for vector SVG export
+        ...(format === 'svg' && { graphData: data })
       });
 
       switch (format) {
