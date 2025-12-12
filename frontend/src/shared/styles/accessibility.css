@@ -72,6 +72,14 @@
   border-radius: 4px;
 }
 
+/* Disable focus indicators when .no-focus-outline is on body */
+body.no-focus-outline *:focus,
+body.no-focus-outline *:focus-visible,
+body.no-focus-outline .focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
 /* Dark theme focus indicators */
 [data-theme="dark"] .focus-visible,
 [data-theme="dark"] *:focus-visible {

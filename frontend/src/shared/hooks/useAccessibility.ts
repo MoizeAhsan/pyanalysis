@@ -2,16 +2,34 @@
  * High contrast theme support and accessibility enhancements
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useTheme } from '@mui/material/styles';
 import { ColorContrast } from '@shared/utils/accessibility';
+
+// Custom event name for high contrast changes
+const HIGH_CONTRAST_CHANGE_EVENT = 'high-contrast-change';
 
 /**
  * Hook to detect and manage high contrast preferences
  */
 export function useHighContrast() {
-  const [isHighContrast, setIsHighContrast] = useState(false);
-  const [systemPreference, setSystemPreference] = useState(false);
+  const [isHighContrast, setIsHighContrast] = useState(() => {
+    const userPreference = localStorage.getItem('high-contrast-mode');
+    if (userPreference !== null) {
+      return userPreference === 'true';
+    }
+    // Check system preference
+    if (typeof window !== 'undefined' && window.matchMedia) {
+      return window.matchMedia('(prefers-contrast: high)').matches;
+    }
+    return false;
+  });
+  const [systemPreference, setSystemPreference] = useState(() => {
+    if (typeof window !== 'undefined' && window.matchMedia) {
+      return window.matchMedia('(prefers-contrast: high)').matches;
+    }
+    return false;
+  });
 
   useEffect(() => {
     // Check for system high contrast preference
@@ -41,20 +59,54 @@ export function useHighContrast() {
       }
     };
 
-    mediaQuery.addListener(handleChange);
-    return () => mediaQuery.removeListener(handleChange);
-  }, []);
+    // Listen for custom high contrast change events (for cross-component sync)
+    const handleHighContrastChange = (e: Event) => {
+      const customEvent = e as CustomEvent<{ isHighContrast: boolean }>;
+      setIsHighContrast(customEvent.detail.isHighContrast);
+    };
 
-  const toggleHighContrast = () => {
+    // Listen for storage changes (for cross-tab sync)
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'high-contrast-mode') {
+        if (e.newValue === null) {
+          setIsHighContrast(systemPreference);
+        } else {
+          setIsHighContrast(e.newValue === 'true');
+        }
+      }
+    };
+
+    mediaQuery.addListener(handleChange);
+    window.addEventListener(HIGH_CONTRAST_CHANGE_EVENT, handleHighContrastChange);
+    window.addEventListener('storage', handleStorageChange);
+    
+    return () => {
+      mediaQuery.removeListener(handleChange);
+      window.removeEventListener(HIGH_CONTRAST_CHANGE_EVENT, handleHighContrastChange);
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, [systemPreference]);
+
+  const toggleHighContrast = useCallback(() => {
     const newValue = !isHighContrast;
     setIsHighContrast(newValue);
     localStorage.setItem('high-contrast-mode', newValue.toString());
-  };
+    
+    // Dispatch custom event to notify other instances
+    window.dispatchEvent(new CustomEvent(HIGH_CONTRAST_CHANGE_EVENT, {
+      detail: { isHighContrast: newValue }
+    }));
+  }, [isHighContrast]);
 
-  const resetToSystemPreference = () => {
+  const resetToSystemPreference = useCallback(() => {
     localStorage.removeItem('high-contrast-mode');
     setIsHighContrast(systemPreference);
-  };
+    
+    // Dispatch custom event to notify other instances
+    window.dispatchEvent(new CustomEvent(HIGH_CONTRAST_CHANGE_EVENT, {
+      detail: { isHighContrast: systemPreference }
+    }));
+  }, [systemPreference]);
 
   return {
     isHighContrast,

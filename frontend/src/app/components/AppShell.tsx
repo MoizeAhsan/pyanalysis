@@ -42,7 +42,7 @@ import { FocusManager, AriaUtils } from '@shared/utils/accessibility';
 import { useKeyboardNavigation } from '@shared/hooks/useKeyboardNavigation';
 import { useKeyboardDetection } from '@shared/hooks/useKeyboardDetection';
 import { useKeyboardShortcuts, createCommonShortcuts } from '@shared/hooks/useKeyboardShortcuts';
-import { useKeyboardHelp } from '@shared/components/KeyboardHelpDialog';
+import { KeyboardHelpDialog } from '@shared/components/KeyboardHelpDialog';
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -202,22 +202,19 @@ export function AppShell({ children, currentView = 'home', onViewChange }: AppSh
     );
   }, [mobileOpen, announcementId]);
 
+  // Keyboard help dialog state
+  const [helpOpen, setHelpOpen] = useState(false);
+  const showHelp = useCallback(() => setHelpOpen(true), []);
+  const hideHelp = useCallback(() => setHelpOpen(false), []);
+
   // Set up global keyboard shortcuts
-  const shortcuts = createCommonShortcuts({
+  const shortcuts = React.useMemo(() => createCommonShortcuts({
     onHome: () => onViewChange?.('home'),
     onSearch: () => onViewChange?.('search'),
+    onHelp: showHelp,
     onToggleNavigation: handleDrawerToggle,
     onMainContent: () => mainContentRef.current?.focus(),
-  });
-  
-  // Add help shortcut
-  const { showHelp, KeyboardHelpComponent } = useKeyboardHelp(shortcuts);
-  shortcuts.push({
-    key: '?',
-    shiftKey: true,
-    action: showHelp,
-    description: 'Show keyboard shortcuts help',
-  });
+  }), [onViewChange, showHelp, handleDrawerToggle]);
   
   useKeyboardShortcuts({ shortcuts });
 
@@ -660,7 +657,11 @@ export function AppShell({ children, currentView = 'home', onViewChange }: AppSh
       />
 
       {/* Keyboard Help Dialog */}
-      <KeyboardHelpComponent />
+      <KeyboardHelpDialog
+        open={helpOpen}
+        onClose={hideHelp}
+        shortcuts={shortcuts}
+      />
       
       {/* Footer - contentinfo landmark at top level */}
       <Box
