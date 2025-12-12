@@ -119,6 +119,7 @@ const navigationItems: NavigationItem[] = [
 ];
 
 const DRAWER_WIDTH = 280;
+const DRAWER_WIDTH_MOBILE = 260;
 
 export function AppShell({ children, currentView = 'home', onViewChange }: AppShellProps) {
   const theme = useTheme();
@@ -285,13 +286,19 @@ export function AppShell({ children, currentView = 'home', onViewChange }: AppSh
               disabled={item.disabled || false}
               selected={Boolean(isSelected || isChildSelected)}
               sx={{
-                minHeight: 48,
+                minHeight: { xs: 52, sm: 48 }, // Larger touch target on mobile
                 pl: 2 + depth * 2,
                 pr: 2,
                 borderRadius: 1,
                 transition: 'all 0.2s ease-in-out',
+                // Better touch feedback
+                WebkitTapHighlightColor: 'transparent',
+                touchAction: 'manipulation',
                 '&:hover': {
                   backgroundColor: 'action.hover',
+                },
+                '&:active': {
+                  backgroundColor: 'action.selected',
                 },
                 '&:focus-visible': {
                   outline: `2px solid ${theme.palette.primary.main}`,
@@ -588,7 +595,8 @@ export function AppShell({ children, currentView = 'home', onViewChange }: AppSh
             display: { xs: 'block', md: 'none' },
             '& .MuiDrawer-paper': {
               boxSizing: 'border-box',
-              width: DRAWER_WIDTH,
+              width: { xs: '85vw', sm: DRAWER_WIDTH_MOBILE },
+              maxWidth: DRAWER_WIDTH,
               backgroundImage: 'none',
             },
           }}
@@ -640,7 +648,10 @@ export function AppShell({ children, currentView = 'home', onViewChange }: AppSh
         <Toolbar />
         
         {/* Page Content */}
-        <Box sx={{ p: { xs: 2, sm: 3, md: 4 } }}>
+        <Box sx={{ 
+          p: { xs: 1.5, sm: 2, md: 3, lg: 4 },
+          pb: { xs: 10, sm: 3, md: 4 }, // Extra bottom padding on mobile for safe area
+        }}>
           {children}
         </Box>
       </Box>

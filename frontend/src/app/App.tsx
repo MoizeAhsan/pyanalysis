@@ -98,9 +98,9 @@ function App() {
   // Memoize the main content components to prevent unnecessary re-renders
   const homeContent = useMemo(() => (
     <AnimatedPage pageKey="home">
-      <Container maxWidth="xl" className="fade-in">
+      <Container maxWidth="xl" className="fade-in" sx={{ px: { xs: 1, sm: 2, md: 3 } }}>
         <Box sx={{
-          mb: { xs: 3, sm: 4 },
+          mb: { xs: 2, sm: 3, md: 4 },
           textAlign: 'center',
           animation: 'fadeIn 0.8s cubic-bezier(0.4, 0, 0.2, 1)'
         }}>
@@ -111,12 +111,14 @@ function App() {
             sx={{
               fontWeight: 700,
               color: 'primary.main',
-              fontSize: { xs: '1.75rem', sm: '2.5rem', md: '3rem' },
+              fontSize: { xs: '1.5rem', sm: '2rem', md: '2.5rem', lg: '3rem' },
+              lineHeight: { xs: 1.3, sm: 1.2 },
               background: 'linear-gradient(135deg, #1976d2 0%, #42a5f5 100%)',
               backgroundClip: 'text',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
-              mb: 2
+              mb: { xs: 1.5, sm: 2 },
+              px: { xs: 1, sm: 0 }
             }}
             className="responsive-title"
           >
@@ -129,9 +131,10 @@ function App() {
             sx={{
               maxWidth: { xs: '100%', sm: 600 },
               mx: 'auto',
-              fontSize: { xs: '1rem', sm: '1.25rem' },
+              fontSize: { xs: '0.875rem', sm: '1rem', md: '1.25rem' },
               lineHeight: 1.6,
-              fontWeight: 400
+              fontWeight: 400,
+              px: { xs: 2, sm: 0 }
             }}
             className="responsive-subtitle"
           >
@@ -177,15 +180,26 @@ function App() {
       case 'mindmap':
         return analysisData ? (
           <AnimatedPage pageKey="mindmap">
-            <Container maxWidth="xl" className="fade-in">
-              <Typography variant="h4" component="h2" gutterBottom sx={{ fontWeight: 600, mb: 3 }}>
+            <Container maxWidth="xl" className="fade-in" sx={{ px: { xs: 1, sm: 2, md: 3 } }}>
+              <Typography 
+                variant="h4" 
+                component="h2" 
+                gutterBottom 
+                sx={{ 
+                  fontWeight: 600, 
+                  mb: { xs: 2, sm: 3 },
+                  fontSize: { xs: '1.25rem', sm: '1.5rem', md: '2rem' }
+                }}
+              >
                 Mind Map View
               </Typography>
               <Box sx={{
                 backgroundColor: 'background.paper',
-                borderRadius: 2,
-                minHeight: '600px',
-                boxShadow: '0px 4px 16px rgba(0, 0, 0, 0.08)'
+                borderRadius: { xs: 1, sm: 2 },
+                minHeight: { xs: '400px', sm: '500px', md: '600px' },
+                height: { xs: 'calc(100vh - 200px)', sm: 'auto' },
+                boxShadow: '0px 4px 16px rgba(0, 0, 0, 0.08)',
+                overflow: 'hidden'
               }}>
                 <LazyMindMapViewer data={analysisData} />
               </Box>
@@ -196,15 +210,26 @@ function App() {
       case 'architecture':
         return analysisData ? (
           <AnimatedPage pageKey="architecture">
-            <Container maxWidth="xl" className="fade-in">
-              <Typography variant="h4" component="h2" gutterBottom sx={{ fontWeight: 600, mb: 3 }}>
+            <Container maxWidth="xl" className="fade-in" sx={{ px: { xs: 1, sm: 2, md: 3 } }}>
+              <Typography 
+                variant="h4" 
+                component="h2" 
+                gutterBottom 
+                sx={{ 
+                  fontWeight: 600, 
+                  mb: { xs: 2, sm: 3 },
+                  fontSize: { xs: '1.25rem', sm: '1.5rem', md: '2rem' }
+                }}
+              >
                 Architecture View
               </Typography>
               <Box sx={{
                 backgroundColor: 'background.paper',
-                borderRadius: 2,
-                minHeight: '600px',
-                boxShadow: '0px 4px 16px rgba(0, 0, 0, 0.08)'
+                borderRadius: { xs: 1, sm: 2 },
+                minHeight: { xs: '400px', sm: '500px', md: '600px' },
+                height: { xs: 'calc(100vh - 200px)', sm: 'auto' },
+                boxShadow: '0px 4px 16px rgba(0, 0, 0, 0.08)',
+                overflow: 'hidden'
               }}>
                 <LazyArchitectureViewer data={analysisData} />
               </Box>
@@ -215,15 +240,25 @@ function App() {
       case 'code-explorer':
         return analysisData ? (
           <AnimatedPage pageKey="code-explorer">
-            <Container maxWidth="xl" className="fade-in">
-              <Typography variant="h4" component="h2" gutterBottom sx={{ fontWeight: 600, mb: 3 }}>
+            <Container maxWidth="xl" className="fade-in" sx={{ px: { xs: 1, sm: 2, md: 3 } }}>
+              <Typography 
+                variant="h4" 
+                component="h2" 
+                gutterBottom 
+                sx={{ 
+                  fontWeight: 600, 
+                  mb: { xs: 2, sm: 3 },
+                  fontSize: { xs: '1.25rem', sm: '1.5rem', md: '2rem' }
+                }}
+              >
                 Code Explorer
               </Typography>
               <Box sx={{
                 backgroundColor: 'background.paper',
-                borderRadius: 2,
-                minHeight: '600px',
-                boxShadow: '0px 4px 16px rgba(0, 0, 0, 0.08)'
+                borderRadius: { xs: 1, sm: 2 },
+                minHeight: { xs: '400px', sm: '500px', md: '600px' },
+                boxShadow: '0px 4px 16px rgba(0, 0, 0, 0.08)',
+                overflow: 'auto'
               }}>
                 <LazyCodeExplorer data={analysisData} selectedElement={selectedElement} />
               </Box>
@@ -234,15 +269,25 @@ function App() {
       case 'search':
         return analysisData ? (
           <AnimatedPage pageKey="search">
-            <Container maxWidth="xl" className="fade-in">
-              <Typography variant="h4" component="h2" gutterBottom sx={{ fontWeight: 600, mb: 3 }}>
+            <Container maxWidth="xl" className="fade-in" sx={{ px: { xs: 1, sm: 2, md: 3 } }}>
+              <Typography 
+                variant="h4" 
+                component="h2" 
+                gutterBottom 
+                sx={{ 
+                  fontWeight: 600, 
+                  mb: { xs: 2, sm: 3 },
+                  fontSize: { xs: '1.25rem', sm: '1.5rem', md: '2rem' }
+                }}
+              >
                 Search Interface
               </Typography>
               <Box sx={{
                 backgroundColor: 'background.paper',
-                borderRadius: 2,
-                minHeight: '600px',
-                boxShadow: '0px 4px 16px rgba(0, 0, 0, 0.08)'
+                borderRadius: { xs: 1, sm: 2 },
+                minHeight: { xs: '400px', sm: '500px', md: '600px' },
+                boxShadow: '0px 4px 16px rgba(0, 0, 0, 0.08)',
+                overflow: 'auto'
               }}>
                 <LazySearchInterface data={analysisData} onElementSelect={handleElementSelect} />
               </Box>

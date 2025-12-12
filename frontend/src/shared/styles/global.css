@@ -7,6 +7,9 @@
 html {
   font-size: 16px;
   line-height: 1.5;
+  /* Prevent text size adjustment on orientation change */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 body {
@@ -17,6 +20,10 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background-color: #fafafa;
+  /* Prevent overscroll bounce on mobile */
+  overscroll-behavior: none;
+  /* Smooth scrolling for iOS */
+  -webkit-overflow-scrolling: touch;
 }
 
 code {
@@ -24,7 +31,43 @@ code {
     monospace;
 }
 
+/* ==================== */
+/* Mobile Touch Utilities */
+/* ==================== */
+
+/* Improved touch targets */
+.touch-target {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* Disable default tap highlight */
+.no-tap-highlight {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Better touch feedback */
+.touch-feedback {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: rgba(25, 118, 210, 0.1);
+}
+
+/* Prevent text selection on touch drag */
+.no-select {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Enable hardware acceleration for smooth scrolling */
+.smooth-scroll {
+  -webkit-overflow-scrolling: touch;
+  transform: translateZ(0);
+}
+
+/* ==================== */
 /* Animation utilities */
+/* ==================== */
+
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -40,7 +83,10 @@ code {
   animation: fadeIn 0.6s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* ==================== */
 /* Responsive utilities */
+/* ==================== */
+
 .responsive-title {
   word-break: break-word;
   hyphens: auto;
@@ -51,13 +97,94 @@ code {
   hyphens: auto;
 }
 
+/* Hide on mobile */
+@media (max-width: 599px) {
+  .hide-on-mobile {
+    display: none !important;
+  }
+}
+
+/* Hide on tablet and up */
+@media (min-width: 600px) {
+  .hide-on-tablet-up {
+    display: none !important;
+  }
+}
+
+/* Show only on mobile */
+@media (min-width: 600px) {
+  .mobile-only {
+    display: none !important;
+  }
+}
+
+/* ==================== */
+/* Mobile-specific styles */
+/* ==================== */
+
+@media (max-width: 599px) {
+  /* Smaller font sizes on mobile */
+  html {
+    font-size: 14px;
+  }
+  
+  /* Full width containers on mobile */
+  .mobile-full-width {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+  }
+  
+  /* Horizontal scroll prevention */
+  body {
+    overflow-x: hidden;
+  }
+  
+  /* Stack buttons vertically on mobile */
+  .mobile-stack {
+    flex-direction: column !important;
+    gap: 8px !important;
+  }
+  
+  /* Adjust spacing for mobile */
+  .mobile-spacing {
+    padding: 12px !important;
+  }
+  
+  /* Smaller border radius on mobile */
+  .mobile-rounded {
+    border-radius: 8px !important;
+  }
+}
+
+/* Tablet styles */
+@media (min-width: 600px) and (max-width: 899px) {
+  .tablet-spacing {
+    padding: 16px !important;
+  }
+}
+
+/* ==================== */
 /* Focus management for accessibility */
+/* ==================== */
+
 .focus-visible {
   outline: 2px solid #1976d2;
   outline-offset: 2px;
 }
 
+/* Better focus styles for touch devices */
+@media (hover: none) and (pointer: coarse) {
+  .focus-visible {
+    outline-width: 3px;
+  }
+}
+
+/* ==================== */
 /* High contrast mode support */
+/* ==================== */
+
 @media (prefers-contrast: high) {
   body {
     background-color: white;
@@ -65,7 +192,10 @@ code {
   }
 }
 
+/* ==================== */
 /* Reduced motion support */
+/* ==================== */
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -80,9 +210,44 @@ code {
   }
 }
 
+/* ==================== */
+/* Safe area utilities for notched devices */
+/* ==================== */
+
+.safe-area-inset-top {
+  padding-top: env(safe-area-inset-top);
+}
+
+.safe-area-inset-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.safe-area-inset-left {
+  padding-left: env(safe-area-inset-left);
+}
+
+.safe-area-inset-right {
+  padding-right: env(safe-area-inset-right);
+}
+
+/* ==================== */
 /* Print styles */
+/* ==================== */
+
 @media print {
   .no-print {
     display: none !important;
+  }
+}
+
+/* ==================== */
+/* Landscape orientation adjustments */
+/* ==================== */
+
+@media (max-height: 500px) and (orientation: landscape) {
+  /* Reduce vertical spacing in landscape on small screens */
+  .landscape-compact {
+    padding-top: 8px !important;
+    padding-bottom: 8px !important;
   }
 }

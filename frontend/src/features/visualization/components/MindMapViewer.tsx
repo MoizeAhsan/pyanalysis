@@ -15,6 +15,7 @@ import {
   IconButton,
   Tooltip,
   useTheme,
+  useMediaQuery,
   alpha
 } from '@mui/material';
 import {
@@ -55,6 +56,8 @@ type LayoutType = 'cose' | 'breadthfirst' | 'circle' | 'grid' | 'concentric';
 
 const MindMapViewer: React.FC<MindMapViewerProps> = memo(({ data }) => {
   const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const isTablet = useMediaQuery(theme.breakpoints.down('md'));
   const [graphType, setGraphType] = useState<GraphType>('cytoscape');
   const [selectedNode, setSelectedNode] = useState<any>(null);
   const [layoutType, setLayoutType] = useState<LayoutType>('breadthfirst');
@@ -407,7 +410,7 @@ const MindMapViewer: React.FC<MindMapViewerProps> = memo(({ data }) => {
       onNodeClick: handleNodeClick,
       style: {
         width: '100%',
-        height: isFullscreen ? '100vh' : '600px'
+        height: isFullscreen ? '100vh' : isMobile ? '350px' : isTablet ? '450px' : '600px'
       }
     };
 
@@ -428,18 +431,18 @@ const MindMapViewer: React.FC<MindMapViewerProps> = memo(({ data }) => {
 
       case 'force':
         return (
-          <VisualizationWrapper skeletonType="force-graph" height={isFullscreen ? '100vh' : 600}>
+          <VisualizationWrapper skeletonType="force-graph" height={isFullscreen ? '100vh' : isMobile ? 350 : isTablet ? 450 : 600}>
             <LazyForceGraph
               key={`force-${refreshKey}`}
               graphData={graphData.forceGraph}
-              width={800}
-              height={isFullscreen ? window.innerHeight : 600}
-              showLabels={true}
+              width={isMobile ? window.innerWidth - 32 : 800}
+              height={isFullscreen ? window.innerHeight : isMobile ? 350 : isTablet ? 450 : 600}
+              showLabels={!isMobile} // Hide labels on mobile for cleaner view
               enableZoom={true}
               enableDrag={true}
-              linkDistance={120}
-              chargeStrength={-400}
-              collisionRadius={25}
+              linkDistance={isMobile ? 80 : 120}
+              chargeStrength={isMobile ? -200 : -400}
+              collisionRadius={isMobile ? 15 : 25}
               {...commonProps}
             />
           </VisualizationWrapper>
@@ -561,18 +564,26 @@ const MindMapViewer: React.FC<MindMapViewerProps> = memo(({ data }) => {
               onChange={handleGraphTypeChange}
               aria-label="graph type"
               size="small"
+              sx={{ 
+                flexWrap: { xs: 'wrap', sm: 'nowrap' },
+                '& .MuiToggleButton-root': {
+                  px: { xs: 1, sm: 2 },
+                  py: { xs: 0.5, sm: 1 },
+                  fontSize: { xs: '0.7rem', sm: '0.875rem' }
+                }
+              }}
             >
               <ToggleButton value="cytoscape" aria-label="cytoscape">
-                <AccountTree sx={{ mr: 1 }} />
-                Cytoscape
+                <AccountTree sx={{ mr: { xs: 0, sm: 1 }, fontSize: { xs: '1rem', sm: '1.25rem' } }} />
+                <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>Cytoscape</Box>
               </ToggleButton>
               <ToggleButton value="force" aria-label="force graph">
-                <BubbleChart sx={{ mr: 1 }} />
-                Force Graph
+                <BubbleChart sx={{ mr: { xs: 0, sm: 1 }, fontSize: { xs: '1rem', sm: '1.25rem' } }} />
+                <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>Force Graph</Box>
               </ToggleButton>
               <ToggleButton value="vis" aria-label="vis network">
-                <Hub sx={{ mr: 1 }} />
-                Vis Network
+                <Hub sx={{ mr: { xs: 0, sm: 1 }, fontSize: { xs: '1rem', sm: '1.25rem' } }} />
+                <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>Vis Network</Box>
               </ToggleButton>
             </ToggleButtonGroup>
           </Box>
@@ -580,8 +591,8 @@ const MindMapViewer: React.FC<MindMapViewerProps> = memo(({ data }) => {
 
         {/* Enhanced Legend */}
         <Box sx={{
-          mb: 3,
-          p: 3,
+          mb: { xs: 2, sm: 3 },
+          p: { xs: 2, sm: 3 },
           background: alpha(theme.palette.primary.main, 0.04),
           borderRadius: 2,
           border: `1px solid ${alpha(theme.palette.primary.main, 0.12)}`,
@@ -590,10 +601,11 @@ const MindMapViewer: React.FC<MindMapViewerProps> = memo(({ data }) => {
           <Typography variant="subtitle1" gutterBottom sx={{
             fontWeight: 600,
             color: 'primary.main',
-            mb: 2,
+            mb: { xs: 1.5, sm: 2 },
             display: 'flex',
             alignItems: 'center',
-            gap: 1
+            gap: 1,
+            fontSize: { xs: '0.875rem', sm: '1rem' }
           }}>
             🎨 Legend & Interactive Controls
           </Typography>
@@ -640,7 +652,7 @@ const MindMapViewer: React.FC<MindMapViewerProps> = memo(({ data }) => {
           </Box>
 
           <Box sx={{
-            p: 2,
+            p: { xs: 1.5, sm: 2 },
             backgroundColor: alpha(theme.palette.background.paper, 0.8),
             borderRadius: 1,
             border: `1px solid ${alpha(theme.palette.primary.main, 0.12)}`
@@ -648,11 +660,15 @@ const MindMapViewer: React.FC<MindMapViewerProps> = memo(({ data }) => {
             <Typography variant="caption" color="text.secondary" sx={{
               display: 'block',
               lineHeight: 1.5,
-              fontSize: '0.8rem'
+              fontSize: { xs: '0.7rem', sm: '0.8rem' }
             }}>
-              💡 <strong>Interactive Features:</strong> Single-click to select and view details •
-              Double-click expandable nodes to collapse/expand • Hover to highlight connections •
-              Use mouse wheel to zoom • Drag to pan • Click background to clear selection
+              {isMobile ? (
+                <>💡 <strong>Touch Controls:</strong> Tap to select • Pinch to zoom • Drag to pan • Tap background to deselect</>
+              ) : (
+                <>💡 <strong>Interactive Features:</strong> Single-click to select and view details •
+                Double-click expandable nodes to collapse/expand • Hover to highlight connections •
+                Use mouse wheel to zoom • Drag to pan • Click background to clear selection</>
+              )}
             </Typography>
           </Box>
         </Box>
@@ -669,9 +685,12 @@ const MindMapViewer: React.FC<MindMapViewerProps> = memo(({ data }) => {
             ref={(el) => setVisualizationElement(el as HTMLElement)}
             sx={{
               flex: 1,
-              minHeight: { xs: '400px', sm: '500px', md: '600px' },
+              minHeight: { xs: '300px', sm: '400px', md: '500px', lg: '600px' },
+              // Enable touch scrolling and gestures
+              touchAction: 'pan-x pan-y pinch-zoom',
+              WebkitOverflowScrolling: 'touch',
               '& > *': {
-                height: isFullscreen ? '100%' : { xs: '400px !important', sm: '500px !important', md: '600px !important' }
+                height: isFullscreen ? '100%' : { xs: '300px !important', sm: '400px !important', md: '500px !important', lg: '600px !important' }
               }
             }}
           >

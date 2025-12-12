@@ -169,8 +169,13 @@ const AnalysisResults = ({ analysisTriggered, onDataLoaded, loading: parentLoadi
   }
 
   return (
-    <Paper elevation={3} sx={{ p: 4, mb: 4 }}>
-      <Typography variant="h5" component="h2" gutterBottom>
+    <Paper elevation={3} sx={{ p: { xs: 2, sm: 3, md: 4 }, mb: { xs: 2, sm: 3, md: 4 } }}>
+      <Typography 
+        variant="h5" 
+        component="h2" 
+        gutterBottom
+        sx={{ fontSize: { xs: '1.25rem', sm: '1.5rem' } }}
+      >
         Analysis Results
       </Typography>
 
@@ -180,57 +185,57 @@ const AnalysisResults = ({ analysisTriggered, onDataLoaded, loading: parentLoadi
         icon={<Assessment />}
         defaultExpanded={true}
       >
-        <Grid container spacing={3}>
-          <Grid item xs={12} sm={6} md={3}>
+        <Grid container spacing={{ xs: 2, sm: 3 }}>
+          <Grid item xs={6} sm={6} md={3}>
             <Card>
-              <CardContent sx={{ textAlign: 'center' }}>
-                <Folder color="primary" sx={{ fontSize: 40, mb: 1 }} />
-                <Typography variant="h4" component="div">
+              <CardContent sx={{ textAlign: 'center', p: { xs: 1.5, sm: 2 } }}>
+                <Folder color="primary" sx={{ fontSize: { xs: 28, sm: 40 }, mb: { xs: 0.5, sm: 1 } }} />
+                <Typography variant="h4" component="div" sx={{ fontSize: { xs: '1.5rem', sm: '2rem' } }}>
                   {stats.total_files}
                 </Typography>
-                <Typography color="text.secondary">
+                <Typography color="text.secondary" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
                   Python Files
                 </Typography>
               </CardContent>
             </Card>
           </Grid>
 
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid item xs={6} sm={6} md={3}>
             <Card>
-              <CardContent sx={{ textAlign: 'center' }}>
-                <Code color="primary" sx={{ fontSize: 40, mb: 1 }} />
-                <Typography variant="h4" component="div">
+              <CardContent sx={{ textAlign: 'center', p: { xs: 1.5, sm: 2 } }}>
+                <Code color="primary" sx={{ fontSize: { xs: 28, sm: 40 }, mb: { xs: 0.5, sm: 1 } }} />
+                <Typography variant="h4" component="div" sx={{ fontSize: { xs: '1.5rem', sm: '2rem' } }}>
                   {stats.total_lines}
                 </Typography>
-                <Typography color="text.secondary">
+                <Typography color="text.secondary" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
                   Lines of Code
                 </Typography>
               </CardContent>
             </Card>
           </Grid>
 
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid item xs={6} sm={6} md={3}>
             <Card>
-              <CardContent sx={{ textAlign: 'center' }}>
-                <Class color="primary" sx={{ fontSize: 40, mb: 1 }} />
-                <Typography variant="h4" component="div">
+              <CardContent sx={{ textAlign: 'center', p: { xs: 1.5, sm: 2 } }}>
+                <Class color="primary" sx={{ fontSize: { xs: 28, sm: 40 }, mb: { xs: 0.5, sm: 1 } }} />
+                <Typography variant="h4" component="div" sx={{ fontSize: { xs: '1.5rem', sm: '2rem' } }}>
                   {stats.classes_count}
                 </Typography>
-                <Typography color="text.secondary">
+                <Typography color="text.secondary" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
                   Classes
                 </Typography>
               </CardContent>
             </Card>
           </Grid>
 
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid item xs={6} sm={6} md={3}>
             <Card>
-              <CardContent sx={{ textAlign: 'center' }}>
-                <Functions color="primary" sx={{ fontSize: 40, mb: 1 }} />
-                <Typography variant="h4" component="div">
+              <CardContent sx={{ textAlign: 'center', p: { xs: 1.5, sm: 2 } }}>
+                <Functions color="primary" sx={{ fontSize: { xs: 28, sm: 40 }, mb: { xs: 0.5, sm: 1 } }} />
+                <Typography variant="h4" component="div" sx={{ fontSize: { xs: '1.5rem', sm: '2rem' } }}>
                   {stats.functions_count}
                 </Typography>
-                <Typography color="text.secondary">
+                <Typography color="text.secondary" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
                   Functions
                 </Typography>
               </CardContent>
@@ -240,7 +245,7 @@ const AnalysisResults = ({ analysisTriggered, onDataLoaded, loading: parentLoadi
       </CollapsibleSection>
 
       {/* Parsed Files */}
-      <Grid container spacing={4}>
+      <Grid container spacing={{ xs: 2, sm: 3, md: 4 }}>
         <Grid item xs={12} md={6}>
           <CollapsibleSection
             title={`Parsed Files (${stats.modules_count})`}

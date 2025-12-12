@@ -23,6 +23,7 @@ import {
   Collapse,
   Badge,
   useTheme,
+  useMediaQuery,
   alpha,
   LinearProgress
 } from '@mui/material';
@@ -60,6 +61,8 @@ interface CircularDependency {
 
 const ArchitectureViewer: React.FC<ArchitectureViewerProps> = memo(({ data = null }) => {
   const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const isTablet = useMediaQuery(theme.breakpoints.down('md'));
   const [viewType, setViewType] = useState<ViewType>('dependency');
   const [layoutType, setLayoutType] = useState<LayoutType>('breadthfirst');
   const [selectedNode, setSelectedNode] = useState<any>(null);
@@ -547,12 +550,12 @@ const ArchitectureViewer: React.FC<ArchitectureViewerProps> = memo(({ data = nul
     }
 
     return (
-      <VisualizationWrapper skeletonType="architecture" height={isFullscreen ? '100vh' : 600}>
+      <VisualizationWrapper skeletonType="architecture" height={isFullscreen ? '100vh' : isMobile ? 350 : isTablet ? 450 : 600}>
         <LazyCytoscapeGraph
           key={`architecture-${refreshKey}`}
           elements={[...graphData.nodes, ...graphData.edges]}
           onNodeClick={handleNodeClick}
-          style={{ width: '100%', height: isFullscreen ? '100vh' : '600px' }}
+          style={{ width: '100%', height: isFullscreen ? '100vh' : isMobile ? '350px' : isTablet ? '450px' : '600px' }}
           layout={getArchitecturalLayout(layoutType)}
           stylesheet={cytoscapeStyle}
           showControls={true}
@@ -560,11 +563,11 @@ const ArchitectureViewer: React.FC<ArchitectureViewerProps> = memo(({ data = nul
         />
       </VisualizationWrapper>
     );
-  }, [processedData, sampleArchitecturalData, handleNodeClick, isFullscreen, refreshKey, getArchitecturalLayout, layoutType, cytoscapeStyle]);
+  }, [processedData, sampleArchitecturalData, handleNodeClick, isFullscreen, refreshKey, getArchitecturalLayout, layoutType, cytoscapeStyle, isMobile, isTablet]);
 
   return (
     <Box sx={{ 
-      mt: 4,
+      mt: { xs: 2, sm: 4 },
       ...(isFullscreen && {
         position: 'fixed',
         top: 0,
@@ -573,12 +576,12 @@ const ArchitectureViewer: React.FC<ArchitectureViewerProps> = memo(({ data = nul
         bottom: 0,
         zIndex: 9999,
         backgroundColor: 'background.default',
-        p: 2
+        p: { xs: 1, sm: 2 }
       })
     }}>
       <Paper elevation={isFullscreen ? 0 : 3} sx={{ 
-        p: 3,
-        borderRadius: isFullscreen ? 0 : 3,
+        p: { xs: 2, sm: 3 },
+        borderRadius: isFullscreen ? 0 : { xs: 2, sm: 3 },
         height: isFullscreen ? '100vh' : 'auto',
         display: 'flex',
         flexDirection: 'column'
@@ -587,9 +590,10 @@ const ArchitectureViewer: React.FC<ArchitectureViewerProps> = memo(({ data = nul
         <Box sx={{ 
           display: 'flex', 
           justifyContent: 'space-between', 
-          alignItems: 'center', 
-          mb: 3, 
+          alignItems: { xs: 'flex-start', sm: 'center' }, 
+          mb: { xs: 2, sm: 3 }, 
           flexWrap: 'wrap', 
+          flexDirection: { xs: 'column', md: 'row' },
           gap: 2 
         }}>
           <Box>
@@ -597,12 +601,13 @@ const ArchitectureViewer: React.FC<ArchitectureViewerProps> = memo(({ data = nul
               display: 'flex', 
               alignItems: 'center', 
               gap: 1,
-              mb: 1
+              mb: 1,
+              fontSize: { xs: '1.25rem', sm: '1.5rem' }
             }}>
               <Architecture />
               Architectural Overview
             </Typography>
-            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
               <Chip 
                 label={`${visibleNodeCount} nodes`} 
                 size="small" 
@@ -653,14 +658,20 @@ const ArchitectureViewer: React.FC<ArchitectureViewerProps> = memo(({ data = nul
               onChange={handleViewTypeChange}
               aria-label="view type"
               size="small"
+              sx={{
+                '& .MuiToggleButton-root': {
+                  px: { xs: 1, sm: 2 },
+                  fontSize: { xs: '0.75rem', sm: '0.875rem' }
+                }
+              }}
             >
               <ToggleButton value="dependency" aria-label="dependency view">
-                <AccountTree sx={{ mr: 1 }} />
-                Dependencies
+                <AccountTree sx={{ mr: { xs: 0.5, sm: 1 }, fontSize: { xs: '1rem', sm: '1.25rem' } }} />
+                <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>Dependencies</Box>
               </ToggleButton>
               <ToggleButton value="imports" aria-label="imports view">
-                <ImportExport sx={{ mr: 1 }} />
-                Imports
+                <ImportExport sx={{ mr: { xs: 0.5, sm: 1 }, fontSize: { xs: '1rem', sm: '1.25rem' } }} />
+                <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>Imports</Box>
               </ToggleButton>
             </ToggleButtonGroup>
           </Box>
