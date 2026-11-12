@@ -1,41 +1,48 @@
-"""
-Python Code Analyzer - Main FastAPI Application
-"""
+"""FastAPI application for the Python Code Analyzer."""
+
+from __future__ import annotations
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from pyanalyzer.api.routes import router
+from pyanalyzer import __version__
+from pyanalyzer.analysis.store import AnalysisStore
+from pyanalyzer.api import legacy
 
-app = FastAPI(
-    title="Python Code Analyzer",
-    description="Visual exploration tool for Python projects",
-    version="1.0.0",
-)
-
-# Configure CORS for frontend
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",  # React dev server
-        "http://127.0.0.1:3000",  # Alternative localhost
-        "http://localhost:5173",  # Vite dev server default port
-        "http://127.0.0.1:5173",  # Alternative localhost for Vite
-    ],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# Include API routes
-app.include_router(router, prefix="/api")
+_DEV_ORIGINS = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+]
 
 
-@app.get("/")
-async def root() -> dict[str, str]:
-    """Root endpoint that returns API information."""
-    return {"message": "Python Code Analyzer API"}
+def create_app() -> FastAPI:
+    """Build an application instance with its own analysis store."""
+    application = FastAPI(
+        title="Python Code Analyzer",
+        description="Visual exploration tool for Python projects",
+        version=__version__,
+    )
+    application.state.store = AnalysisStore()
+    application.add_middleware(
+        CORSMiddleware,
+        allow_origins=_DEV_ORIGINS,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+    application.include_router(legacy.router, prefix="/api")
 
+    @application.get("/")
+    def root() -> dict[str, str]:
+        """Identify the service."""
+        return {"message": "Python Code Analyzer API"}
+
+    return application
+
+
+app = create_app()
 
 if __name__ == "__main__":
     import uvicorn

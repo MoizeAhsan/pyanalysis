@@ -38,14 +38,10 @@ def test_data_is_empty_before_analysis(client: TestClient) -> None:
 def test_data_contains_elements_after_analysis(client: TestClient, sample_project: Path) -> None:
     client.post("/api/analyze", json={"project_path": str(sample_project)})
 
-    response = client.get("/api/data", headers={"accept-encoding": "identity"})
+    response = client.get("/api/data")
 
     assert response.status_code == 200
     data = response.json()["data"]
-    if data.get("compressed"):
-        from pyanalyzer.utils.compression import DataCompressor
-
-        data = DataCompressor.decompress_json_data(data)
     assert data["has_data"] is True
     assert {m["name"] for m in data["modules"]} == {
         "main",
@@ -76,19 +72,19 @@ def test_reset_clears_the_session(client: TestClient, sample_project: Path) -> N
 
 def test_analyze_rejects_missing_path(client: TestClient, tmp_path: Path) -> None:
     response = client.post("/api/analyze", json={"project_path": str(tmp_path / "missing")})
-    assert response.status_code == 422
+    assert response.status_code == 400
 
 
 def test_analyze_rejects_empty_path(client: TestClient) -> None:
     response = client.post("/api/analyze", json={"project_path": ""})
-    assert response.status_code == 422
+    assert response.status_code == 400
 
 
 def test_analyze_rejects_file_path(client: TestClient, tmp_path: Path) -> None:
     file_path = tmp_path / "single.py"
     file_path.write_text("x = 1\n", encoding="utf-8")
     response = client.post("/api/analyze", json={"project_path": str(file_path)})
-    assert response.status_code == 422
+    assert response.status_code == 400
 
 
 def test_empty_project_is_analyzed_without_error(
@@ -132,3 +128,56 @@ def test_search_finds_elements_by_name(client: TestClient, sample_project: Path)
 def test_search_without_analysis_reports_no_data(client: TestClient) -> None:
     response = client.get("/api/search", params={"q": "anything"})
     assert response.json()["data"] == {"has_data": False, "results": []}
+
+
+def test_analyze_error_explains_the_problem(client: TestClient, tmp_path: Path) -> None:
+    response = client.post("/api/analyze", json={"project_path": str(tmp_path / "missing")})
+    assert "does not exist" in response.json()["detail"]
+
+
+def test_architecture_reports_import_cycles(
+    client: TestClient, make_project: ProjectFactory
+) -> None:
+    project = make_project(
+        {
+            "a.py": "import b\n",
+            "b.py": "import a\n",
+            "c.py": "import a\n",
+        }
+    )
+    client.post("/api/analyze", json={"project_path": str(project)})
+
+    data = client.get("/api/architecture").json()["data"]
+
+    assert data["circular_dependencies"] == [["module:a.py", "module:b.py"]]
+    assert data["dependency_graph"]["metrics"]["edge_count"] == 3
+
+
+def test_search_rejects_out_of_range_pagination(client: TestClient) -> None:
+    assert client.get("/api/search", params={"q": "x", "page": 0}).status_code == 422
+    assert client.get("/api/search", params={"q": "x", "page_size": 100000}).status_code == 422
+
+
+def test_search_pages_do_not_overlap_and_flag_truncation(
+    client: TestClient, make_project: ProjectFactory
+) -> None:
+    source = "\n".join(f"def handler_{i:02d}() -> None: ...\n" for i in range(25))
+    project = make_project({"handlers.py": source})
+    client.post("/api/analyze", json={"project_path": str(project)})
+
+    def names(**params: int) -> list[str]:
+        body = client.get(
+            "/api/search", params={"q": "handler_", "element_type": "function", **params}
+        ).json()["data"]
+        return [r["element"]["name"] for r in body["results"]]
+
+    first, second, third = (names(page=p, page_size=10) for p in (1, 2, 3))
+    assert len(first) == len(second) == 10
+    assert len(third) == 5
+    assert len({*first, *second, *third}) == 25
+
+    capped = client.get(
+        "/api/search", params={"q": "handler_", "element_type": "function", "max_results": 7}
+    ).json()["data"]
+    assert capped["truncated"] is True
+    assert capped["pagination"]["total_results"] == 7

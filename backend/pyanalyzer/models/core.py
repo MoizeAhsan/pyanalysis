@@ -1,34 +1,38 @@
+"""Core data model shared by every analysis stage.
+
+All file paths stored in these objects are POSIX-style and relative to the
+analyzed project's root, so results are stable across machines and never leak
+absolute paths.
 """
-Core data models for the Python Code Analyzer
-"""
+
+from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
-from typing import Any
+from enum import StrEnum
 
 
-class ElementType(Enum):
-    """Types of code elements that can be analyzed."""
+class ElementType(StrEnum):
+    """Kinds of code elements the analyzer tracks."""
 
     MODULE = "module"
     CLASS = "class"
     FUNCTION = "function"
-    VARIABLE = "variable"
-    IMPORT = "import"
 
 
-class UsageType(Enum):
-    """Types of code element usage patterns."""
+class UsageType(StrEnum):
+    """How a code element is used at a given location."""
 
     CALL = "call"
     IMPORT = "import"
     INHERITANCE = "inheritance"
-    ASSIGNMENT = "assignment"
+    REFERENCE = "reference"
+    TYPE_HINT = "type_hint"
+    DECORATOR = "decorator"
 
 
-class PatternType(Enum):
-    """Types of architectural patterns that can be detected."""
+class PatternType(StrEnum):
+    """Architectural patterns the detector can report."""
 
     MVC = "mvc"
     FACTORY = "factory"
@@ -36,9 +40,19 @@ class PatternType(Enum):
     SINGLETON = "singleton"
 
 
-@dataclass
+class ParameterKind(StrEnum):
+    """Parameter kinds, mirroring :class:`inspect.Parameter`."""
+
+    POSITIONAL_ONLY = "positional_only"
+    POSITIONAL = "positional"
+    VAR_POSITIONAL = "var_positional"
+    KEYWORD_ONLY = "keyword_only"
+    VAR_KEYWORD = "var_keyword"
+
+
+@dataclass(slots=True, frozen=True)
 class SourceLocation:
-    """Location information for code elements in source files."""
+    """A span in a source file. Lines are 1-based, columns 0-based."""
 
     file_path: str
     line_number: int
@@ -47,44 +61,56 @@ class SourceLocation:
     end_column: int = 0
 
 
-@dataclass
+@dataclass(slots=True)
 class Parameter:
-    """Function or method parameter information."""
+    """A function or method parameter."""
 
     name: str
+    kind: ParameterKind = ParameterKind.POSITIONAL
     type_hint: str | None = None
     default_value: str | None = None
 
 
-@dataclass
-class Usage:
-    """Usage information for code elements."""
-
-    location: SourceLocation
-    context: str
-    usage_type: UsageType
-
-
-@dataclass
-class CodeElement:  # pylint: disable=too-many-instance-attributes
-    """Represents a code element (class, function, module, etc.) with metadata."""
+@dataclass(slots=True)
+class CodeElement:
+    """A module, class, or function (including methods and nested definitions)."""
 
     id: str
     name: str
+    qualified_name: str
     type: ElementType
     location: SourceLocation
+    parent_id: str | None = None
     docstring: str | None = None
     parameters: list[Parameter] = field(default_factory=list)
     return_type: str | None = None
     decorators: list[str] = field(default_factory=list)
-    dependencies: list[str] = field(default_factory=list)
-    usages: list[Usage] = field(default_factory=list)
-    metadata: dict[str, Any] = field(default_factory=dict)
+    bases: list[str] = field(default_factory=list)
+    is_method: bool = False
+    is_async: bool = False
+    complexity: int = 0
+
+    @property
+    def line_count(self) -> int:
+        """Number of source lines the element spans."""
+        if self.location.end_line < self.location.line_number:
+            return 1
+        return self.location.end_line - self.location.line_number + 1
 
 
-@dataclass
+@dataclass(slots=True, frozen=True)
+class Usage:
+    """One place where an element is used, and by which element."""
+
+    location: SourceLocation
+    context: str
+    usage_type: UsageType
+    used_by: str
+
+
+@dataclass(slots=True)
 class ProjectInfo:
-    """Information about the analyzed project."""
+    """Summary of the analyzed project."""
 
     name: str
     path: str
@@ -94,9 +120,9 @@ class ProjectInfo:
     analysis_timestamp: datetime = field(default_factory=datetime.now)
 
 
-@dataclass
+@dataclass(slots=True)
 class ArchitecturalPattern:
-    """Detected architectural pattern in the codebase."""
+    """A detected architectural pattern and the elements that form it."""
 
     name: str
     type: PatternType
@@ -105,29 +131,32 @@ class ArchitecturalPattern:
     description: str
 
 
-@dataclass
+@dataclass(slots=True)
 class GraphNode:
-    """Node in the dependency graph."""
+    """A node in a dependency graph."""
 
     id: str
     name: str
-    type: ElementType
-    metadata: dict[str, Any] = field(default_factory=dict)
+    type: str
+    file_path: str = ""
+    in_degree: int = 0
+    out_degree: int = 0
+    size: int = 0
 
 
-@dataclass
+@dataclass(slots=True)
 class GraphEdge:
-    """Edge in the dependency graph."""
+    """A weighted, typed edge in a dependency graph."""
 
     source: str
     target: str
     relationship_type: str
-    weight: float = 1.0
+    weight: int = 1
 
 
-@dataclass
+@dataclass(slots=True)
 class GraphMetrics:
-    """Metrics for the dependency graph."""
+    """Whole-graph metrics."""
 
     node_count: int
     edge_count: int
@@ -135,48 +164,18 @@ class GraphMetrics:
     avg_degree: float
 
 
-@dataclass
+@dataclass(slots=True)
 class DependencyGraph:
-    """Graph representation of code dependencies."""
+    """Nodes, edges, and metrics for one abstraction level."""
 
     nodes: dict[str, GraphNode] = field(default_factory=dict)
     edges: list[GraphEdge] = field(default_factory=list)
     metrics: GraphMetrics | None = None
 
 
-class AnalysisSession:
-    """Session-based storage for current analysis"""
+@dataclass(slots=True, frozen=True)
+class SkippedFile:
+    """A file that was found but not analyzed, with the reason."""
 
-    def __init__(self) -> None:
-        self.project_info: ProjectInfo | None = None
-        self.modules: dict[str, CodeElement] = {}
-        self.classes: dict[str, CodeElement] = {}
-        self.functions: dict[str, CodeElement] = {}
-        self.dependency_graph: DependencyGraph | None = None
-        self.architectural_patterns: list[ArchitecturalPattern] = []
-        self.all_elements: dict[str, CodeElement] = {}
-
-    def reset(self) -> None:
-        """Clear all analysis data and return to clean state"""
-        self.project_info = None
-        self.modules.clear()
-        self.classes.clear()
-        self.functions.clear()
-        self.dependency_graph = None
-        self.architectural_patterns.clear()
-        self.all_elements.clear()
-
-    def add_element(self, element: CodeElement) -> None:
-        """Add a code element to the appropriate collection"""
-        self.all_elements[element.id] = element
-
-        if element.type == ElementType.MODULE:
-            self.modules[element.id] = element
-        elif element.type == ElementType.CLASS:
-            self.classes[element.id] = element
-        elif element.type == ElementType.FUNCTION:
-            self.functions[element.id] = element
-
-
-# Global session instance
-current_session = AnalysisSession()
+    file_path: str
+    reason: str

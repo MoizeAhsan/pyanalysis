@@ -1,294 +1,171 @@
-"""
-Architectural pattern detector for identifying common design patterns in Python code
+"""Detection of common architectural and design patterns.
+
+Detection combines naming conventions with structural evidence (which methods
+a class defines). Confidence reflects how much evidence was found; results are
+hints for exploration, not proofs.
 """
 
-import logging
+from __future__ import annotations
+
+import re
 from collections import defaultdict
+from typing import Final
 
-from pyanalyzer.models.core import (
-    ArchitecturalPattern,
-    CodeElement,
-    DependencyGraph,
-    ElementType,
-    PatternType,
+from pyanalyzer.analysis.resolver import Resolution
+from pyanalyzer.models.core import ArchitecturalPattern, CodeElement, ElementType, PatternType
+
+_MVC_ROLES: Final = {
+    "model": (("model", "entity"), ("model", "models", "entities", "domain")),
+    "view": (("view", "template"), ("view", "views", "templates")),
+    "controller": (
+        ("controller", "handler", "viewset"),
+        ("controller", "controllers", "handlers", "routes", "routers"),
+    ),
+}
+_FACTORY_CLASS: Final = re.compile(r"(factory|builder|creator)$", re.IGNORECASE)
+_FACTORY_METHOD: Final = re.compile(r"^(create|build|make|new)(_|$)", re.IGNORECASE)
+_OBSERVER_CLASS: Final = re.compile(r"(observer|listener|subscriber|watcher)$", re.IGNORECASE)
+_SUBJECT_CLASS: Final = re.compile(
+    r"(subject|publisher|notifier|observable|emitter|dispatcher|eventbus)$", re.IGNORECASE
 )
+_SUBSCRIBE_METHOD: Final = re.compile(
+    r"^(subscribe|attach|register|add_(listener|observer|handler|subscriber)|on)$", re.IGNORECASE
+)
+_NOTIFY_METHOD: Final = re.compile(
+    r"^_?(notify|emit|publish|dispatch|fire|broadcast)(_|$)", re.IGNORECASE
+)
+_SINGLETON_ACCESSOR: Final = frozenset({"get_instance", "instance", "getinstance", "shared"})
 
-logger = logging.getLogger(__name__)
+
+def detect_patterns(resolution: Resolution) -> list[ArchitecturalPattern]:
+    """Detect patterns across all classes of a resolved project."""
+    elements = resolution.elements
+    classes = [e for e in elements.values() if e.type is ElementType.CLASS]
+    methods: dict[str, list[CodeElement]] = defaultdict(list)
+    for class_element in classes:
+        for child_id in resolution.children.get(class_element.id, ()):
+            child = elements[child_id]
+            if child.type is ElementType.FUNCTION:
+                methods[class_element.id].append(child)
+
+    patterns: list[ArchitecturalPattern] = []
+    patterns.extend(_detect_mvc(classes))
+    patterns.extend(_detect_factories(classes, methods))
+    patterns.extend(_detect_observer(classes, methods))
+    patterns.extend(_detect_singletons(classes, methods))
+    return patterns
 
 
-class ArchitecturalPatternDetector:
-    """
-    Detects common architectural patterns in Python codebases
-    """
+def _path_segments(element: CodeElement) -> set[str]:
+    return set(element.location.file_path.lower().removesuffix(".py").split("/"))
 
-    def __init__(self) -> None:
-        self.elements_by_type: dict[ElementType, list[CodeElement]] = defaultdict(list)
-        self.elements_by_name: dict[str, CodeElement] = {}
-        self.dependency_graph: DependencyGraph | None = None
 
-    def detect_patterns(
-        self, elements: list[CodeElement], dependency_graph: DependencyGraph | None
-    ) -> list[ArchitecturalPattern]:
-        """
-        Detect architectural patterns in the given code elements
+def _detect_mvc(classes: list[CodeElement]) -> list[ArchitecturalPattern]:
+    roles: dict[str, list[CodeElement]] = {role: [] for role in _MVC_ROLES}
+    for element in classes:
+        name = element.name.lower()
+        segments = _path_segments(element)
+        for role, (suffixes, directories) in _MVC_ROLES.items():
+            if name.endswith(suffixes) or not segments.isdisjoint(directories):
+                roles[role].append(element)
+                break
+    if not all(roles.values()):
+        return []
+    members = [element for group in roles.values() for element in group]
+    return [
+        ArchitecturalPattern(
+            name="Model-View-Controller (MVC)",
+            type=PatternType.MVC,
+            confidence=min(0.9, len(members) / 10.0),
+            elements=[element.id for element in members],
+            description=(
+                f"MVC structure with {len(roles['model'])} models, {len(roles['view'])} views, "
+                f"and {len(roles['controller'])} controllers"
+            ),
+        )
+    ]
 
-        Args:
-            elements: List of code elements to analyze
-            dependency_graph: Dependency graph for relationship analysis
 
-        Returns:
-            List of detected architectural patterns
-        """
-        logger.info("Starting architectural pattern detection for %d elements", len(elements))
-
-        # Index elements for pattern detection
-        self._index_elements(elements)
-        self.dependency_graph = dependency_graph
-
-        patterns = []
-
-        # Detect different pattern types
-        patterns.extend(self._detect_mvc_pattern())
-        patterns.extend(self._detect_factory_pattern())
-        patterns.extend(self._detect_observer_pattern())
-        patterns.extend(self._detect_singleton_pattern())
-
-        logger.info("Detected %d architectural patterns", len(patterns))
-        return patterns
-
-    def _index_elements(self, elements: list[CodeElement]) -> None:
-        """Index elements by type and name for efficient lookup"""
-        self.elements_by_type.clear()
-        self.elements_by_name.clear()
-
-        for element in elements:
-            self.elements_by_type[element.type].append(element)
-            self.elements_by_name[element.id] = element
-
-    def _detect_mvc_pattern(self) -> list[ArchitecturalPattern]:
-        """Detect Model-View-Controller pattern"""
-        patterns = []
-
-        # Look for MVC indicators in class names and file paths
-        models = []
-        views = []
-        controllers = []
-
-        for element in self.elements_by_type[ElementType.CLASS]:
-            name_lower = element.name.lower()
-            file_path_lower = element.location.file_path.lower()
-
-            # Model detection
-            if (
-                name_lower.endswith("model")
-                or "model" in file_path_lower
-                or name_lower.endswith("entity")
-                or name_lower.endswith("data")
-            ):
-                models.append(element)
-
-            # View detection
-            elif (
-                name_lower.endswith("view")
-                or "view" in file_path_lower
-                or name_lower.endswith("template")
-                or name_lower.endswith("ui")
-                or "frontend" in file_path_lower
-            ):
-                views.append(element)
-
-            # Controller detection
-            elif (
-                name_lower.endswith("controller")
-                or "controller" in file_path_lower
-                or name_lower.endswith("handler")
-                or name_lower.endswith("service")
-                or "api" in file_path_lower
-            ):
-                controllers.append(element)
-
-        # If we have components from all three categories, it's likely MVC
-        if models and views and controllers:
-            confidence = min(0.9, (len(models) + len(views) + len(controllers)) / 10.0)
-
-            pattern = ArchitecturalPattern(
-                name="Model-View-Controller (MVC)",
-                type=PatternType.MVC,
+def _detect_factories(
+    classes: list[CodeElement], methods: dict[str, list[CodeElement]]
+) -> list[ArchitecturalPattern]:
+    patterns: list[ArchitecturalPattern] = []
+    for element in classes:
+        creators = [m for m in methods[element.id] if _FACTORY_METHOD.match(m.name)]
+        named = _FACTORY_CLASS.search(element.name) is not None
+        if not creators or not (named or len(creators) >= 2):
+            continue
+        confidence = min(0.9, (0.5 if named else 0.3) + 0.1 * len(creators))
+        patterns.append(
+            ArchitecturalPattern(
+                name=f"Factory ({element.name})",
+                type=PatternType.FACTORY,
                 confidence=confidence,
-                elements=[e.id for e in models + views + controllers],
-                description=f"MVC pattern detected with {len(models)} models, "
-                f"{len(views)} views, and {len(controllers)} controllers",
+                elements=[element.id, *(m.id for m in creators)],
+                description=(
+                    f"{element.name} exposes {len(creators)} creation "
+                    f"method{'s' if len(creators) != 1 else ''}"
+                ),
             )
-            patterns.append(pattern)
+        )
+    return patterns
 
-        return patterns
 
-    def _detect_factory_pattern(self) -> list[ArchitecturalPattern]:
-        """Detect Factory pattern"""
-        patterns = []
+def _detect_observer(
+    classes: list[CodeElement], methods: dict[str, list[CodeElement]]
+) -> list[ArchitecturalPattern]:
+    observers = [e for e in classes if _OBSERVER_CLASS.search(e.name)]
+    subjects: list[CodeElement] = []
+    structural = 0
+    for element in classes:
+        names = [m.name for m in methods[element.id]]
+        subscribes = any(_SUBSCRIBE_METHOD.match(n) for n in names)
+        notifies = any(_NOTIFY_METHOD.match(n) for n in names)
+        if subscribes and notifies:
+            subjects.append(element)
+            structural += 1
+        elif _SUBJECT_CLASS.search(element.name):
+            subjects.append(element)
+    if not subjects or not (observers or structural):
+        return []
+    members = [*subjects, *(o for o in observers if o not in subjects)]
+    return [
+        ArchitecturalPattern(
+            name="Observer",
+            type=PatternType.OBSERVER,
+            confidence=min(0.9, 0.3 + 0.2 * structural + 0.1 * len(observers)),
+            elements=[element.id for element in members],
+            description=(
+                f"{len(subjects)} subject{'s' if len(subjects) != 1 else ''} and "
+                f"{len(observers)} observer{'s' if len(observers) != 1 else ''}"
+            ),
+        )
+    ]
 
-        for element in self.elements_by_type[ElementType.CLASS]:
-            name_lower = element.name.lower()
 
-            # Look for factory naming patterns
-            if "factory" in name_lower or "builder" in name_lower or "creator" in name_lower:
-                # Check if it has methods that create other objects
-                factory_methods = []
-                for func_element in self.elements_by_type[ElementType.FUNCTION]:
-                    if func_element.location.file_path == element.location.file_path:
-                        func_name_lower = func_element.name.lower()
-                        if (
-                            "create" in func_name_lower
-                            or "build" in func_name_lower
-                            or "make" in func_name_lower
-                            or "get" in func_name_lower
-                        ):
-                            factory_methods.append(func_element)
-
-                if factory_methods:
-                    confidence = min(0.8, len(factory_methods) / 5.0)
-
-                    pattern = ArchitecturalPattern(
-                        name=f"Factory Pattern ({element.name})",
-                        type=PatternType.FACTORY,
-                        confidence=confidence,
-                        elements=[element.id] + [m.id for m in factory_methods],
-                        description=f"Factory pattern detected in {element.name} "
-                        f"with {len(factory_methods)} factory methods",
-                    )
-                    patterns.append(pattern)
-
-        return patterns
-
-    def _detect_observer_pattern(self) -> list[ArchitecturalPattern]:
-        """Detect Observer pattern"""
-        patterns = []
-
-        # Look for observer-like classes and methods
-        observers = []
-        subjects = []
-
-        for element in self.elements_by_type[ElementType.CLASS]:
-            name_lower = element.name.lower()
-
-            # Observer detection
-            if (
-                "observer" in name_lower
-                or "listener" in name_lower
-                or "subscriber" in name_lower
-                or "watcher" in name_lower
-            ):
-                observers.append(element)
-
-            # Subject detection
-            elif (
-                "subject" in name_lower
-                or "publisher" in name_lower
-                or "notifier" in name_lower
-                or "observable" in name_lower
-            ):
-                subjects.append(element)
-
-        # Look for notify/update method patterns
-        notify_methods = []
-        update_methods = []
-
-        for func_element in self.elements_by_type[ElementType.FUNCTION]:
-            func_name_lower = func_element.name.lower()
-
-            if (
-                "notify" in func_name_lower
-                or "publish" in func_name_lower
-                or "broadcast" in func_name_lower
-            ):
-                notify_methods.append(func_element)
-            elif (
-                "update" in func_name_lower
-                or "handle" in func_name_lower
-                or "on_" in func_name_lower
-            ):
-                update_methods.append(func_element)
-
-        # If we have observers/subjects and related methods, it's likely Observer pattern
-        if (observers or subjects) and (notify_methods or update_methods):
-            total_elements = (
-                len(observers) + len(subjects) + len(notify_methods) + len(update_methods)
+def _detect_singletons(
+    classes: list[CodeElement], methods: dict[str, list[CodeElement]]
+) -> list[ArchitecturalPattern]:
+    patterns: list[ArchitecturalPattern] = []
+    for element in classes:
+        names = {m.name.lower() for m in methods[element.id]}
+        evidence: list[str] = []
+        if "singleton" in element.name.lower():
+            evidence.append("its name")
+        if "__new__" in names:
+            evidence.append("a custom __new__")
+        if names & _SINGLETON_ACCESSOR:
+            evidence.append("an instance accessor")
+        named_only = evidence == ["its name"]
+        if len(evidence) < 2 and not named_only:
+            continue
+        patterns.append(
+            ArchitecturalPattern(
+                name=f"Singleton ({element.name})",
+                type=PatternType.SINGLETON,
+                confidence=min(0.9, 0.3 + 0.25 * len(evidence)),
+                elements=[element.id],
+                description=f"{element.name} looks like a singleton: {', '.join(evidence)}",
             )
-            confidence = min(0.7, total_elements / 8.0)
-
-            all_elements = observers + subjects + notify_methods + update_methods
-            pattern = ArchitecturalPattern(
-                name="Observer Pattern",
-                type=PatternType.OBSERVER,
-                confidence=confidence,
-                elements=[e.id for e in all_elements],
-                description=f"Observer pattern detected with {len(observers)} observers, "
-                f"{len(subjects)} subjects, {len(notify_methods)} notify methods, "
-                f"and {len(update_methods)} update methods",
-            )
-            patterns.append(pattern)
-
-        return patterns
-
-    def _detect_singleton_pattern(self) -> list[ArchitecturalPattern]:
-        """Detect Singleton pattern"""
-        patterns = []
-
-        for element in self.elements_by_type[ElementType.CLASS]:
-            name_lower = element.name.lower()
-
-            # Look for singleton naming patterns
-            if "singleton" in name_lower:
-                confidence = 0.8
-
-                pattern = ArchitecturalPattern(
-                    name=f"Singleton Pattern ({element.name})",
-                    type=PatternType.SINGLETON,
-                    confidence=confidence,
-                    elements=[element.id],
-                    description=f"Singleton pattern detected in {element.name}",
-                )
-                patterns.append(pattern)
-                continue
-
-            # Look for singleton implementation patterns
-            singleton_indicators = 0
-
-            # Check for private constructor patterns or instance methods
-            for func_element in self.elements_by_type[ElementType.FUNCTION]:
-                if func_element.location.file_path == element.location.file_path:
-                    func_name_lower = func_element.name.lower()
-
-                    if (
-                        "instance" in func_name_lower
-                        or "get_instance" in func_name_lower
-                        or "__new__" in func_name_lower
-                    ):
-                        singleton_indicators += 1
-
-            # Check for global variables that might be singleton instances
-            for var_element in self.elements_by_type[ElementType.VARIABLE]:
-                if var_element.location.file_path == element.location.file_path:
-                    var_name_lower = var_element.name.lower()
-
-                    if (
-                        "instance" in var_name_lower
-                        or "_instance" in var_name_lower
-                        or var_name_lower == element.name.lower()
-                    ):
-                        singleton_indicators += 1
-
-            if singleton_indicators >= 2:
-                confidence = min(0.6, singleton_indicators / 4.0)
-
-                pattern = ArchitecturalPattern(
-                    name=f"Singleton Pattern ({element.name})",
-                    type=PatternType.SINGLETON,
-                    confidence=confidence,
-                    elements=[element.id],
-                    description=f"Potential singleton pattern detected in {element.name} "
-                    f"with {singleton_indicators} indicators",
-                )
-                patterns.append(pattern)
-
-        return patterns
+        )
+    return patterns

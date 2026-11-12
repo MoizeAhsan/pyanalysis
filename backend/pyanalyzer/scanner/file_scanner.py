@@ -1,240 +1,175 @@
-"""
-File system scanner for discovering Python files in project directories
-"""
+"""Discovery of Python source files in a project directory."""
 
-import logging
+from __future__ import annotations
+
 import os
-from collections.abc import Generator
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from collections.abc import Callable
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Final
 
-logger = logging.getLogger(__name__)
+from pathspec import GitIgnoreSpec
+
+from pyanalyzer.models.core import SkippedFile
+
+#: Directories and files that are never worth analyzing. Patterns use
+#: ``.gitignore`` syntax, as do user-supplied exclude patterns.
+DEFAULT_EXCLUDES: Final[tuple[str, ...]] = (
+    "__pycache__/",
+    ".git/",
+    ".svn/",
+    ".hg/",
+    "node_modules/",
+    ".venv/",
+    "venv/",
+    ".env/",
+    "env/",
+    "site-packages/",
+    ".mypy_cache/",
+    ".pytest_cache/",
+    ".ruff_cache/",
+    ".tox/",
+    ".nox/",
+    ".eggs/",
+    "*.egg-info/",
+    "build/",
+    "dist/",
+    "htmlcov/",
+)
+
+DEFAULT_MAX_FILE_SIZE: Final = 2 * 1024 * 1024
 
 
-class FileSystemScanner:
+class ProjectPathError(ValueError):
+    """The requested project path does not exist or is not a directory."""
+
+
+@dataclass(slots=True, frozen=True)
+class ScanOptions:
+    """What to include when scanning a project."""
+
+    exclude: tuple[str, ...] = ()
+    respect_gitignore: bool = True
+    use_default_excludes: bool = True
+    max_file_size: int = DEFAULT_MAX_FILE_SIZE
+
+
+@dataclass(slots=True, frozen=True)
+class ScannedFile:
+    """A Python file found by the scanner, with the stat data used for caching."""
+
+    rel_path: str
+    size: int
+    mtime_ns: int
+
+
+@dataclass(slots=True)
+class ScanResult:
+    """Files to analyze, plus files that were found but deliberately left out."""
+
+    root: str
+    files: list[ScannedFile] = field(default_factory=list)
+    skipped: list[SkippedFile] = field(default_factory=list)
+
+
+type _IgnoreRules = tuple[tuple[str, GitIgnoreSpec], ...]
+
+
+def validate_project_path(project_path: str) -> Path:
+    """Return the resolved project directory or raise a descriptive error."""
+    if not project_path or not project_path.strip():
+        raise ProjectPathError("Project path cannot be empty")
+    path = Path(project_path.strip()).expanduser()
+    if not path.exists():
+        raise ProjectPathError(f"Project path does not exist: {project_path}")
+    if not path.is_dir():
+        raise ProjectPathError(f"Project path is not a directory: {project_path}")
+    resolved = path.resolve()
+    if not os.access(resolved, os.R_OK | os.X_OK):
+        raise PermissionError(f"Cannot access directory: {project_path}")
+    return resolved
+
+
+def scan_project(
+    project_path: str,
+    options: ScanOptions | None = None,
+    should_cancel: Callable[[], bool] | None = None,
+) -> ScanResult:
+    """Find every ``.py`` file under ``project_path`` in one pass.
+
+    Symbolic links are never followed, so link cycles cannot cause repeated or
+    endless traversal. Excluded directories are pruned without being entered.
+    Results are sorted by path so analysis is deterministic.
     """
-    Scanner for recursively discovering Python files in project directories
-    """
+    options = options or ScanOptions()
+    root = validate_project_path(project_path)
+    patterns = [*(DEFAULT_EXCLUDES if options.use_default_excludes else ()), *options.exclude]
+    base_rules: _IgnoreRules = (("", GitIgnoreSpec.from_lines(patterns)),) if patterns else ()
 
-    def __init__(self, exclude_patterns: set[str] | None = None, max_workers: int | None = None):
-        """
-        Initialize the file scanner
-
-        Args:
-            exclude_patterns: Set of directory/file patterns to exclude
-            max_workers: Maximum number of worker threads for parallel scanning
-        """
-        self.exclude_patterns = exclude_patterns or {
-            "__pycache__",
-            ".git",
-            ".svn",
-            ".hg",
-            "node_modules",
-            ".venv",
-            "venv",
-            ".env",
-            "env",
-            ".mypy_cache",
-            ".pytest_cache",
-            ".ruff_cache",
-            "build",
-            "dist",
-            "*.egg-info",
-            ".tox",
-            "htmlcov",
-            ".coverage",
-        }
-
-        # Optimize worker count for I/O bound directory scanning
-        if max_workers is None:
-            cpu_count = os.cpu_count() or 4
-            self.max_workers = min(cpu_count, 8)  # Cap at 8 for directory scanning
-        else:
-            self.max_workers = max_workers
-
-    def scan_project(self, project_path: str) -> list[str]:
-        """
-        Recursively scan project directory for Python files
-
-        Args:
-            project_path: Path to the project directory
-
-        Returns:
-            List of Python file paths
-
-        Raises:
-            ValueError: If project path is invalid
-            PermissionError: If directory is not accessible
-        """
-        path = Path(project_path)
-
-        if not path.exists():
-            raise ValueError(f"Project path does not exist: {project_path}")
-
-        if not path.is_dir():
-            raise ValueError(f"Project path is not a directory: {project_path}")
-
+    result = ScanResult(root=str(root))
+    pending: list[tuple[str, _IgnoreRules]] = [("", base_rules)]
+    while pending:
+        if should_cancel is not None and should_cancel():
+            break
+        rel_dir, rules = pending.pop()
         try:
-            # Test if directory is accessible
-            list(path.iterdir())
-        except PermissionError as e:
-            raise PermissionError(f"Cannot access directory: {project_path}") from e
+            with os.scandir(root / rel_dir if rel_dir else root) as iterator:
+                entries = list(iterator)
+        except OSError as exc:
+            result.skipped.append(
+                SkippedFile(rel_dir or ".", f"unreadable directory: {exc.strerror}")
+            )
+            continue
 
-        python_files = []
-        skipped_files = []
+        if options.respect_gitignore:
+            rules = _with_gitignore(root, rel_dir, entries, rules)
 
-        logger.info("Starting scan of project: %s", project_path)
-
-        for file_path in self._discover_python_files(path):
-            try:
-                # Verify file is readable
-                with open(file_path, encoding="utf-8") as f:
-                    # Just try to read first line to verify accessibility
-                    f.readline()
-                python_files.append(str(file_path))
-            except (PermissionError, UnicodeDecodeError, OSError) as e:
-                logger.warning("Skipping inaccessible file %s: %s", file_path, e)
-                skipped_files.append(str(file_path))
-
-        logger.info(
-            "Scan complete. Found %d Python files, skipped %d files",
-            len(python_files),
-            len(skipped_files),
-        )
-
-        return python_files
-
-    def _discover_python_files(self, root_path: Path) -> Generator[Path, None, None]:
-        """
-        Generator that yields Python file paths recursively
-
-        Args:
-            root_path: Root directory to scan
-
-        Yields:
-            Path objects for Python files
-        """
-        try:
-            for item in root_path.iterdir():
-                # Skip excluded patterns
-                if self._should_exclude(item):
-                    logger.debug("Excluding: %s", item)
+        for entry in entries:
+            rel_path = f"{rel_dir}/{entry.name}" if rel_dir else entry.name
+            is_python = entry.name.endswith(".py")
+            if entry.is_symlink():
+                if is_python and not _is_ignored(rel_path, rules):
+                    result.skipped.append(SkippedFile(rel_path, "symbolic link"))
+            elif entry.is_dir(follow_symlinks=False):
+                if not _is_ignored(rel_path + "/", rules):
+                    pending.append((rel_path, rules))
+            elif is_python and entry.is_file(follow_symlinks=False):
+                if _is_ignored(rel_path, rules):
                     continue
+                try:
+                    stat = entry.stat(follow_symlinks=False)
+                except OSError as exc:
+                    result.skipped.append(SkippedFile(rel_path, f"unreadable: {exc.strerror}"))
+                    continue
+                if stat.st_size > options.max_file_size:
+                    result.skipped.append(
+                        SkippedFile(rel_path, f"larger than {options.max_file_size} bytes")
+                    )
+                    continue
+                result.files.append(ScannedFile(rel_path, stat.st_size, stat.st_mtime_ns))
 
-                if item.is_file() and item.suffix == ".py":
-                    yield item
-                elif item.is_dir():
-                    # Recursively scan subdirectories
-                    try:
-                        yield from self._discover_python_files(item)
-                    except PermissionError:
-                        logger.warning("Permission denied accessing directory: %s", item)
-                        continue
+    result.files.sort(key=lambda scanned: scanned.rel_path)
+    result.skipped.sort(key=lambda skipped: skipped.file_path)
+    return result
 
-        except PermissionError:
-            logger.warning("Permission denied accessing directory: %s", root_path)
 
-    def _should_exclude(self, path: Path) -> bool:
-        """
-        Check if a path should be excluded based on exclude patterns
+def _with_gitignore(
+    root: Path, rel_dir: str, entries: list[os.DirEntry[str]], rules: _IgnoreRules
+) -> _IgnoreRules:
+    """Add the rules from ``rel_dir``'s own ``.gitignore``, if it has one."""
+    if not any(entry.name == ".gitignore" for entry in entries):
+        return rules
+    try:
+        lines = (root / rel_dir / ".gitignore").read_text(encoding="utf-8").splitlines()
+    except (OSError, UnicodeDecodeError):
+        return rules
+    return (*rules, (rel_dir, GitIgnoreSpec.from_lines(lines)))
 
-        Args:
-            path: Path to check
 
-        Returns:
-            True if path should be excluded
-        """
-        name = path.name
-
-        # Check exact matches
-        if name in self.exclude_patterns:
+def _is_ignored(rel_path: str, rules: _IgnoreRules) -> bool:
+    """Whether any active rule set ignores ``rel_path`` (directories end with ``/``)."""
+    for base, spec in rules:
+        relative = rel_path[len(base) + 1 :] if base else rel_path
+        if spec.match_file(relative):
             return True
-
-        # Check pattern matches (simple glob-style)
-        for pattern in self.exclude_patterns:
-            if pattern.startswith("*") and name.endswith(pattern[1:]):
-                return True
-            if pattern.endswith("*") and name.startswith(pattern[:-1]):
-                return True
-
-        return False
-
-    def get_project_stats(self, project_path: str) -> dict[str, Any]:
-        """
-        Get basic statistics about the project with parallel line counting
-
-        Args:
-            project_path: Path to the project directory
-
-        Returns:
-            Dictionary with project statistics
-        """
-        python_files = self.scan_project(project_path)
-        total_files = len(python_files)
-        if total_files == 0:
-            return {
-                "total_files": 0,
-                "total_lines": 0,
-                "python_files": [],
-            }
-
-        # Count lines in parallel for better performance
-        total_lines = self._count_lines_parallel(python_files)
-
-        return {
-            "total_files": total_files,
-            "total_lines": total_lines,
-            "python_files": python_files,
-        }
-
-    def _count_lines_parallel(self, file_paths: list[str]) -> int:
-        """
-        Count lines in multiple files using parallel processing
-
-        Args:
-            file_paths: List of file paths to count lines in
-
-        Returns:
-            Total line count across all files
-        """
-        total_lines = 0
-
-        if len(file_paths) < 10 or self.max_workers == 1:
-            # Use single-threaded for small file counts
-            for file_path in file_paths:
-                total_lines += self._count_lines_single_file(file_path)
-        else:
-            # Use multi-threaded for larger file counts
-            with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
-                future_to_file = {
-                    executor.submit(self._count_lines_single_file, file_path): file_path
-                    for file_path in file_paths
-                }
-
-                for future in as_completed(future_to_file):
-                    try:
-                        line_count = future.result()
-                        total_lines += line_count
-                    except Exception as e:
-                        file_path = future_to_file[future]
-                        logger.debug("Failed to count lines in %s: %s", file_path, e)
-
-        return total_lines
-
-    def _count_lines_single_file(self, file_path: str) -> int:
-        """
-        Count lines in a single file
-
-        Args:
-            file_path: Path to the file
-
-        Returns:
-            Number of lines in the file
-        """
-        try:
-            with open(file_path, encoding="utf-8") as f:
-                return sum(1 for _ in f)
-        except (OSError, UnicodeDecodeError):
-            # Skip files that can't be read
-            return 0
+    return False

@@ -9,18 +9,26 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from pyanalyzer.main import app
-from pyanalyzer.models.core import current_session
+from pyanalyzer.analysis.pipeline import AnalysisOptions, AnalysisResult, analyze_project
+from pyanalyzer.main import create_app
 
 ProjectFactory = Callable[[Mapping[str, str]], Path]
+Analyze = Callable[[Mapping[str, str]], AnalysisResult]
 
 
 @pytest.fixture
 def make_project(tmp_path: Path) -> ProjectFactory:
-    """Return a factory that writes ``{relative_path: source}`` into a temp project."""
+    """Return a factory that writes ``{relative_path: source}`` into a new temp project.
+
+    Every call creates a separate directory named ``project``.
+    """
+
+    created = 0
 
     def _make(files: Mapping[str, str]) -> Path:
-        root = tmp_path / "project"
+        nonlocal created
+        created += 1
+        root = tmp_path / f"workspace{created}" / "project"
         for rel_path, source in files.items():
             target = root / rel_path
             target.parent.mkdir(parents=True, exist_ok=True)
@@ -96,9 +104,17 @@ def sample_project(make_project: ProjectFactory) -> Path:
 
 
 @pytest.fixture
+def analyze(make_project: ProjectFactory) -> Analyze:
+    """Return a function that writes a project and analyzes it in-process."""
+
+    def _analyze(files: Mapping[str, str]) -> AnalysisResult:
+        return analyze_project(str(make_project(files)), AnalysisOptions(workers=1))
+
+    return _analyze
+
+
+@pytest.fixture
 def client() -> Iterator[TestClient]:
-    """API client with a clean analysis session before and after each test."""
-    current_session.reset()
-    with TestClient(app) as test_client:
+    """API client backed by a fresh application and an empty analysis store."""
+    with TestClient(create_app()) as test_client:
         yield test_client
-    current_session.reset()
