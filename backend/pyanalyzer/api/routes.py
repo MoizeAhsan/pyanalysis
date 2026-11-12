@@ -3,15 +3,15 @@ API routes for Python Code Analyzer
 """
 
 import logging
-from typing import Dict, Any, Optional, List
 from pathlib import Path
+from typing import Any
 
-from fastapi import APIRouter, HTTPException, Header
-from pydantic import BaseModel, validator
+from fastapi import APIRouter, Header, HTTPException
+from pydantic import BaseModel, field_validator
 
-from models.core import current_session, CodeElement, DependencyGraph
-from analysis_engine.project_analyzer import ProjectAnalyzer
-from utils.compression import compress_large_response
+from pyanalyzer.analysis.project_analyzer import ProjectAnalyzer
+from pyanalyzer.models.core import CodeElement, DependencyGraph, current_session
+from pyanalyzer.utils.compression import compress_large_response
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -25,8 +25,9 @@ class AnalyzeRequest(BaseModel):
 
     project_path: str
 
-    @validator("project_path")
-    def validate_project_path(cls, v):  # pylint: disable=no-self-argument
+    @field_validator("project_path")
+    @classmethod
+    def validate_project_path(cls, v: str) -> str:
         """Validate that the project path exists and is accessible"""
         if not v or not v.strip():
             raise ValueError("Project path cannot be empty")
@@ -45,10 +46,10 @@ class AnalyzeResponse(BaseModel):
 
     success: bool
     message: str
-    data: Dict[str, Any] = {}
+    data: dict[str, Any] = {}
 
 
-def _serialize_code_element(element: CodeElement) -> Dict[str, Any]:
+def _serialize_code_element(element: CodeElement) -> dict[str, Any]:
     """Convert CodeElement to serializable dictionary"""
     return {
         "id": element.id,
@@ -92,8 +93,8 @@ def _serialize_code_element(element: CodeElement) -> Dict[str, Any]:
 
 
 def _serialize_dependency_graph(
-    graph: Optional[DependencyGraph],
-) -> Optional[Dict[str, Any]]:
+    graph: DependencyGraph | None,
+) -> dict[str, Any] | None:
     """Convert DependencyGraph to serializable dictionary"""
     if not graph:
         return None
@@ -139,24 +140,16 @@ async def analyze_project(request: AnalyzeRequest) -> AnalyzeResponse:
 
         # Get basic statistics for response
         stats = {
-            "project_name": session.project_info.name
-            if session.project_info
-            else "Unknown",
-            "total_files": session.project_info.total_files
-            if session.project_info
-            else 0,
-            "total_lines": session.project_info.total_lines
-            if session.project_info
-            else 0,
+            "project_name": session.project_info.name if session.project_info else "Unknown",
+            "total_files": session.project_info.total_files if session.project_info else 0,
+            "total_lines": session.project_info.total_lines if session.project_info else 0,
             "modules_count": len(session.modules),
             "classes_count": len(session.classes),
             "functions_count": len(session.functions),
             "total_elements": len(session.all_elements),
         }
 
-        logger.info(
-            "Analysis completed successfully for project: %s", request.project_path
-        )
+        logger.info("Analysis completed successfully for project: %s", request.project_path)
 
         return AnalyzeResponse(
             success=True,
@@ -193,7 +186,7 @@ async def reset_analysis() -> AnalyzeResponse:
 
 @router.get("/architecture", response_model=AnalyzeResponse)
 async def get_architectural_data(
-    accept_encoding: Optional[str] = Header(None, alias="accept-encoding")
+    accept_encoding: str | None = Header(None, alias="accept-encoding"),
 ) -> AnalyzeResponse:
     """Get architectural overview data for current session"""
     try:
@@ -215,12 +208,9 @@ async def get_architectural_data(
                 "total_lines": current_session.project_info.total_lines,
             },
             "modules": [
-                _serialize_code_element(element)
-                for element in current_session.modules.values()
+                _serialize_code_element(element) for element in current_session.modules.values()
             ],
-            "dependency_graph": _serialize_dependency_graph(
-                current_session.dependency_graph
-            ),
+            "dependency_graph": _serialize_dependency_graph(current_session.dependency_graph),
             "architectural_patterns": [
                 {
                     "name": pattern.name,
@@ -246,9 +236,9 @@ async def get_architectural_data(
         )
 
         # Apply compression for large architectural data
-        should_compress = (
-            accept_encoding and "gzip" in accept_encoding.lower()
-        ) or len(str(architectural_data)) > 5120  # Compress if > 5KB
+        should_compress = (accept_encoding and "gzip" in accept_encoding.lower()) or len(
+            str(architectural_data)
+        ) > 5120  # Compress if > 5KB
 
         if should_compress:
             compressed_data = compress_large_response(
@@ -259,7 +249,7 @@ async def get_architectural_data(
                     "Compressed architectural response: %d -> %d bytes (%.1f%% reduction)",
                     compressed_data["original_size"],
                     compressed_data["compressed_size"],
-                    (1 - compressed_data["compression_ratio"]) * 100
+                    (1 - compressed_data["compression_ratio"]) * 100,
                 )
                 return AnalyzeResponse(
                     success=True,
@@ -279,7 +269,7 @@ async def get_architectural_data(
         ) from e
 
 
-def _search_element(element: CodeElement, query: str) -> Optional[Dict[str, Any]]:
+def _search_element(element: CodeElement, query: str) -> dict[str, Any] | None:
     """Search for query in a single element and return match result if found"""
     # Search in name
     if query in element.name.lower():
@@ -319,13 +309,13 @@ def _search_element(element: CodeElement, query: str) -> Optional[Dict[str, Any]
     return None
 
 
-def _detect_circular_dependencies() -> List[List[str]]:
+def _detect_circular_dependencies() -> list[list[str]]:
     """Detect circular dependencies in the current dependency graph"""
     if not current_session.dependency_graph:
         return []
 
     # Simple cycle detection using DFS
-    graph: Dict[str, List[str]] = {}
+    graph: dict[str, list[str]] = {}
     for node_id in current_session.dependency_graph.nodes:
         graph[node_id] = []
 
@@ -333,15 +323,15 @@ def _detect_circular_dependencies() -> List[List[str]]:
         if edge.source in graph:
             graph[edge.source].append(edge.target)
 
-    visited = set()
-    recursion_stack = set()
-    cycles = []
+    visited: set[str] = set()
+    recursion_stack: set[str] = set()
+    cycles: list[list[str]] = []
 
-    def dfs(node, path):
+    def dfs(node: str, path: list[str]) -> bool:
         if node in recursion_stack:
             # Found a cycle
             cycle_start = path.index(node)
-            cycle = path[cycle_start:] + [node]
+            cycle = [*path[cycle_start:], node]
             cycles.append(cycle)
             return True
 
@@ -371,7 +361,7 @@ def _detect_circular_dependencies() -> List[List[str]]:
 @router.get("/search", response_model=AnalyzeResponse)
 async def search_elements(
     q: str = "",
-    element_type: Optional[str] = None,
+    element_type: str | None = None,
     page: int = 1,
     page_size: int = 20,
     max_results: int = 100,
@@ -419,7 +409,7 @@ async def search_elements(
                 results.append(match_result)
 
         # Sort results by relevance (name matches first, then docstring, then file path)
-        def sort_key(result):
+        def sort_key(result: dict[str, Any]) -> tuple[int, str]:
             if result["match_type"] == "name":
                 return (0, result["element"]["name"].lower())
             if result["match_type"] == "docstring":
@@ -485,7 +475,7 @@ async def search_elements(
 
 @router.get("/data", response_model=AnalyzeResponse)
 async def get_analysis_data(
-    accept_encoding: Optional[str] = Header(None, alias="accept-encoding")
+    accept_encoding: str | None = Header(None, alias="accept-encoding"),
 ) -> AnalyzeResponse:
     """Get all analysis results for current session"""
     try:
@@ -512,20 +502,15 @@ async def get_analysis_data(
                 "analysis_timestamp": current_session.project_info.analysis_timestamp.isoformat(),
             },
             "modules": [
-                _serialize_code_element(element)
-                for element in current_session.modules.values()
+                _serialize_code_element(element) for element in current_session.modules.values()
             ],
             "classes": [
-                _serialize_code_element(element)
-                for element in current_session.classes.values()
+                _serialize_code_element(element) for element in current_session.classes.values()
             ],
             "functions": [
-                _serialize_code_element(element)
-                for element in current_session.functions.values()
+                _serialize_code_element(element) for element in current_session.functions.values()
             ],
-            "dependency_graph": _serialize_dependency_graph(
-                current_session.dependency_graph
-            ),
+            "dependency_graph": _serialize_dependency_graph(current_session.dependency_graph),
             "architectural_patterns": [
                 {
                     "name": pattern.name,
@@ -545,14 +530,12 @@ async def get_analysis_data(
             },
         }
 
-        logger.info(
-            "Retrieved analysis data for project: %s", current_session.project_info.name
-        )
+        logger.info("Retrieved analysis data for project: %s", current_session.project_info.name)
 
         # Apply compression for large responses
-        should_compress = (
-            accept_encoding and "gzip" in accept_encoding.lower()
-        ) or len(str(data)) > 10240  # Compress if > 10KB
+        should_compress = (accept_encoding and "gzip" in accept_encoding.lower()) or len(
+            str(data)
+        ) > 10240  # Compress if > 10KB
 
         if should_compress:
             compressed_data = compress_large_response(data, threshold=5120)  # 5KB threshold
@@ -561,12 +544,12 @@ async def get_analysis_data(
                     "Compressed response: %d -> %d bytes (%.1f%% reduction)",
                     compressed_data["original_size"],
                     compressed_data["compressed_size"],
-                    (1 - compressed_data["compression_ratio"]) * 100
+                    (1 - compressed_data["compression_ratio"]) * 100,
                 )
                 return AnalyzeResponse(
                     success=True,
                     message="Analysis data retrieved successfully (compressed)",
-                    data=compressed_data
+                    data=compressed_data,
                 )
 
         return AnalyzeResponse(
@@ -574,6 +557,4 @@ async def get_analysis_data(
         )
     except Exception as e:
         logger.error("Failed to retrieve analysis data: %s", e)
-        raise HTTPException(
-            status_code=500, detail=f"Failed to retrieve data: {e}"
-        ) from e
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve data: {e}") from e

@@ -3,15 +3,14 @@ Architectural pattern detector for identifying common design patterns in Python 
 """
 
 import logging
-from typing import List, Dict, Optional
 from collections import defaultdict
 
-from models.core import (
-    CodeElement,
-    ElementType,
+from pyanalyzer.models.core import (
     ArchitecturalPattern,
-    PatternType,
+    CodeElement,
     DependencyGraph,
+    ElementType,
+    PatternType,
 )
 
 logger = logging.getLogger(__name__)
@@ -23,13 +22,13 @@ class ArchitecturalPatternDetector:
     """
 
     def __init__(self) -> None:
-        self.elements_by_type: Dict[ElementType, List[CodeElement]] = defaultdict(list)
-        self.elements_by_name: Dict[str, CodeElement] = {}
-        self.dependency_graph: Optional[DependencyGraph] = None
+        self.elements_by_type: dict[ElementType, list[CodeElement]] = defaultdict(list)
+        self.elements_by_name: dict[str, CodeElement] = {}
+        self.dependency_graph: DependencyGraph | None = None
 
     def detect_patterns(
-        self, elements: List[CodeElement], dependency_graph: Optional[DependencyGraph]
-    ) -> List[ArchitecturalPattern]:
+        self, elements: list[CodeElement], dependency_graph: DependencyGraph | None
+    ) -> list[ArchitecturalPattern]:
         """
         Detect architectural patterns in the given code elements
 
@@ -40,9 +39,7 @@ class ArchitecturalPatternDetector:
         Returns:
             List of detected architectural patterns
         """
-        logger.info(
-            "Starting architectural pattern detection for %d elements", len(elements)
-        )
+        logger.info("Starting architectural pattern detection for %d elements", len(elements))
 
         # Index elements for pattern detection
         self._index_elements(elements)
@@ -59,7 +56,7 @@ class ArchitecturalPatternDetector:
         logger.info("Detected %d architectural patterns", len(patterns))
         return patterns
 
-    def _index_elements(self, elements: List[CodeElement]) -> None:
+    def _index_elements(self, elements: list[CodeElement]) -> None:
         """Index elements by type and name for efficient lookup"""
         self.elements_by_type.clear()
         self.elements_by_name.clear()
@@ -68,7 +65,7 @@ class ArchitecturalPatternDetector:
             self.elements_by_type[element.type].append(element)
             self.elements_by_name[element.id] = element
 
-    def _detect_mvc_pattern(self) -> List[ArchitecturalPattern]:
+    def _detect_mvc_pattern(self) -> list[ArchitecturalPattern]:
         """Detect Model-View-Controller pattern"""
         patterns = []
 
@@ -126,7 +123,7 @@ class ArchitecturalPatternDetector:
 
         return patterns
 
-    def _detect_factory_pattern(self) -> List[ArchitecturalPattern]:
+    def _detect_factory_pattern(self) -> list[ArchitecturalPattern]:
         """Detect Factory pattern"""
         patterns = []
 
@@ -134,11 +131,7 @@ class ArchitecturalPatternDetector:
             name_lower = element.name.lower()
 
             # Look for factory naming patterns
-            if (
-                "factory" in name_lower
-                or "builder" in name_lower
-                or "creator" in name_lower
-            ):
+            if "factory" in name_lower or "builder" in name_lower or "creator" in name_lower:
                 # Check if it has methods that create other objects
                 factory_methods = []
                 for func_element in self.elements_by_type[ElementType.FUNCTION]:
@@ -167,7 +160,7 @@ class ArchitecturalPatternDetector:
 
         return patterns
 
-    def _detect_observer_pattern(self) -> List[ArchitecturalPattern]:
+    def _detect_observer_pattern(self) -> list[ArchitecturalPattern]:
         """Detect Observer pattern"""
         patterns = []
 
@@ -219,10 +212,7 @@ class ArchitecturalPatternDetector:
         # If we have observers/subjects and related methods, it's likely Observer pattern
         if (observers or subjects) and (notify_methods or update_methods):
             total_elements = (
-                len(observers)
-                + len(subjects)
-                + len(notify_methods)
-                + len(update_methods)
+                len(observers) + len(subjects) + len(notify_methods) + len(update_methods)
             )
             confidence = min(0.7, total_elements / 8.0)
 
@@ -240,7 +230,7 @@ class ArchitecturalPatternDetector:
 
         return patterns
 
-    def _detect_singleton_pattern(self) -> List[ArchitecturalPattern]:
+    def _detect_singleton_pattern(self) -> list[ArchitecturalPattern]:
         """Detect Singleton pattern"""
         patterns = []
 

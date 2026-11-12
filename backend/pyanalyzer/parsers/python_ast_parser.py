@@ -4,15 +4,14 @@ Python AST Parser for extracting code elements from Python files
 
 import ast
 import logging
-from pathlib import Path
-from typing import List, Optional, Union
 from dataclasses import dataclass
+from pathlib import Path
 
-from models.core import (
+from pyanalyzer.models.core import (
     CodeElement,
     ElementType,
-    SourceLocation,
     Parameter,
+    SourceLocation,
 )
 
 # Configure logging for the parser
@@ -26,7 +25,7 @@ class FileAST:
 
     file_path: str
     ast_tree: ast.AST
-    source_lines: List[str]
+    source_lines: list[str]
     encoding: str = "utf-8"
 
 
@@ -36,10 +35,10 @@ class PythonASTParser:
     """
 
     def __init__(self) -> None:
-        self.current_file_path: Optional[str] = None
-        self.current_source_lines: List[str] = []
+        self.current_file_path: str | None = None
+        self.current_source_lines: list[str] = []
 
-    def parse_file(self, file_path: str) -> Optional[FileAST]:
+    def parse_file(self, file_path: str) -> FileAST | None:
         """
         Parse a Python file and return FileAST object
 
@@ -60,7 +59,7 @@ class PythonASTParser:
                 return None
 
             # Read file content
-            with open(file_path, "r", encoding="utf-8") as f:
+            with open(file_path, encoding="utf-8") as f:
                 source_code = f.read()
                 source_lines = source_code.splitlines()
 
@@ -68,23 +67,19 @@ class PythonASTParser:
             ast_tree = ast.parse(source_code, filename=file_path)
 
             logger.info("Successfully parsed: %s", file_path)
-            return FileAST(
-                file_path=str(path), ast_tree=ast_tree, source_lines=source_lines
-            )
+            return FileAST(file_path=str(path), ast_tree=ast_tree, source_lines=source_lines)
 
         except SyntaxError as e:
-            logger.error(
-                "Syntax error in %s at line %s: %s", file_path, e.lineno, e.msg
-            )
+            logger.error("Syntax error in %s at line %s: %s", file_path, e.lineno, e.msg)
             return None
         except UnicodeDecodeError as e:
             logger.error("Encoding error in %s: %s", file_path, e)
             return None
-        except (OSError, IOError) as e:
+        except OSError as e:
             logger.error("File I/O error parsing %s: %s", file_path, e)
             return None
 
-    def extract_elements(self, file_ast: FileAST) -> List[CodeElement]:
+    def extract_elements(self, file_ast: FileAST) -> list[CodeElement]:
         """
         Extract code elements from parsed AST
 
@@ -140,9 +135,7 @@ class PythonASTParser:
             id=module_id,
             name=module_name,
             type=ElementType.MODULE,
-            location=SourceLocation(
-                file_path=file_ast.file_path, line_number=1, column_number=0
-            ),
+            location=SourceLocation(file_path=file_ast.file_path, line_number=1, column_number=0),
             docstring=docstring,
         )
 
@@ -184,18 +177,12 @@ class PythonASTParser:
             metadata={
                 "base_classes": [self._get_node_name(base) for base in node.bases],
                 "method_count": len(
-                    [
-                        n
-                        for n in node.body
-                        if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))
-                    ]
+                    [n for n in node.body if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))]
                 ),
             },
         )
 
-    def _extract_function(
-        self, node: Union[ast.FunctionDef, ast.AsyncFunctionDef]
-    ) -> CodeElement:
+    def _extract_function(self, node: ast.FunctionDef | ast.AsyncFunctionDef) -> CodeElement:
         """Extract function information from AST node"""
         function_id = f"function:{self.current_file_path}:{node.name}"
 
@@ -237,17 +224,13 @@ class PythonASTParser:
             },
         )
 
-    def _extract_imports(
-        self, node: Union[ast.Import, ast.ImportFrom]
-    ) -> List[CodeElement]:
+    def _extract_imports(self, node: ast.Import | ast.ImportFrom) -> list[CodeElement]:
         """Extract import information from AST node"""
         imports = []
 
         if isinstance(node, ast.Import):
             for alias in node.names:
-                import_id = (
-                    f"import:{self.current_file_path}:{alias.name}:{node.lineno}"
-                )
+                import_id = f"import:{self.current_file_path}:{alias.name}:{node.lineno}"
                 imports.append(
                     CodeElement(
                         id=import_id,
@@ -295,7 +278,7 @@ class PythonASTParser:
 
         return imports
 
-    def _extract_parameters(self, args: ast.arguments) -> List[Parameter]:
+    def _extract_parameters(self, args: ast.arguments) -> list[Parameter]:
         """Extract function parameters from arguments node"""
         parameters = []
 
@@ -303,18 +286,14 @@ class PythonASTParser:
         for i, arg in enumerate(args.args):
             param = Parameter(
                 name=arg.arg,
-                type_hint=self._get_type_annotation(arg.annotation)
-                if arg.annotation
-                else None,
+                type_hint=self._get_type_annotation(arg.annotation) if arg.annotation else None,
             )
 
             # Check for default values
             defaults_offset = len(args.args) - len(args.defaults)
             if i >= defaults_offset:
                 default_idx = i - defaults_offset
-                param.default_value = self._get_default_value(
-                    args.defaults[default_idx]
-                )
+                param.default_value = self._get_default_value(args.defaults[default_idx])
 
             parameters.append(param)
 
@@ -322,9 +301,7 @@ class PythonASTParser:
         for i, arg in enumerate(args.kwonlyargs):
             param = Parameter(
                 name=arg.arg,
-                type_hint=self._get_type_annotation(arg.annotation)
-                if arg.annotation
-                else None,
+                type_hint=self._get_type_annotation(arg.annotation) if arg.annotation else None,
             )
 
             # Check for default values

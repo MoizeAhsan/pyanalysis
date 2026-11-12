@@ -4,9 +4,10 @@ File system scanner for discovering Python files in project directories
 
 import logging
 import os
-from pathlib import Path
-from typing import List, Set, Generator, Optional, Dict, Any
+from collections.abc import Generator
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from pathlib import Path
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -16,11 +17,7 @@ class FileSystemScanner:
     Scanner for recursively discovering Python files in project directories
     """
 
-    def __init__(
-        self,
-        exclude_patterns: Optional[Set[str]] = None,
-        max_workers: Optional[int] = None
-    ):
+    def __init__(self, exclude_patterns: set[str] | None = None, max_workers: int | None = None):
         """
         Initialize the file scanner
 
@@ -56,7 +53,7 @@ class FileSystemScanner:
         else:
             self.max_workers = max_workers
 
-    def scan_project(self, project_path: str) -> List[str]:
+    def scan_project(self, project_path: str) -> list[str]:
         """
         Recursively scan project directory for Python files
 
@@ -92,7 +89,7 @@ class FileSystemScanner:
         for file_path in self._discover_python_files(path):
             try:
                 # Verify file is readable
-                with open(file_path, "r", encoding="utf-8") as f:
+                with open(file_path, encoding="utf-8") as f:
                     # Just try to read first line to verify accessibility
                     f.readline()
                 python_files.append(str(file_path))
@@ -132,9 +129,7 @@ class FileSystemScanner:
                     try:
                         yield from self._discover_python_files(item)
                     except PermissionError:
-                        logger.warning(
-                            "Permission denied accessing directory: %s", item
-                        )
+                        logger.warning("Permission denied accessing directory: %s", item)
                         continue
 
         except PermissionError:
@@ -165,7 +160,7 @@ class FileSystemScanner:
 
         return False
 
-    def get_project_stats(self, project_path: str) -> Dict[str, Any]:
+    def get_project_stats(self, project_path: str) -> dict[str, Any]:
         """
         Get basic statistics about the project with parallel line counting
 
@@ -193,10 +188,10 @@ class FileSystemScanner:
             "python_files": python_files,
         }
 
-    def _count_lines_parallel(self, file_paths: List[str]) -> int:
+    def _count_lines_parallel(self, file_paths: list[str]) -> int:
         """
         Count lines in multiple files using parallel processing
-        
+
         Args:
             file_paths: List of file paths to count lines in
 
@@ -238,7 +233,7 @@ class FileSystemScanner:
             Number of lines in the file
         """
         try:
-            with open(file_path, "r", encoding="utf-8") as f:
+            with open(file_path, encoding="utf-8") as f:
                 return sum(1 for _ in f)
         except (OSError, UnicodeDecodeError):
             # Skip files that can't be read

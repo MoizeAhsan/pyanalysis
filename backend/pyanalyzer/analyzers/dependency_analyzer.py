@@ -4,9 +4,8 @@ Dependency analyzer that tracks dependencies between code elements
 
 import ast
 import logging
-from typing import List, Dict, Optional
 
-from models.core import CodeElement, ElementType
+from pyanalyzer.models.core import CodeElement, ElementType
 
 logger = logging.getLogger(__name__)
 
@@ -17,12 +16,10 @@ class DependencyAnalyzer:
     """
 
     def __init__(self) -> None:
-        self.elements_by_name: Dict[str, List[CodeElement]] = {}
-        self.elements_by_file: Dict[str, List[CodeElement]] = {}
+        self.elements_by_name: dict[str, list[CodeElement]] = {}
+        self.elements_by_file: dict[str, list[CodeElement]] = {}
 
-    def analyze_dependencies(
-        self, elements: List[CodeElement], file_paths: List[str]
-    ) -> None:
+    def analyze_dependencies(self, elements: list[CodeElement], file_paths: list[str]) -> None:
         """
         Analyze dependencies for all code elements
 
@@ -40,13 +37,11 @@ class DependencyAnalyzer:
             try:
                 self._analyze_file_dependencies(file_path)
             except (SyntaxError, UnicodeDecodeError, OSError) as e:
-                logger.error(
-                    "Failed to analyze dependencies in file %s: %s", file_path, e
-                )
+                logger.error("Failed to analyze dependencies in file %s: %s", file_path, e)
 
         logger.info("Dependency analysis completed")
 
-    def _index_elements(self, elements: List[CodeElement]) -> None:
+    def _index_elements(self, elements: list[CodeElement]) -> None:
         """Index elements by name and file for quick lookup"""
         self.elements_by_name.clear()
         self.elements_by_file.clear()
@@ -66,7 +61,7 @@ class DependencyAnalyzer:
     def _analyze_file_dependencies(self, file_path: str) -> None:
         """Analyze dependencies in a single file"""
         try:
-            with open(file_path, "r", encoding="utf-8") as f:
+            with open(file_path, encoding="utf-8") as f:
                 source_code = f.read()
 
             tree = ast.parse(source_code, filename=file_path)
@@ -80,9 +75,7 @@ class DependencyAnalyzer:
                     self._find_element_dependencies(element, tree, file_path)
 
         except (SyntaxError, UnicodeDecodeError, OSError) as e:
-            logger.warning(
-                "Could not parse file %s for dependency analysis: %s", file_path, e
-            )
+            logger.warning("Could not parse file %s for dependency analysis: %s", file_path, e)
 
     def _find_element_dependencies(
         self, element: CodeElement, tree: ast.AST, file_path: str
@@ -117,26 +110,20 @@ class DependencyAnalyzer:
         # Update element dependencies
         element.dependencies = list(dependencies)
 
-    def _find_element_node(
-        self, element: CodeElement, tree: ast.AST
-    ) -> Optional[ast.AST]:
+    def _find_element_node(self, element: CodeElement, tree: ast.AST) -> ast.AST | None:
         """Find the AST node corresponding to a code element"""
         for node in ast.walk(tree):
-            if isinstance(node, ast.ClassDef) and element.type == ElementType.CLASS:
-                if (
-                    node.name == element.name
-                    and node.lineno == element.location.line_number
-                ):
-                    return node
-            elif (
+            is_match = (isinstance(node, ast.ClassDef) and element.type == ElementType.CLASS) or (
                 isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
                 and element.type == ElementType.FUNCTION
+            )
+            if (
+                is_match
+                and isinstance(node, (ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef))
+                and node.name == element.name
+                and node.lineno == element.location.line_number
             ):
-                if (
-                    node.name == element.name
-                    and node.lineno == element.location.line_number
-                ):
-                    return node
+                return node
         return None
 
     def _is_external_dependency(self, name: str, current_file: str) -> bool:
@@ -148,7 +135,7 @@ class DependencyAnalyzer:
                     return True
         return False
 
-    def _get_call_name(self, node: ast.Call) -> Optional[str]:
+    def _get_call_name(self, node: ast.Call) -> str | None:
         """Get the name being called"""
         if isinstance(node.func, ast.Name):
             return node.func.id
@@ -156,7 +143,7 @@ class DependencyAnalyzer:
             return self._get_root_name(node.func)
         return None
 
-    def _get_root_name(self, node: ast.Attribute) -> Optional[str]:
+    def _get_root_name(self, node: ast.Attribute) -> str | None:
         """Get the root name from an attribute chain (e.g., 'obj' from 'obj.method.attr')"""
         if isinstance(node.value, ast.Name):
             return node.value.id

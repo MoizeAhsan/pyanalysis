@@ -3,16 +3,17 @@ Dependency Graph Builder using NetworkX for analyzing code relationships
 """
 
 import logging
-from typing import List, Dict, Optional, Any
-import networkx as nx  # type: ignore
+from typing import Any
 
-from models.core import (
+import networkx as nx
+
+from pyanalyzer.models.core import (
     CodeElement,
-    ElementType,
     DependencyGraph,
-    GraphNode,
+    ElementType,
     GraphEdge,
     GraphMetrics,
+    GraphNode,
 )
 
 logger = logging.getLogger(__name__)
@@ -24,10 +25,10 @@ class DependencyGraphBuilder:
     """
 
     def __init__(self) -> None:
-        self.graph: nx.DiGraph = nx.DiGraph()
-        self.element_map: Dict[str, CodeElement] = {}
+        self.graph: nx.DiGraph[str] = nx.DiGraph()
+        self.element_map: dict[str, CodeElement] = {}
 
-    def build_graph(self, code_elements: List[CodeElement]) -> DependencyGraph:
+    def build_graph(self, code_elements: list[CodeElement]) -> DependencyGraph:
         """
         Build dependency graph from code elements
 
@@ -37,9 +38,7 @@ class DependencyGraphBuilder:
         Returns:
             DependencyGraph with nodes, edges, and metrics
         """
-        logger.info(
-            "Building dependency graph from %d code elements", len(code_elements)
-        )
+        logger.info("Building dependency graph from %d code elements", len(code_elements))
 
         # Reset graph for new analysis
         self.graph.clear()
@@ -69,7 +68,7 @@ class DependencyGraphBuilder:
 
         return dependency_graph
 
-    def _add_nodes(self, code_elements: List[CodeElement]) -> None:
+    def _add_nodes(self, code_elements: list[CodeElement]) -> None:
         """Add nodes to the NetworkX graph"""
         for element in code_elements:
             # Add node with element metadata
@@ -82,7 +81,7 @@ class DependencyGraphBuilder:
                 element_type=element.type,
             )
 
-    def _add_import_edges(self, code_elements: List[CodeElement]) -> None:
+    def _add_import_edges(self, code_elements: list[CodeElement]) -> None:
         """Add edges based on import relationships"""
         for element in code_elements:
             if element.type == ElementType.IMPORT:
@@ -112,41 +111,35 @@ class DependencyGraphBuilder:
                         line_number=import_element.location.line_number,
                     )
 
-    def _find_module_for_file(self, file_path: str) -> Optional[str]:
+    def _find_module_for_file(self, file_path: str) -> str | None:
         """Find the module ID for a given file path"""
         for element_id, element in self.element_map.items():
-            if (
-                element.type == ElementType.MODULE
-                and element.location.file_path == file_path
-            ):
+            if element.type == ElementType.MODULE and element.location.file_path == file_path:
                 return element_id
         return None
 
-    def _find_dependency_targets(self, dependency: str) -> List[str]:
+    def _find_dependency_targets(self, dependency: str) -> list[str]:
         """Find target elements for a dependency string"""
         targets = []
 
         # Look for exact matches in modules first
         for element_id, element in self.element_map.items():
-            if element.type == ElementType.MODULE:
-                # Check if module name matches dependency
-                if self._module_matches_dependency(element, dependency):
-                    targets.append(element_id)
+            if element.type == ElementType.MODULE and self._module_matches_dependency(
+                element, dependency
+            ):
+                targets.append(element_id)
 
         # If no module matches, look for classes/functions
         if not targets:
             for element_id, element in self.element_map.items():
-                if element.type in [ElementType.CLASS, ElementType.FUNCTION]:
-                    if element.name == dependency or dependency.endswith(
-                        f".{element.name}"
-                    ):
-                        targets.append(element_id)
+                if element.type in [ElementType.CLASS, ElementType.FUNCTION] and (
+                    element.name == dependency or dependency.endswith(f".{element.name}")
+                ):
+                    targets.append(element_id)
 
         return targets
 
-    def _module_matches_dependency(
-        self, module_element: CodeElement, dependency: str
-    ) -> bool:
+    def _module_matches_dependency(self, module_element: CodeElement, dependency: str) -> bool:
         """Check if a module element matches a dependency string"""
         module_name = module_element.name
         file_path = module_element.location.file_path
@@ -182,9 +175,9 @@ class DependencyGraphBuilder:
                 metadata={
                     "file_path": node_data.get("file_path", ""),
                     "line_number": node_data.get("line_number", 0),
-                    "degree": int(self.graph.degree(node_id)),  # type: ignore
-                    "in_degree": int(self.graph.in_degree(node_id)),  # type: ignore
-                    "out_degree": int(self.graph.out_degree(node_id)),  # type: ignore
+                    "degree": int(self.graph.degree(node_id)),
+                    "in_degree": int(self.graph.in_degree(node_id)),
+                    "out_degree": int(self.graph.out_degree(node_id)),
                 },
             )
             nodes[node_id] = graph_node
@@ -216,7 +209,7 @@ class DependencyGraphBuilder:
         # Calculate average degree
         avg_degree = 0.0
         if node_count > 0:
-            degree_dict = dict(self.graph.degree())  # type: ignore
+            degree_dict = dict(self.graph.degree())
             total_degree = sum(degree_dict.values())
             avg_degree = total_degree / node_count
 
@@ -227,7 +220,7 @@ class DependencyGraphBuilder:
             avg_degree=avg_degree,
         )
 
-    def detect_cycles(self) -> List[List[str]]:
+    def detect_cycles(self) -> list[list[str]]:
         """
         Detect circular dependencies in the graph
 
@@ -245,7 +238,7 @@ class DependencyGraphBuilder:
             logger.error("Unexpected error detecting cycles: %s", e)
             return []
 
-    def get_strongly_connected_components(self) -> List[List[str]]:
+    def get_strongly_connected_components(self) -> list[list[str]]:
         """
         Get strongly connected components (groups of mutually dependent modules)
 
@@ -256,20 +249,16 @@ class DependencyGraphBuilder:
             components = list(nx.strongly_connected_components(self.graph))
             # Filter out single-node components (not interesting for dependencies)
             multi_node_components = [list(comp) for comp in components if len(comp) > 1]
-            logger.info(
-                "Found %d strongly connected components", len(multi_node_components)
-            )
+            logger.info("Found %d strongly connected components", len(multi_node_components))
             return multi_node_components
         except nx.NetworkXError as e:
             logger.error("NetworkX error finding strongly connected components: %s", e)
             return []
         except Exception as e:
-            logger.error(
-                "Unexpected error finding strongly connected components: %s", e
-            )
+            logger.error("Unexpected error finding strongly connected components: %s", e)
             return []
 
-    def get_node_centrality(self) -> Dict[str, float]:
+    def get_node_centrality(self) -> dict[str, float]:
         """
         Calculate node centrality measures
 
@@ -278,7 +267,7 @@ class DependencyGraphBuilder:
         """
         try:
             # Use PageRank as a measure of node importance
-            centrality: Dict[str, float] = nx.pagerank(self.graph)
+            centrality: dict[str, float] = nx.pagerank(self.graph)
             return centrality
         except nx.NetworkXError as e:
             logger.error("NetworkX error calculating centrality: %s", e)
@@ -287,7 +276,7 @@ class DependencyGraphBuilder:
             logger.error("Unexpected error calculating centrality: %s", e)
             return {}
 
-    def get_graph_summary(self) -> Dict[str, Any]:
+    def get_graph_summary(self) -> dict[str, Any]:
         """
         Get a summary of the dependency graph
 
@@ -299,7 +288,7 @@ class DependencyGraphBuilder:
         components = self.get_strongly_connected_components()
 
         # Count elements by type
-        type_counts: Dict[str, int] = {}
+        type_counts: dict[str, int] = {}
         for node_id in self.graph.nodes():
             node_type = self.graph.nodes[node_id].get("type", "unknown")
             type_counts[node_type] = type_counts.get(node_type, 0) + 1

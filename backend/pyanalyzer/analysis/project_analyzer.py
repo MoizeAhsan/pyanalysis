@@ -9,17 +9,17 @@ import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from pathlib import Path
-from typing import List, Optional, Dict, Any
+from typing import Any
 
 import psutil
 
-from models.core import ProjectInfo, CodeElement, AnalysisSession, current_session
-from parsers.python_ast_parser import PythonASTParser
-from analysis_engine.file_scanner import FileSystemScanner
-from graph.dependency_graph_builder import DependencyGraphBuilder
-from analyzers.usage_analyzer import UsageAnalyzer
-from analyzers.dependency_analyzer import DependencyAnalyzer
-from analyzers.pattern_detector import ArchitecturalPatternDetector
+from pyanalyzer.analyzers.dependency_analyzer import DependencyAnalyzer
+from pyanalyzer.analyzers.pattern_detector import ArchitecturalPatternDetector
+from pyanalyzer.analyzers.usage_analyzer import UsageAnalyzer
+from pyanalyzer.graph.dependency_graph_builder import DependencyGraphBuilder
+from pyanalyzer.models.core import AnalysisSession, CodeElement, ProjectInfo, current_session
+from pyanalyzer.parsers.python_ast_parser import PythonASTParser
+from pyanalyzer.scanner.file_scanner import FileSystemScanner
 
 logger = logging.getLogger(__name__)
 
@@ -43,14 +43,12 @@ class AnalysisProgress:
             if not success:
                 self.failed_files += 1
 
-    def get_progress_info(self) -> Dict[str, Any]:
+    def get_progress_info(self) -> dict[str, Any]:
         """Get current progress information"""
         with self.lock:
             elapsed = (datetime.now() - self.start_time).total_seconds()
             progress_percent = (
-                (self.processed_files / self.total_files * 100)
-                if self.total_files > 0
-                else 0
+                (self.processed_files / self.total_files * 100) if self.total_files > 0 else 0
             )
 
             return {
@@ -69,7 +67,7 @@ class ProjectAnalyzer:
     Main analyzer class that orchestrates the analysis pipeline
     """
 
-    def __init__(self, max_workers: Optional[int] = None, memory_limit_mb: int = 1024):
+    def __init__(self, max_workers: int | None = None, memory_limit_mb: int = 1024):
         """
         Initialize the project analyzer
 
@@ -94,7 +92,7 @@ class ProjectAnalyzer:
             self.max_workers = max_workers
 
         self.memory_limit_mb = memory_limit_mb
-        self.current_progress: Optional[AnalysisProgress] = None
+        self.current_progress: AnalysisProgress | None = None
 
         # Memory monitoring
         self.process = psutil.Process()
@@ -173,9 +171,7 @@ class ProjectAnalyzer:
 
             # Step 10: Detect architectural patterns
             logger.info("Detecting architectural patterns...")
-            patterns = self.pattern_detector.detect_patterns(
-                all_elements, dependency_graph
-            )
+            patterns = self.pattern_detector.detect_patterns(all_elements, dependency_graph)
             current_session.architectural_patterns = patterns
 
             logger.info(
@@ -195,7 +191,7 @@ class ProjectAnalyzer:
             current_session.reset()
             raise
 
-    def _parse_files_optimized(self, file_paths: List[str]) -> List[CodeElement]:
+    def _parse_files_optimized(self, file_paths: list[str]) -> list[CodeElement]:
         """
         Parse multiple files with optimized memory usage and parallel processing
 
@@ -205,7 +201,7 @@ class ProjectAnalyzer:
         Returns:
             List of all extracted code elements
         """
-        all_elements: List[CodeElement] = []
+        all_elements: list[CodeElement] = []
         total_files = len(file_paths)
 
         if total_files == 0:
@@ -216,12 +212,14 @@ class ProjectAnalyzer:
 
         logger.info(
             "Processing %d files in batches of %d with %d workers",
-            total_files, batch_size, self.max_workers
+            total_files,
+            batch_size,
+            self.max_workers,
         )
 
         # Process files in batches to manage memory usage
         for i in range(0, total_files, batch_size):
-            batch_files = file_paths[i:i + batch_size]
+            batch_files = file_paths[i : i + batch_size]
             batch_elements = self._parse_files_batch(batch_files)
             all_elements.extend(batch_elements)
 
@@ -234,12 +232,12 @@ class ProjectAnalyzer:
                 (i // batch_size) + 1,
                 (total_files + batch_size - 1) // batch_size,
                 len(batch_files),
-                len(all_elements)
+                len(all_elements),
             )
 
         return all_elements
 
-    def _parse_files_batch(self, file_paths: List[str]) -> List[CodeElement]:
+    def _parse_files_batch(self, file_paths: list[str]) -> list[CodeElement]:
         """
         Parse multiple files in parallel and extract code elements
 
@@ -249,7 +247,7 @@ class ProjectAnalyzer:
         Returns:
             List of all extracted code elements
         """
-        all_elements: List[CodeElement] = []
+        all_elements: list[CodeElement] = []
 
         if self.max_workers == 1 or len(file_paths) < 4:
             # Single-threaded processing for small batches
@@ -280,7 +278,7 @@ class ProjectAnalyzer:
 
         return all_elements
 
-    def _parse_single_file(self, file_path: str) -> List[CodeElement]:
+    def _parse_single_file(self, file_path: str) -> list[CodeElement]:
         """
         Parse a single file and extract code elements
 
@@ -290,7 +288,7 @@ class ProjectAnalyzer:
         Returns:
             List of code elements from the file
         """
-        elements: List[CodeElement] = []
+        elements: list[CodeElement] = []
 
         try:
             # Update progress
@@ -313,7 +311,7 @@ class ProjectAnalyzer:
 
         return elements
 
-    def get_analysis_progress(self) -> Optional[Dict[str, Any]]:
+    def get_analysis_progress(self) -> dict[str, Any] | None:
         """
         Get current analysis progress information
 
@@ -343,7 +341,8 @@ class ProjectAnalyzer:
             if memory_mb > self.memory_limit_mb:
                 logger.warning(
                     "Memory usage (%.1f MB) exceeds limit (%.1f MB), triggering cleanup",
-                    memory_mb, self.memory_limit_mb
+                    memory_mb,
+                    self.memory_limit_mb,
                 )
                 gc.collect()
                 # Log memory after cleanup
@@ -355,10 +354,10 @@ class ProjectAnalyzer:
     def _optimize_batch_size(self, total_files: int) -> int:
         """
         Calculate optimal batch size based on available memory and file count
-        
+
         Args:
             total_files: Total number of files to process
-            
+
         Returns:
             Optimal batch size for processing
         """
@@ -378,7 +377,9 @@ class ProjectAnalyzer:
 
             logger.debug(
                 "Calculated batch size: %d (available memory: %.1f MB, total files: %d)",
-                batch_size, available_memory_mb, total_files
+                batch_size,
+                available_memory_mb,
+                total_files,
             )
 
             return batch_size

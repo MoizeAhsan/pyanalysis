@@ -4,10 +4,9 @@ Usage analyzer that tracks where code elements are used throughout the codebase
 
 import ast
 import logging
-from typing import List, Dict, Optional
 from dataclasses import dataclass
 
-from models.core import CodeElement, ElementType, Usage, UsageType, SourceLocation
+from pyanalyzer.models.core import CodeElement, ElementType, SourceLocation, Usage, UsageType
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +19,7 @@ class UsageContext:
     usage_type: UsageType
     location: SourceLocation
     context_line: str
-    surrounding_context: List[str]
+    surrounding_context: list[str]
 
 
 class UsageAnalyzer:
@@ -29,11 +28,11 @@ class UsageAnalyzer:
     """
 
     def __init__(self) -> None:
-        self.elements_by_name: Dict[str, List[CodeElement]] = {}
-        self.elements_by_id: Dict[str, CodeElement] = {}
-        self.file_contents: Dict[str, List[str]] = {}
+        self.elements_by_name: dict[str, list[CodeElement]] = {}
+        self.elements_by_id: dict[str, CodeElement] = {}
+        self.file_contents: dict[str, list[str]] = {}
 
-    def analyze_usage(self, elements: List[CodeElement], file_paths: List[str]) -> None:
+    def analyze_usage(self, elements: list[CodeElement], file_paths: list[str]) -> None:
         """
         Analyze usage patterns for all code elements across the given files
 
@@ -62,7 +61,7 @@ class UsageAnalyzer:
 
         logger.info("Usage analysis completed")
 
-    def _index_elements(self, elements: List[CodeElement]) -> None:
+    def _index_elements(self, elements: list[CodeElement]) -> None:
         """Index elements by name and ID for quick lookup"""
         self.elements_by_name.clear()
         self.elements_by_id.clear()
@@ -76,13 +75,13 @@ class UsageAnalyzer:
                 self.elements_by_name[element.name] = []
             self.elements_by_name[element.name].append(element)
 
-    def _load_file_contents(self, file_paths: List[str]) -> None:
+    def _load_file_contents(self, file_paths: list[str]) -> None:
         """Load and cache file contents for context extraction"""
         self.file_contents.clear()
 
         for file_path in file_paths:
             try:
-                with open(file_path, "r", encoding="utf-8") as f:
+                with open(file_path, encoding="utf-8") as f:
                     self.file_contents[file_path] = f.readlines()
             except (OSError, UnicodeDecodeError) as e:
                 logger.warning("Could not read file %s: %s", file_path, e)
@@ -92,7 +91,7 @@ class UsageAnalyzer:
         """Analyze usage patterns in a single file"""
         try:
             # Parse the file
-            with open(file_path, "r", encoding="utf-8") as f:
+            with open(file_path, encoding="utf-8") as f:
                 source_code = f.read()
 
             tree = ast.parse(source_code, filename=file_path)
@@ -102,9 +101,7 @@ class UsageAnalyzer:
                 self._check_node_for_usage(node, file_path)
 
         except (SyntaxError, UnicodeDecodeError, OSError) as e:
-            logger.warning(
-                "Could not parse file %s for usage analysis: %s", file_path, e
-            )
+            logger.warning("Could not parse file %s for usage analysis: %s", file_path, e)
 
     def _check_node_for_usage(self, node: ast.AST, file_path: str) -> None:
         """Check an AST node for usage of tracked elements"""
@@ -134,13 +131,8 @@ class UsageAnalyzer:
         func_name = self._get_call_name(node)
         if func_name and func_name in self.elements_by_name:
             for element in self.elements_by_name[func_name]:
-                if (
-                    element.type == ElementType.FUNCTION
-                    and element.location.file_path != file_path
-                ):
-                    usage = self._create_usage(
-                        node, file_path, UsageType.CALL, f"{func_name}(...)"
-                    )
+                if element.type == ElementType.FUNCTION and element.location.file_path != file_path:
+                    usage = self._create_usage(node, file_path, UsageType.CALL, f"{func_name}(...)")
                     element.usages.append(usage)
 
     def _handle_name_usage(self, node: ast.Name, file_path: str) -> None:
@@ -159,9 +151,7 @@ class UsageAnalyzer:
             for element in self.elements_by_name[attr_name]:
                 if element.location.file_path != file_path:
                     full_attr = self._get_full_attribute_name(node)
-                    usage = self._create_usage(
-                        node, file_path, UsageType.CALL, full_attr
-                    )
+                    usage = self._create_usage(node, file_path, UsageType.CALL, full_attr)
                     element.usages.append(usage)
 
     def _handle_import_usage(self, node: ast.AST, file_path: str) -> None:
@@ -180,20 +170,19 @@ class UsageAnalyzer:
                             )
                             element.usages.append(usage)
 
-        elif isinstance(node, ast.ImportFrom):
-            if node.module:
-                module_name = node.module.split(".")[0]  # Get root module
-                if module_name in self.elements_by_name:
-                    for element in self.elements_by_name[module_name]:
-                        if element.type == ElementType.MODULE:
-                            imported_names = [alias.name for alias in node.names]
-                            usage = self._create_usage(
-                                node,
-                                file_path,
-                                UsageType.IMPORT,
-                                f"from {node.module} import {', '.join(imported_names)}",
-                            )
-                            element.usages.append(usage)
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            module_name = node.module.split(".")[0]  # Get root module
+            if module_name in self.elements_by_name:
+                for element in self.elements_by_name[module_name]:
+                    if element.type == ElementType.MODULE:
+                        imported_names = [alias.name for alias in node.names]
+                        usage = self._create_usage(
+                            node,
+                            file_path,
+                            UsageType.IMPORT,
+                            f"from {node.module} import {', '.join(imported_names)}",
+                        )
+                        element.usages.append(usage)
 
     def _handle_inheritance_usage(self, node: ast.ClassDef, file_path: str) -> None:
         """Handle class inheritance usage"""
@@ -242,7 +231,7 @@ class UsageAnalyzer:
                 return lines[line_number - 1].rstrip("\n")
         return ""
 
-    def _get_call_name(self, node: ast.Call) -> Optional[str]:
+    def _get_call_name(self, node: ast.Call) -> str | None:
         """Extract function name from call node"""
         if isinstance(node.func, ast.Name):
             return node.func.id
@@ -258,7 +247,7 @@ class UsageAnalyzer:
             return f"{self._get_full_attribute_name(node.value)}.{node.attr}"
         return node.attr
 
-    def _get_node_name(self, node: ast.AST) -> Optional[str]:
+    def _get_node_name(self, node: ast.AST) -> str | None:
         """Get name from various AST node types"""
         if isinstance(node, ast.Name):
             return node.id

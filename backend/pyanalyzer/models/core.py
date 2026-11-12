@@ -3,9 +3,9 @@ Core data models for the Python Code Analyzer
 """
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Any
 from datetime import datetime
 from enum import Enum
+from typing import Any
 
 
 class ElementType(Enum):
@@ -52,8 +52,8 @@ class Parameter:
     """Function or method parameter information."""
 
     name: str
-    type_hint: Optional[str] = None
-    default_value: Optional[str] = None
+    type_hint: str | None = None
+    default_value: str | None = None
 
 
 @dataclass
@@ -73,13 +73,13 @@ class CodeElement:  # pylint: disable=too-many-instance-attributes
     name: str
     type: ElementType
     location: SourceLocation
-    docstring: Optional[str] = None
-    parameters: List[Parameter] = field(default_factory=list)
-    return_type: Optional[str] = None
-    decorators: List[str] = field(default_factory=list)
-    dependencies: List[str] = field(default_factory=list)
-    usages: List[Usage] = field(default_factory=list)
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    docstring: str | None = None
+    parameters: list[Parameter] = field(default_factory=list)
+    return_type: str | None = None
+    decorators: list[str] = field(default_factory=list)
+    dependencies: list[str] = field(default_factory=list)
+    usages: list[Usage] = field(default_factory=list)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -90,7 +90,7 @@ class ProjectInfo:
     path: str
     total_files: int = 0
     total_lines: int = 0
-    languages: List[str] = field(default_factory=lambda: ["python"])
+    languages: list[str] = field(default_factory=lambda: ["python"])
     analysis_timestamp: datetime = field(default_factory=datetime.now)
 
 
@@ -101,7 +101,7 @@ class ArchitecturalPattern:
     name: str
     type: PatternType
     confidence: float
-    elements: List[str]
+    elements: list[str]
     description: str
 
 
@@ -112,7 +112,7 @@ class GraphNode:
     id: str
     name: str
     type: ElementType
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -139,22 +139,22 @@ class GraphMetrics:
 class DependencyGraph:
     """Graph representation of code dependencies."""
 
-    nodes: Dict[str, GraphNode] = field(default_factory=dict)
-    edges: List[GraphEdge] = field(default_factory=list)
-    metrics: Optional[GraphMetrics] = None
+    nodes: dict[str, GraphNode] = field(default_factory=dict)
+    edges: list[GraphEdge] = field(default_factory=list)
+    metrics: GraphMetrics | None = None
 
 
 class AnalysisSession:
     """Session-based storage for current analysis"""
 
     def __init__(self) -> None:
-        self.project_info: Optional[ProjectInfo] = None
-        self.modules: Dict[str, CodeElement] = {}
-        self.classes: Dict[str, CodeElement] = {}
-        self.functions: Dict[str, CodeElement] = {}
-        self.dependency_graph: Optional[DependencyGraph] = None
-        self.architectural_patterns: List[ArchitecturalPattern] = []
-        self.all_elements: Dict[str, CodeElement] = {}
+        self.project_info: ProjectInfo | None = None
+        self.modules: dict[str, CodeElement] = {}
+        self.classes: dict[str, CodeElement] = {}
+        self.functions: dict[str, CodeElement] = {}
+        self.dependency_graph: DependencyGraph | None = None
+        self.architectural_patterns: list[ArchitecturalPattern] = []
+        self.all_elements: dict[str, CodeElement] = {}
 
     def reset(self) -> None:
         """Clear all analysis data and return to clean state"""
