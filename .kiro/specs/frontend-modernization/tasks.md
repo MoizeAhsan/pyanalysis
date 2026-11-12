@@ -1,5 +1,7 @@
 # Implementation Plan
 
+> **Status (2026-11):** this task list was audited. Items that were marked complete but were not true, or are no longer true after the rebuild, are unchecked below with a note. See `.kiro/specs/production-hardening/` for what was found and what is now true.
+
 - [x] 1. Setup modern build system and TypeScript migration
   - Replace Create React App with Vite for faster development and builds
   - Configure TypeScript 5.3+ with strict type checking
@@ -76,7 +78,8 @@
   - Create detail-on-demand patterns for node information
   - _Requirements: 3.3, 5.4_
 
-- [x] 5.4 Add visualization export and sharing capabilities
+- [ ] 5.4 Add visualization export and sharing capabilities
+  - _Audit note: PNG export only; SVG export was removed. Shareable URLs now work through the router._
   - Implement export functionality (PNG, SVG formats)
   - Add fullscreen mode for detailed exploration
   - Create shareable visualization URLs with state persistence
@@ -95,7 +98,8 @@
   - Add filter presets and saved filter combinations
   - _Requirements: 8.2_
 
-- [x] 6.3 Optimize search performance for large datasets
+- [ ] 6.3 Optimize search performance for large datasets
+  - _Audit note: The web worker was never wired up and has been removed; search runs on the server with virtualized results._
   - Implement Web Workers for heavy search computations
   - Add virtualization for search results display
   - Create efficient client-side search algorithms with indexing
@@ -158,13 +162,15 @@
   - Ensure backward compatibility with current data structures
   - _Requirements: 1.1, 7.4_
 
-- [x] 10.2 Performance audit and optimization
+- [ ] 10.2 Performance audit and optimization
+  - _Audit note: No Lighthouse audit has been run. Bundles are split and the graph library loads on demand._
   - Run Lighthouse audits to achieve 90+ performance score
   - Optimize bundle sizes and loading times
   - Implement final caching strategies for static assets
   - _Requirements: 3.1_
 
-- [x] 10.3 Accessibility audit and final adjustments
+- [ ] 10.3 Accessibility audit and final adjustments
+  - _Audit note: Automated axe scans pass on five routes. Testing with real screen readers has not been done._
   - Conduct comprehensive accessibility testing
   - Fix any remaining WCAG compliance issues
   - Test with actual screen readers and keyboard navigation

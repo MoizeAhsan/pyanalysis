@@ -1,80 +1,95 @@
 # Python Code Analyzer
 
-A comprehensive visual exploration tool for Python projects that provides interactive mind maps, architectural overviews, and detailed code relationship analysis.
+Explore the structure of a Python project in your browser: what depends on what, where every class and function is used, and where the code has problems. Analysis is static (the project's code is parsed, never run) and everything stays on your machine.
 
-## Features
+## What it shows
 
-- **Visual Project Exploration**: Interactive mind maps showing project structure
-- **Architectural Overview**: High-level design patterns and component organization
-- **Code Relationships**: Detailed analysis of classes, functions, and their usage
-- **Static Analysis**: AST-based parsing without code execution
-- **Scalable Design**: Handles large projects with thousands of files
-- **Progressive Disclosure**: Information presented in manageable chunks
-- **Visual Interface**: Designed for visual thinkers with intuitive UX
-
-## Architecture
-
-- **Backend**: FastAPI with Python AST parsing and NetworkX for graph analysis
-- **Frontend**: React with Material-UI, D3.js, and Cytoscape.js for visualizations
-- **Analysis**: Static analysis using Python's AST, astroid, and rope libraries
-
-## Quick Start
-
-### Backend Setup
-
-```bash
-cd backend
-pip install -r requirements.txt
-python main.py
-```
-
-The API will be available at `http://localhost:8000`
-
-### Frontend Setup
-
-```bash
-cd frontend
-# Remove existing node_modules if you had issues
-rm -rf node_modules package-lock.json
-npm install
-npm start
-```
-
-The web interface will be available at `http://localhost:3000`
-
-## Project Structure
-
-```
-├── backend/
-│   ├── main.py                 # FastAPI application entry point
-│   ├── models/                 # Data models and core types
-│   ├── api/                    # REST API endpoints
-│   ├── analysis_engine/        # Core analysis orchestration
-│   ├── parsers/                # AST parsing and code extraction
-│   ├── graph/                  # Dependency graph building
-│   └── analyzers/              # Pattern detection and analysis
-├── frontend/
-│   ├── src/
-│   │   ├── components/         # React components
-│   │   └── services/           # API communication
-│   └── public/                 # Static assets
-└── .kiro/specs/               # Project specifications
-```
-
-## Usage
-
-1. Start both backend and frontend servers
-2. Open the web interface at `http://localhost:3000`
-3. Enter the path to your Python project
-4. Click "Analyze Project" to begin analysis
-5. Explore the generated mind maps and architectural views
-
-## Development Status
-
-This project is currently in development. See the implementation tasks in `.kiro/specs/python-code-analyzer/tasks.md` for current progress and upcoming features.
+- **Mind map**: the project as a tree of directories, modules, classes, and functions that you expand as you go.
+- **Architecture**: dependency graphs at package, module, or class level, with import cycles and detected design patterns.
+- **Code explorer**: every element with its documentation, signature, class hierarchy, method overrides, and each place it is used, with source.
+- **Search**: by name, path, or documentation.
+- **Findings**: import cycles, unused imports, code nothing appears to use, and code smells (long or complex functions, too many parameters, large classes).
 
 ## Requirements
 
-- Python 3.12+
-- Node.js 20+
-- Modern web browser with JavaScript enabled
+- Python 3.12 or newer
+- Node.js 22 or newer (only to build the web interface)
+
+## Quick start
+
+```bash
+make setup     # backend virtualenv + frontend dependencies
+make serve     # build the frontend and start the app
+```
+
+Then open <http://localhost:8000>, enter the path of a Python project, and choose **Analyze**.
+
+To analyze a project straight away, or to get a summary without the browser:
+
+```bash
+backend/.venv/bin/pyanalyzer serve /path/to/project
+backend/.venv/bin/pyanalyzer analyze /path/to/project          # prints a summary
+backend/.venv/bin/pyanalyzer analyze /path/to/project --json   # machine-readable
+```
+
+## Performance
+
+Measured on a 2-core (4-thread) laptop:
+
+| Project | Size | First run | Repeat run |
+|---|---|---|---|
+| Synthetic benchmark (`backend/tests/test_scale.py`) | 10,100 files | 6.9 s | 3.2 s |
+| Third-party packages in a virtualenv | 2,612 files, 1.0 M lines | 12.0 s | 3.4 s |
+
+Repeat runs are faster because per-file results are cached and only changed files are parsed again. The first run is limited by Python's own parser and scales with CPU cores. Queries against a finished analysis (search, graphs, lists) took under 300 ms on the 10,100-file project.
+
+## Configuration
+
+Set these environment variables before starting the server. All are optional.
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `PYANALYZER_HOST` | `127.0.0.1` | Interface to bind |
+| `PYANALYZER_PORT` | `8000` | Port |
+| `PYANALYZER_ALLOWED_HOSTS` | `["localhost","127.0.0.1","[::1]"]` | Host headers the server answers to |
+| `PYANALYZER_CORS_ORIGINS` | Vite dev-server origins | Browser origins allowed to call the API |
+| `PYANALYZER_WORKERS` | CPU count, at most 8 | Worker processes for parsing |
+| `PYANALYZER_USE_CACHE` | `true` | Reuse results for unchanged files |
+| `PYANALYZER_CACHE_DIR` | per-user cache directory | Where cached results are stored |
+| `PYANALYZER_MAX_FILE_SIZE` | `2097152` | Files larger than this many bytes are skipped |
+| `PYANALYZER_MAX_FUNCTION_LINES` | `60` | Long-function threshold |
+| `PYANALYZER_MAX_PARAMETERS` | `6` | Parameter-count threshold |
+| `PYANALYZER_MAX_COMPLEXITY` | `10` | Cyclomatic-complexity threshold |
+| `PYANALYZER_MAX_CLASS_METHODS` | `20` | Large-class threshold |
+
+By default the scanner skips virtual environments, caches, build output, and anything matched by `.gitignore`. Both can be turned off, and extra exclude patterns (in `.gitignore` syntax) added, under **Options** on the start page.
+
+## Security
+
+The server is a local tool with no authentication: anyone who can reach it can ask it to read Python files in any directory the server's user can read. It therefore binds to `127.0.0.1` and rejects requests whose `Host` header is not local. Do not expose it to a network without putting your own access control in front of it.
+
+## What the analysis cannot see
+
+Results come from reading source code, so anything decided at run time is invisible:
+
+- A call on a value of unknown type, such as `thing.save()`, is not linked to any `save` method. Usages are recorded only where a name provably refers to an element (through an import, a definition in the same file, or `self`/`super()` in a method).
+- "Dead-code candidates" are code with no reference found inside the project. Code reached dynamically, registered with a framework, or used by other projects will appear here. Decorated functions, dunder methods, test code, names in `__all__`, and methods of classes with external base classes are never reported.
+- Symbolic links are not followed.
+
+## Development
+
+```bash
+make dev-backend    # API with auto-reload on :8000
+make dev-frontend   # Vite dev server on :3000, proxying /api
+make check          # lint, format check, type-check, and tests for both halves
+make e2e            # browser tests against the real backend
+make api-types      # regenerate frontend types after changing the API
+```
+
+| | Backend (`backend/`) | Frontend (`frontend/`) |
+|---|---|---|
+| Lint and format | ruff | ESLint (zero warnings), Prettier |
+| Types | mypy `--strict` | TypeScript strict |
+| Tests | pytest, hypothesis; coverage floor 90% | Vitest, Testing Library, MSW, fast-check, axe; Playwright |
+
+The API is documented at `/docs` while the server is running. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for how the pieces fit together, and `.kiro/specs/` for the specifications.

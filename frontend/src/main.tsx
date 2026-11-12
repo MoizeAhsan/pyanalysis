@@ -23,7 +23,7 @@ ReactDOM.createRoot(root).render(
       <QueryClientProvider client={queryClient}>
         <ThemeProvider>
           <NotificationProvider>
-            <BrowserRouter>
+            <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
               <App />
             </BrowserRouter>
           </NotificationProvider>

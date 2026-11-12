@@ -80,7 +80,7 @@ export default function SearchPage() {
           Find modules, classes, and functions by name or path.
         </Typography>
       </div>
-      <Paper variant="outlined" component="search" sx={{ p: 2 }}>
+      <Paper variant="outlined" role="search" sx={{ p: 2 }}>
         <Stack spacing={2}>
           <TextField
             label="Search the project"
