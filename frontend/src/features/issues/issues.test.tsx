@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { renderApp } from '@/test/render';
 import { api, withAnalysis } from '@/test/server';
@@ -25,7 +25,9 @@ describe('IssuesPage', () => {
 
     expect(await screen.findByText('1 finding')).toBeInTheDocument();
     expect(api.requests).toContain('GET /api/issues?kind=dead_code&offset=0&limit=100');
-    expect(screen.getByTestId('location')).toHaveTextContent('/issues?kind=dead_code');
+    await waitFor(() =>
+      expect(screen.getByTestId('location')).toHaveTextContent('/issues?kind=dead_code'),
+    );
 
     await user.click(screen.getByLabelText('Severity'));
     await user.click(screen.getByRole('option', { name: 'Warnings' }));
@@ -44,8 +46,10 @@ describe('IssuesPage', () => {
     withAnalysis();
     const { user } = renderApp(<IssuesPage />, { route: '/issues' });
     await user.click(await screen.findByRole('button', { name: /legacy_export/ }));
-    expect(screen.getByTestId('location')).toHaveTextContent(
-      '/explore?id=function%3Ashop%2Fjobs.py%3Alegacy_export',
+    await waitFor(() =>
+      expect(screen.getByTestId('location')).toHaveTextContent(
+        '/explore?id=function%3Ashop%2Fjobs.py%3Alegacy_export',
+      ),
     );
   });
 

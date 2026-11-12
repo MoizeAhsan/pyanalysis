@@ -16,7 +16,9 @@ describe('SearchPage', () => {
 
     expect(await screen.findByText('3 results for “order”')).toBeInTheDocument();
     expect(searches()).toEqual(['GET /api/search?q=order&offset=0&limit=50']);
-    expect(screen.getByTestId('location')).toHaveTextContent('/search?q=order');
+    await waitFor(() =>
+      expect(screen.getByTestId('location')).toHaveTextContent('/search?q=order'),
+    );
   });
 
   it('runs the query from the URL on load', async () => {
@@ -87,8 +89,10 @@ describe('SearchPage', () => {
     withAnalysis();
     const { user, unmount } = renderApp(<SearchPage />, { route: '/search?q=place' });
     await user.click(await screen.findByRole('button', { name: /place_order/ }));
-    expect(screen.getByTestId('location')).toHaveTextContent(
-      '/explore?id=function%3Ashop%2Forders.py%3Aplace_order',
+    await waitFor(() =>
+      expect(screen.getByTestId('location')).toHaveTextContent(
+        '/explore?id=function%3Ashop%2Forders.py%3Aplace_order',
+      ),
     );
     unmount();
 

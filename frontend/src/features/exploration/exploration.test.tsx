@@ -147,8 +147,10 @@ describe('ExplorePage', () => {
     expect(screen.getByText(/Select an element to see/)).toBeInTheDocument();
     await user.click(within(list).getByRole('button', { name: /^Class Order/ }));
 
-    expect(screen.getByTestId('location')).toHaveTextContent(
-      '/explore?id=class%3Ashop%2Forders.py%3AOrder',
+    await waitFor(() =>
+      expect(screen.getByTestId('location')).toHaveTextContent(
+        '/explore?id=class%3Ashop%2Forders.py%3AOrder',
+      ),
     );
     const details = screen.getByRole('region', { name: 'Element details' });
     expect(await within(details).findByRole('heading', { name: 'Order' })).toBeInTheDocument();
@@ -167,7 +169,9 @@ describe('ExplorePage', () => {
 
     expect(await screen.findByText('1 element')).toBeInTheDocument();
     expect(api.requests).toContain('GET /api/elements?type=class&offset=0&limit=100');
-    expect(screen.getByTestId('location')).toHaveTextContent('/explore?type=class');
+    await waitFor(() =>
+      expect(screen.getByTestId('location')).toHaveTextContent('/explore?type=class'),
+    );
   });
 
   it('ignores an invalid kind in the URL', async () => {

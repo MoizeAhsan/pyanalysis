@@ -254,7 +254,9 @@ describe('ArchitecturePage', () => {
     await user.click(screen.getByRole('button', { name: 'Classes' }));
 
     await waitFor(() => expect(api.requests).toContain('GET /api/graph?level=class&max_nodes=300'));
-    expect(screen.getByTestId('location')).toHaveTextContent('/architecture?level=class');
+    await waitFor(() =>
+      expect(screen.getByTestId('location')).toHaveTextContent('/architecture?level=class'),
+    );
   });
 
   it('restores its state from the URL', async () => {

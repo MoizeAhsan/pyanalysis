@@ -49,7 +49,7 @@ describe('App', () => {
     await user.click(screen.getAllByText('Findings')[0] as HTMLElement);
 
     expect(await screen.findByRole('heading', { level: 2, name: 'Findings' })).toBeInTheDocument();
-    expect(screen.getByTestId('location')).toHaveTextContent('/issues');
+    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/issues'));
   });
 
   it('handles unknown URLs', async () => {
