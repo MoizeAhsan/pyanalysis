@@ -6,16 +6,16 @@
 export const spacingTokens = {
   // Base spacing unit (8px)
   base: 8,
-  
+
   // Spacing scale
-  xs: 4,    // 0.5 * base
-  sm: 8,    // 1 * base
-  md: 16,   // 2 * base
-  lg: 24,   // 3 * base
-  xl: 32,   // 4 * base
-  xxl: 48,  // 6 * base
+  xs: 4, // 0.5 * base
+  sm: 8, // 1 * base
+  md: 16, // 2 * base
+  lg: 24, // 3 * base
+  xl: 32, // 4 * base
+  xxl: 48, // 6 * base
   xxxl: 64, // 8 * base
-  
+
   // Component-specific spacing
   component: {
     // Padding
@@ -26,7 +26,7 @@ export const spacingTokens = {
       lg: 24,
       xl: 32,
     },
-    
+
     // Margins
     margin: {
       xs: 4,
@@ -35,7 +35,7 @@ export const spacingTokens = {
       lg: 24,
       xl: 32,
     },
-    
+
     // Gaps
     gap: {
       xs: 4,
@@ -44,27 +44,27 @@ export const spacingTokens = {
       lg: 16,
       xl: 24,
     },
-    
+
     // Button spacing
     button: {
       paddingX: 16,
       paddingY: 8,
       gap: 8,
     },
-    
+
     // Card spacing
     card: {
       padding: 16,
       gap: 12,
     },
-    
+
     // Form spacing
     form: {
       fieldGap: 16,
       labelGap: 4,
       groupGap: 24,
     },
-    
+
     // Navigation spacing
     navigation: {
       itemPadding: 12,
@@ -72,7 +72,7 @@ export const spacingTokens = {
       sectionGap: 16,
     },
   },
-  
+
   // Layout spacing
   layout: {
     containerPadding: {
@@ -94,7 +94,7 @@ export const spacingTokens = {
       lg: 24,
     },
   },
-  
+
   // Border radius
   borderRadius: {
     none: 0,
@@ -106,7 +106,7 @@ export const spacingTokens = {
     xxl: 24,
     full: 9999,
   },
-  
+
   // Border width
   borderWidth: {
     none: 0,

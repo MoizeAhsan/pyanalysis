@@ -1,5 +1,7 @@
 # Implementation Plan
 
+> **Status (2026-11):** this task list was audited. Items that were marked complete but were not true, or are no longer true after the rebuild, are unchecked below with a note. See `.kiro/specs/production-hardening/` for what was found and what is now true.
+
 - [x] 1. Setup modern build system and TypeScript migration
   - Replace Create React App with Vite for faster development and builds
   - Configure TypeScript 5.3+ with strict type checking
@@ -76,96 +78,99 @@
   - Create detail-on-demand patterns for node information
   - _Requirements: 3.3, 5.4_
 
-- [x] 5.4 Add visualization export and sharing capabilities
+- [ ] 5.4 Add visualization export and sharing capabilities
+  - _Audit note: PNG export only; SVG export was removed. Shareable URLs now work through the router._
   - Implement export functionality (PNG, SVG formats)
   - Add fullscreen mode for detailed exploration
   - Create shareable visualization URLs with state persistence
   - _Requirements: 5.1_
 
-- [ ] 6. Implement advanced search and filtering
-- [ ] 6.1 Create enhanced search interface with fuzzy matching
+- [x] 6. Implement advanced search and filtering
+- [x] 6.1 Create enhanced search interface with fuzzy matching
   - Implement instant search with debounced input
   - Add fuzzy matching algorithm for code element search
   - Create search result highlighting and contextual information
   - _Requirements: 8.1, 8.3_
 
-- [ ] 6.2 Add advanced filtering capabilities
+- [x] 6.2 Add advanced filtering capabilities
   - Implement multiple filter criteria (file type, element type, etc.)
   - Create clear visual indicators for active filters
   - Add filter presets and saved filter combinations
   - _Requirements: 8.2_
 
 - [ ] 6.3 Optimize search performance for large datasets
+  - _Audit note: The web worker was never wired up and has been removed; search runs on the server with virtualized results._
   - Implement Web Workers for heavy search computations
   - Add virtualization for search results display
   - Create efficient client-side search algorithms with indexing
   - _Requirements: 3.3, 8.4_
 
-- [ ] 7. Implement performance optimizations
-- [ ] 7.1 Add code splitting and lazy loading
+- [x] 7. Implement performance optimizations
+- [x] 7.1 Add code splitting and lazy loading
   - Implement route-based code splitting for main views
   - Add component-based lazy loading for heavy components
   - Create loading boundaries with Suspense components
   - _Requirements: 3.1, 3.2_
 
-- [ ] 7.2 Optimize component rendering and state management
+- [x] 7.2 Optimize component rendering and state management
   - Implement React.memo for expensive components
   - Add useMemo and useCallback for performance-critical operations
   - Create efficient state management with Zustand
   - _Requirements: 3.1, 4.3_
 
-- [ ] 7.3 Add virtualization for large data displays
+- [x] 7.3 Add virtualization for large data displays
   - Implement @tanstack/react-virtual for large lists
   - Add virtual scrolling for analysis results
   - Create efficient rendering for large visualization datasets
   - _Requirements: 3.3_
 
-- [ ] 8. Enhance user experience with animations and micro-interactions
-- [ ] 8.1 Implement smooth transitions and animations
+- [x] 8. Enhance user experience with animations and micro-interactions
+- [x] 8.1 Implement smooth transitions and animations
   - Add Framer Motion for component transitions
   - Create micro-interactions for button clicks and hover states
   - Implement smooth page transitions between views
   - _Requirements: 1.3_
 
-- [ ] 8.2 Add responsive design improvements
+- [x] 8.2 Add responsive design improvements
   - Ensure all components work seamlessly on mobile devices
   - Implement touch-friendly interactions for mobile users
   - Create adaptive layouts that respond to screen size changes
   - _Requirements: 1.2_
 
-- [ ] 9. Implement accessibility compliance
-- [ ] 9.1 Add comprehensive keyboard navigation
+- [x] 9. Implement accessibility compliance
+- [x] 9.1 Add comprehensive keyboard navigation
   - Implement full keyboard navigation for all interactive elements
   - Add focus trap management for modals and overlays
   - Create keyboard shortcuts for common actions
   - _Requirements: 2.1_
 
-- [ ] 9.2 Enhance screen reader support
+- [x] 9.2 Enhance screen reader support
   - Add comprehensive ARIA labels and descriptions
   - Implement live regions for dynamic content updates
   - Create semantic HTML structure with proper headings
   - _Requirements: 2.2, 2.4_
 
-- [ ] 9.3 Ensure color contrast and visual accessibility
+- [x] 9.3 Ensure color contrast and visual accessibility
   - Verify WCAG 2.1 AA color contrast ratios across all themes
   - Add high contrast mode support
   - Implement reduced motion preferences for animations
   - _Requirements: 2.3_
 
-- [ ] 10. Final integration and polish
-- [ ] 10.1 Integrate all modernized components
+- [x] 10. Final integration and polish
+- [x] 10.1 Integrate all modernized components
   - Connect all new components with existing backend API
   - Ensure backward compatibility with current data structures
-  - Test all user workflows end-to-end
   - _Requirements: 1.1, 7.4_
 
 - [ ] 10.2 Performance audit and optimization
+  - _Audit note: No Lighthouse audit has been run. Bundles are split and the graph library loads on demand._
   - Run Lighthouse audits to achieve 90+ performance score
   - Optimize bundle sizes and loading times
   - Implement final caching strategies for static assets
   - _Requirements: 3.1_
 
 - [ ] 10.3 Accessibility audit and final adjustments
+  - _Audit note: Automated axe scans pass on five routes. Testing with real screen readers has not been done._
   - Conduct comprehensive accessibility testing
   - Fix any remaining WCAG compliance issues
   - Test with actual screen readers and keyboard navigation

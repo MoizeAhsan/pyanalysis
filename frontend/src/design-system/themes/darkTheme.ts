@@ -63,10 +63,10 @@ export const darkTheme = createTheme({
       focus: colorTokens.action.dark.focus,
     },
   },
-  
+
   typography: {
     fontFamily: typographyTokens.fontFamily.primary,
-    
+
     // Material Design 3 typography scale
     h1: {
       ...typographyTokens.scale.displayLarge,
@@ -123,13 +123,13 @@ export const darkTheme = createTheme({
       textTransform: 'uppercase',
     },
   },
-  
+
   spacing: spacingTokens.base,
-  
+
   shape: {
     borderRadius: spacingTokens.borderRadius.md,
   },
-  
+
   shadows: [
     shadowTokens.elevationDark[0],
     shadowTokens.elevationDark[1],
@@ -157,7 +157,7 @@ export const darkTheme = createTheme({
     shadowTokens.elevationDark[5], // 23
     shadowTokens.elevationDark[5], // 24
   ],
-  
+
   components: {
     // Button component customization
     MuiButton: {
@@ -177,7 +177,7 @@ export const darkTheme = createTheme({
         },
       },
     },
-    
+
     // Card component customization
     MuiCard: {
       styleOverrides: {
@@ -191,7 +191,7 @@ export const darkTheme = createTheme({
         },
       },
     },
-    
+
     // Paper component customization
     MuiPaper: {
       styleOverrides: {
@@ -221,7 +221,7 @@ export const darkTheme = createTheme({
         },
       },
     },
-    
+
     // AppBar component customization
     MuiAppBar: {
       styleOverrides: {
@@ -231,7 +231,7 @@ export const darkTheme = createTheme({
         },
       },
     },
-    
+
     // Chip component customization
     MuiChip: {
       styleOverrides: {
@@ -240,7 +240,7 @@ export const darkTheme = createTheme({
         },
       },
     },
-    
+
     // TextField component customization
     MuiTextField: {
       styleOverrides: {

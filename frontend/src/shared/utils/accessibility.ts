@@ -67,16 +67,15 @@ export class FocusManager {
       '[contenteditable="true"]',
     ].join(', ');
 
-    return Array.from(container.querySelectorAll(focusableSelectors))
-      .filter((element) => {
-        const htmlElement = element as HTMLElement;
-        return (
-          htmlElement.offsetWidth > 0 &&
-          htmlElement.offsetHeight > 0 &&
-          !htmlElement.hidden &&
-          window.getComputedStyle(htmlElement).visibility !== 'hidden'
-        );
-      }) as HTMLElement[];
+    return Array.from(container.querySelectorAll(focusableSelectors)).filter((element) => {
+      const htmlElement = element as HTMLElement;
+      return (
+        htmlElement.offsetWidth > 0 &&
+        htmlElement.offsetHeight > 0 &&
+        !htmlElement.hidden &&
+        window.getComputedStyle(htmlElement).visibility !== 'hidden'
+      );
+    }) as HTMLElement[];
   }
 
   /**
@@ -116,7 +115,7 @@ export class KeyboardNavigation {
       orientation?: 'horizontal' | 'vertical' | 'both';
       wrap?: boolean;
       onNavigate?: (newIndex: number) => void;
-    } = {}
+    } = {},
   ): number {
     const { orientation = 'vertical', wrap = true, onNavigate } = options;
     let newIndex = currentIndex;
@@ -125,25 +124,29 @@ export class KeyboardNavigation {
       case 'ArrowUp':
         if (orientation === 'vertical' || orientation === 'both') {
           event.preventDefault();
-          newIndex = currentIndex > 0 ? currentIndex - 1 : wrap ? elements.length - 1 : currentIndex;
+          newIndex =
+            currentIndex > 0 ? currentIndex - 1 : wrap ? elements.length - 1 : currentIndex;
         }
         break;
       case 'ArrowDown':
         if (orientation === 'vertical' || orientation === 'both') {
           event.preventDefault();
-          newIndex = currentIndex < elements.length - 1 ? currentIndex + 1 : wrap ? 0 : currentIndex;
+          newIndex =
+            currentIndex < elements.length - 1 ? currentIndex + 1 : wrap ? 0 : currentIndex;
         }
         break;
       case 'ArrowLeft':
         if (orientation === 'horizontal' || orientation === 'both') {
           event.preventDefault();
-          newIndex = currentIndex > 0 ? currentIndex - 1 : wrap ? elements.length - 1 : currentIndex;
+          newIndex =
+            currentIndex > 0 ? currentIndex - 1 : wrap ? elements.length - 1 : currentIndex;
         }
         break;
       case 'ArrowRight':
         if (orientation === 'horizontal' || orientation === 'both') {
           event.preventDefault();
-          newIndex = currentIndex < elements.length - 1 ? currentIndex + 1 : wrap ? 0 : currentIndex;
+          newIndex =
+            currentIndex < elements.length - 1 ? currentIndex + 1 : wrap ? 0 : currentIndex;
         }
         break;
       case 'Home':
@@ -174,7 +177,7 @@ export class ColorContrast {
     const rgb = this.hexToRgb(color);
     if (!rgb) return 0;
 
-    const [r, g, b] = rgb.map(c => {
+    const [r, g, b] = rgb.map((c) => {
       c = c / 255;
       return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
     });
@@ -241,8 +244,8 @@ export class AriaUtils {
    */
   static removeDescribedBy(element: HTMLElement, descriptionId: string) {
     const existingIds = element.getAttribute('aria-describedby')?.split(' ') || [];
-    const filteredIds = existingIds.filter(id => id !== descriptionId);
-    
+    const filteredIds = existingIds.filter((id) => id !== descriptionId);
+
     if (filteredIds.length > 0) {
       element.setAttribute('aria-describedby', filteredIds.join(' '));
     } else {
@@ -260,9 +263,13 @@ export class AriaUtils {
   /**
    * Update ARIA live region
    */
-  static updateLiveRegion(regionId: string, message: string, priority: 'polite' | 'assertive' = 'polite') {
+  static updateLiveRegion(
+    regionId: string,
+    message: string,
+    priority: 'polite' | 'assertive' = 'polite',
+  ) {
     let region = document.getElementById(regionId);
-    
+
     if (!region) {
       region = document.createElement('div');
       region.id = regionId;

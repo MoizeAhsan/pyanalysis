@@ -13,12 +13,7 @@ import {
   Tooltip,
   useTheme as useMuiTheme,
 } from '@mui/material';
-import {
-  LightMode,
-  DarkMode,
-  SettingsBrightness,
-  Palette,
-} from '@mui/icons-material';
+import { LightMode, DarkMode, SettingsBrightness, Palette } from '@mui/icons-material';
 import { useTheme } from '../providers/ThemeProvider';
 
 interface ThemeSwitcherProps {
@@ -27,10 +22,10 @@ interface ThemeSwitcherProps {
   showLabel?: boolean;
 }
 
-export function ThemeSwitcher({ 
-  variant = 'icon', 
+export function ThemeSwitcher({
+  variant = 'icon',
   size = 'medium',
-  showLabel = false 
+  showLabel = false,
 }: ThemeSwitcherProps) {
   const { mode, setMode, effectiveMode } = useTheme();
   const muiTheme = useMuiTheme();
@@ -124,7 +119,7 @@ export function ThemeSwitcher({
           <Palette />
         </IconButton>
       </Tooltip>
-      
+
       <Menu
         id="theme-menu"
         anchorEl={anchorEl}
@@ -165,7 +160,7 @@ export function ThemeSwitcher({
           </ListItemIcon>
           <ListItemText primary="Light" />
         </MenuItem>
-        
+
         <MenuItem
           onClick={() => handleModeSelect('dark')}
           selected={mode === 'dark'}
@@ -187,7 +182,7 @@ export function ThemeSwitcher({
           </ListItemIcon>
           <ListItemText primary="Dark" />
         </MenuItem>
-        
+
         <MenuItem
           onClick={() => handleModeSelect('system')}
           selected={mode === 'system'}
@@ -207,10 +202,7 @@ export function ThemeSwitcher({
           <ListItemIcon sx={{ color: 'inherit' }}>
             <SettingsBrightness fontSize="small" />
           </ListItemIcon>
-          <ListItemText 
-            primary="System" 
-            secondary={showLabel ? `(${effectiveMode})` : undefined}
-          />
+          <ListItemText primary="System" secondary={showLabel ? `(${effectiveMode})` : undefined} />
         </MenuItem>
       </Menu>
     </>

@@ -2,9 +2,10 @@
  * Theme Provider with system preference detection and localStorage persistence
  */
 
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { ThemeProvider as MuiThemeProvider, CssBaseline } from '@mui/material';
 import { lightTheme, darkTheme, type ThemeMode } from '../themes';
+import { useHighContrast, getHighContrastTheme } from '@shared/hooks/useAccessibility';
 
 interface ThemeContextType {
   mode: ThemeMode;
@@ -12,6 +13,7 @@ interface ThemeContextType {
   toggleMode: () => void;
   systemPreference: 'light' | 'dark';
   effectiveMode: 'light' | 'dark';
+  isHighContrast: boolean;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
@@ -23,6 +25,8 @@ interface ThemeProviderProps {
 const THEME_STORAGE_KEY = 'python-analyzer-theme-mode';
 
 export function ThemeProvider({ children }: ThemeProviderProps) {
+  const { isHighContrast } = useHighContrast();
+
   // Detect system preference
   const [systemPreference, setSystemPreference] = useState<'light' | 'dark'>(() => {
     if (typeof window !== 'undefined' && window.matchMedia) {
@@ -49,7 +53,7 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
   useEffect(() => {
     if (typeof window !== 'undefined' && window.matchMedia) {
       const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-      
+
       const handleChange = (e: MediaQueryListEvent) => {
         setSystemPreference(e.matches ? 'dark' : 'light');
       };
@@ -65,7 +69,7 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
         return () => mediaQuery.removeListener(handleChange);
       }
     }
-    
+
     // Return undefined for cases where no cleanup is needed
     return undefined;
   }, []);
@@ -74,17 +78,14 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
   useEffect(() => {
     if (typeof document !== 'undefined') {
       const root = document.documentElement;
-      
+
       // Set theme attribute for CSS variables
       root.setAttribute('data-theme', effectiveMode);
-      
+
       // Update meta theme-color for mobile browsers
       const metaThemeColor = document.querySelector('meta[name="theme-color"]');
       if (metaThemeColor) {
-        metaThemeColor.setAttribute(
-          'content',
-          effectiveMode === 'dark' ? '#121212' : '#ffffff'
-        );
+        metaThemeColor.setAttribute('content', effectiveMode === 'dark' ? '#121212' : '#ffffff');
       } else {
         // Create meta theme-color if it doesn't exist
         const meta = document.createElement('meta');
@@ -97,7 +98,7 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
 
   const setMode = (newMode: ThemeMode) => {
     setModeState(newMode);
-    
+
     // Persist to localStorage
     if (typeof window !== 'undefined') {
       localStorage.setItem(THEME_STORAGE_KEY, newMode);
@@ -120,10 +121,16 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
     toggleMode,
     systemPreference,
     effectiveMode,
+    isHighContrast,
   };
 
   // Select the appropriate theme
-  const currentTheme = effectiveMode === 'dark' ? darkTheme : lightTheme;
+  let currentTheme = effectiveMode === 'dark' ? darkTheme : lightTheme;
+
+  // Apply high contrast modifications if needed
+  if (isHighContrast) {
+    currentTheme = getHighContrastTheme(currentTheme);
+  }
 
   return (
     <ThemeContext.Provider value={contextValue}>

@@ -1,0 +1,2561 @@
+{
+  "components": {
+    "schemas": {
+      "AnalysisRequest": {
+        "description": "Start an analysis. Exclude patterns use ``.gitignore`` syntax.",
+        "properties": {
+          "exclude": {
+            "default": [],
+            "items": {
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
+            },
+            "maxItems": 100,
+            "title": "Exclude",
+            "type": "array"
+          },
+          "project_path": {
+            "maxLength": 4096,
+            "title": "Project Path",
+            "type": "string"
+          },
+          "respect_gitignore": {
+            "default": true,
+            "title": "Respect Gitignore",
+            "type": "boolean"
+          },
+          "use_default_excludes": {
+            "default": true,
+            "title": "Use Default Excludes",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "project_path"
+        ],
+        "title": "AnalysisRequest",
+        "type": "object"
+      },
+      "AnalysisStatus": {
+        "properties": {
+          "elapsed_seconds": {
+            "title": "Elapsed Seconds",
+            "type": "number"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "has_result": {
+            "title": "Has Result",
+            "type": "boolean"
+          },
+          "phase": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phase"
+          },
+          "processed": {
+            "title": "Processed",
+            "type": "integer"
+          },
+          "project_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Project Path"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "state": {
+            "$ref": "#/components/schemas/JobState"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "state",
+          "phase",
+          "processed",
+          "total",
+          "project_path",
+          "error",
+          "started_at",
+          "elapsed_seconds",
+          "has_result"
+        ],
+        "title": "AnalysisStatus",
+        "type": "object"
+      },
+      "CycleList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/CycleOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total"
+        ],
+        "title": "CycleList",
+        "type": "object"
+      },
+      "CycleOut": {
+        "properties": {
+          "modules": {
+            "items": {
+              "$ref": "#/components/schemas/ElementRef"
+            },
+            "title": "Modules",
+            "type": "array"
+          }
+        },
+        "required": [
+          "modules"
+        ],
+        "title": "CycleOut",
+        "type": "object"
+      },
+      "ElementDetail": {
+        "description": "Everything known about one element except its usages, which are paginated.",
+        "properties": {
+          "bases": {
+            "items": {
+              "$ref": "#/components/schemas/ElementRef"
+            },
+            "title": "Bases",
+            "type": "array"
+          },
+          "children": {
+            "items": {
+              "$ref": "#/components/schemas/ElementRef"
+            },
+            "title": "Children",
+            "type": "array"
+          },
+          "column": {
+            "title": "Column",
+            "type": "integer"
+          },
+          "complexity": {
+            "title": "Complexity",
+            "type": "integer"
+          },
+          "declared_bases": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Declared Bases",
+            "type": "array"
+          },
+          "decorators": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Decorators",
+            "type": "array"
+          },
+          "dependencies": {
+            "items": {
+              "$ref": "#/components/schemas/ElementRef"
+            },
+            "title": "Dependencies",
+            "type": "array"
+          },
+          "docstring": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Docstring"
+          },
+          "end_line": {
+            "title": "End Line",
+            "type": "integer"
+          },
+          "external_bases": {
+            "items": {
+              "type": "string"
+            },
+            "title": "External Bases",
+            "type": "array"
+          },
+          "file_path": {
+            "title": "File Path",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "is_async": {
+            "title": "Is Async",
+            "type": "boolean"
+          },
+          "is_method": {
+            "title": "Is Method",
+            "type": "boolean"
+          },
+          "issues": {
+            "items": {
+              "$ref": "#/components/schemas/IssueOut"
+            },
+            "title": "Issues",
+            "type": "array"
+          },
+          "line": {
+            "title": "Line",
+            "type": "integer"
+          },
+          "line_count": {
+            "title": "Line Count",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "overridden_by": {
+            "items": {
+              "$ref": "#/components/schemas/ElementRef"
+            },
+            "title": "Overridden By",
+            "type": "array"
+          },
+          "overrides": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ElementRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "parameters": {
+            "items": {
+              "$ref": "#/components/schemas/ParameterOut"
+            },
+            "title": "Parameters",
+            "type": "array"
+          },
+          "parent": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ElementRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "parent_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Id"
+          },
+          "qualified_name": {
+            "title": "Qualified Name",
+            "type": "string"
+          },
+          "return_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Return Type"
+          },
+          "subclasses": {
+            "items": {
+              "$ref": "#/components/schemas/ElementRef"
+            },
+            "title": "Subclasses",
+            "type": "array"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary"
+          },
+          "type": {
+            "$ref": "#/components/schemas/ElementType"
+          },
+          "usage_count": {
+            "title": "Usage Count",
+            "type": "integer"
+          },
+          "usage_counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "propertyNames": {
+              "$ref": "#/components/schemas/UsageType"
+            },
+            "title": "Usage Counts",
+            "type": "object"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "qualified_name",
+          "type",
+          "file_path",
+          "line",
+          "end_line",
+          "parent_id",
+          "is_method",
+          "is_async",
+          "summary",
+          "usage_count",
+          "column",
+          "docstring",
+          "parameters",
+          "return_type",
+          "decorators",
+          "complexity",
+          "line_count",
+          "parent",
+          "children",
+          "dependencies",
+          "usage_counts",
+          "declared_bases",
+          "bases",
+          "external_bases",
+          "subclasses",
+          "overrides",
+          "overridden_by",
+          "issues"
+        ],
+        "title": "ElementDetail",
+        "type": "object"
+      },
+      "ElementPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ElementSummary"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "next_offset": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Offset"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "offset",
+          "limit",
+          "next_offset"
+        ],
+        "title": "ElementPage",
+        "type": "object"
+      },
+      "ElementRef": {
+        "description": "A pointer to another element.",
+        "properties": {
+          "file_path": {
+            "title": "File Path",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "line": {
+            "title": "Line",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "qualified_name": {
+            "title": "Qualified Name",
+            "type": "string"
+          },
+          "type": {
+            "$ref": "#/components/schemas/ElementType"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "qualified_name",
+          "type",
+          "file_path",
+          "line"
+        ],
+        "title": "ElementRef",
+        "type": "object"
+      },
+      "ElementSummary": {
+        "description": "An element without its relationships; cheap enough to list by the thousand.",
+        "properties": {
+          "end_line": {
+            "title": "End Line",
+            "type": "integer"
+          },
+          "file_path": {
+            "title": "File Path",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "is_async": {
+            "title": "Is Async",
+            "type": "boolean"
+          },
+          "is_method": {
+            "title": "Is Method",
+            "type": "boolean"
+          },
+          "line": {
+            "title": "Line",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "parent_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Id"
+          },
+          "qualified_name": {
+            "title": "Qualified Name",
+            "type": "string"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary"
+          },
+          "type": {
+            "$ref": "#/components/schemas/ElementType"
+          },
+          "usage_count": {
+            "title": "Usage Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "qualified_name",
+          "type",
+          "file_path",
+          "line",
+          "end_line",
+          "parent_id",
+          "is_method",
+          "is_async",
+          "summary",
+          "usage_count"
+        ],
+        "title": "ElementSummary",
+        "type": "object"
+      },
+      "ElementType": {
+        "description": "Kinds of code elements the analyzer tracks.",
+        "enum": [
+          "module",
+          "class",
+          "function"
+        ],
+        "title": "ElementType",
+        "type": "string"
+      },
+      "ErrorDetail": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "title": "ErrorDetail",
+        "type": "object"
+      },
+      "ErrorResponse": {
+        "description": "Body of every non-2xx response from the v2 API.",
+        "properties": {
+          "error": {
+            "$ref": "#/components/schemas/ErrorDetail"
+          }
+        },
+        "required": [
+          "error"
+        ],
+        "title": "ErrorResponse",
+        "type": "object"
+      },
+      "GraphEdgeOut": {
+        "properties": {
+          "relationship_type": {
+            "title": "Relationship Type",
+            "type": "string"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "target": {
+            "title": "Target",
+            "type": "string"
+          },
+          "weight": {
+            "title": "Weight",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "source",
+          "target",
+          "relationship_type",
+          "weight"
+        ],
+        "title": "GraphEdgeOut",
+        "type": "object"
+      },
+      "GraphNodeOut": {
+        "properties": {
+          "file_path": {
+            "title": "File Path",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "in_degree": {
+            "title": "In Degree",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "out_degree": {
+            "title": "Out Degree",
+            "type": "integer"
+          },
+          "size": {
+            "title": "Size",
+            "type": "integer"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "type",
+          "file_path",
+          "in_degree",
+          "out_degree",
+          "size"
+        ],
+        "title": "GraphNodeOut",
+        "type": "object"
+      },
+      "GraphOut": {
+        "description": "A drawable slice of a dependency graph.\n\n``truncated`` is true when ``nodes`` is a subset chosen by connectivity;\n``total_nodes`` and ``total_edges`` describe the full graph at this level.",
+        "properties": {
+          "edges": {
+            "items": {
+              "$ref": "#/components/schemas/GraphEdgeOut"
+            },
+            "title": "Edges",
+            "type": "array"
+          },
+          "focus": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Focus"
+          },
+          "level": {
+            "title": "Level",
+            "type": "string"
+          },
+          "nodes": {
+            "items": {
+              "$ref": "#/components/schemas/GraphNodeOut"
+            },
+            "title": "Nodes",
+            "type": "array"
+          },
+          "total_edges": {
+            "title": "Total Edges",
+            "type": "integer"
+          },
+          "total_nodes": {
+            "title": "Total Nodes",
+            "type": "integer"
+          },
+          "truncated": {
+            "title": "Truncated",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "level",
+          "focus",
+          "nodes",
+          "edges",
+          "total_nodes",
+          "total_edges",
+          "truncated"
+        ],
+        "title": "GraphOut",
+        "type": "object"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "Health": {
+        "properties": {
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "version"
+        ],
+        "title": "Health",
+        "type": "object"
+      },
+      "IssueKind": {
+        "description": "Kinds of finding the analyzer reports.",
+        "enum": [
+          "import_cycle",
+          "unused_import",
+          "dead_code",
+          "high_complexity",
+          "long_function",
+          "too_many_parameters",
+          "large_class"
+        ],
+        "title": "IssueKind",
+        "type": "string"
+      },
+      "IssueOut": {
+        "properties": {
+          "element_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Element Id"
+          },
+          "file_path": {
+            "title": "File Path",
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/IssueKind"
+          },
+          "line": {
+            "title": "Line",
+            "type": "integer"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "severity": {
+            "$ref": "#/components/schemas/Severity"
+          }
+        },
+        "required": [
+          "kind",
+          "severity",
+          "message",
+          "file_path",
+          "line",
+          "element_id"
+        ],
+        "title": "IssueOut",
+        "type": "object"
+      },
+      "IssuePage": {
+        "properties": {
+          "counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "propertyNames": {
+              "$ref": "#/components/schemas/IssueKind"
+            },
+            "title": "Counts",
+            "type": "object"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/IssueOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "next_offset": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Offset"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "offset",
+          "limit",
+          "next_offset",
+          "counts"
+        ],
+        "title": "IssuePage",
+        "type": "object"
+      },
+      "JobState": {
+        "enum": [
+          "idle",
+          "running",
+          "completed",
+          "failed",
+          "cancelled"
+        ],
+        "title": "JobState",
+        "type": "string"
+      },
+      "ModuleRank": {
+        "properties": {
+          "file_path": {
+            "title": "File Path",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "imported_by": {
+            "title": "Imported By",
+            "type": "integer"
+          },
+          "imports": {
+            "title": "Imports",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "file_path",
+          "imported_by",
+          "imports"
+        ],
+        "title": "ModuleRank",
+        "type": "object"
+      },
+      "NameCount": {
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "count"
+        ],
+        "title": "NameCount",
+        "type": "object"
+      },
+      "ParameterKind": {
+        "description": "Parameter kinds, mirroring :class:`inspect.Parameter`.",
+        "enum": [
+          "positional_only",
+          "positional",
+          "var_positional",
+          "keyword_only",
+          "var_keyword"
+        ],
+        "title": "ParameterKind",
+        "type": "string"
+      },
+      "ParameterOut": {
+        "properties": {
+          "default_value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Default Value"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/ParameterKind"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "type_hint": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Type Hint"
+          }
+        },
+        "required": [
+          "name",
+          "kind",
+          "type_hint",
+          "default_value"
+        ],
+        "title": "ParameterOut",
+        "type": "object"
+      },
+      "PatternList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PatternOut"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "PatternList",
+        "type": "object"
+      },
+      "PatternOut": {
+        "properties": {
+          "confidence": {
+            "title": "Confidence",
+            "type": "number"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "elements": {
+            "items": {
+              "$ref": "#/components/schemas/ElementRef"
+            },
+            "title": "Elements",
+            "type": "array"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "type": {
+            "$ref": "#/components/schemas/PatternType"
+          }
+        },
+        "required": [
+          "name",
+          "type",
+          "confidence",
+          "description",
+          "elements"
+        ],
+        "title": "PatternOut",
+        "type": "object"
+      },
+      "PatternType": {
+        "description": "Architectural patterns the detector can report.",
+        "enum": [
+          "mvc",
+          "factory",
+          "observer",
+          "singleton"
+        ],
+        "title": "PatternType",
+        "type": "string"
+      },
+      "SearchPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/SearchResult"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "next_offset": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Offset"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "query": {
+            "title": "Query",
+            "type": "string"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "query",
+          "items",
+          "total",
+          "offset",
+          "limit",
+          "next_offset"
+        ],
+        "title": "SearchPage",
+        "type": "object"
+      },
+      "SearchResult": {
+        "properties": {
+          "element": {
+            "$ref": "#/components/schemas/ElementSummary"
+          },
+          "match_text": {
+            "title": "Match Text",
+            "type": "string"
+          },
+          "match_type": {
+            "title": "Match Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "element",
+          "match_type",
+          "match_text"
+        ],
+        "title": "SearchResult",
+        "type": "object"
+      },
+      "Severity": {
+        "description": "How much attention a finding deserves.",
+        "enum": [
+          "info",
+          "warning"
+        ],
+        "title": "Severity",
+        "type": "string"
+      },
+      "SkippedFileOut": {
+        "properties": {
+          "file_path": {
+            "title": "File Path",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "file_path",
+          "reason"
+        ],
+        "title": "SkippedFileOut",
+        "type": "object"
+      },
+      "SourceOut": {
+        "properties": {
+          "end_line": {
+            "title": "End Line",
+            "type": "integer"
+          },
+          "file_path": {
+            "title": "File Path",
+            "type": "string"
+          },
+          "lines": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Lines",
+            "type": "array"
+          },
+          "start_line": {
+            "title": "Start Line",
+            "type": "integer"
+          },
+          "total_lines": {
+            "title": "Total Lines",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "file_path",
+          "start_line",
+          "end_line",
+          "total_lines",
+          "lines"
+        ],
+        "title": "SourceOut",
+        "type": "object"
+      },
+      "Summary": {
+        "description": "Headline facts about the analyzed project.",
+        "properties": {
+          "analyzed_at": {
+            "format": "date-time",
+            "title": "Analyzed At",
+            "type": "string"
+          },
+          "cached_files": {
+            "title": "Cached Files",
+            "type": "integer"
+          },
+          "classes": {
+            "title": "Classes",
+            "type": "integer"
+          },
+          "dependency_edges": {
+            "title": "Dependency Edges",
+            "type": "integer"
+          },
+          "duration_seconds": {
+            "title": "Duration Seconds",
+            "type": "number"
+          },
+          "external_packages": {
+            "items": {
+              "$ref": "#/components/schemas/NameCount"
+            },
+            "title": "External Packages",
+            "type": "array"
+          },
+          "functions": {
+            "title": "Functions",
+            "type": "integer"
+          },
+          "import_cycles": {
+            "title": "Import Cycles",
+            "type": "integer"
+          },
+          "issues": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "propertyNames": {
+              "$ref": "#/components/schemas/IssueKind"
+            },
+            "title": "Issues",
+            "type": "object"
+          },
+          "modules": {
+            "title": "Modules",
+            "type": "integer"
+          },
+          "most_imported_modules": {
+            "items": {
+              "$ref": "#/components/schemas/ModuleRank"
+            },
+            "title": "Most Imported Modules",
+            "type": "array"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "path": {
+            "title": "Path",
+            "type": "string"
+          },
+          "patterns": {
+            "title": "Patterns",
+            "type": "integer"
+          },
+          "skipped_files": {
+            "items": {
+              "$ref": "#/components/schemas/SkippedFileOut"
+            },
+            "title": "Skipped Files",
+            "type": "array"
+          },
+          "skipped_total": {
+            "title": "Skipped Total",
+            "type": "integer"
+          },
+          "total_files": {
+            "title": "Total Files",
+            "type": "integer"
+          },
+          "total_lines": {
+            "title": "Total Lines",
+            "type": "integer"
+          },
+          "usages": {
+            "title": "Usages",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "name",
+          "path",
+          "analyzed_at",
+          "duration_seconds",
+          "total_files",
+          "total_lines",
+          "cached_files",
+          "modules",
+          "classes",
+          "functions",
+          "usages",
+          "dependency_edges",
+          "import_cycles",
+          "patterns",
+          "issues",
+          "skipped_files",
+          "skipped_total",
+          "external_packages",
+          "most_imported_modules"
+        ],
+        "title": "Summary",
+        "type": "object"
+      },
+      "TreeChildren": {
+        "properties": {
+          "children": {
+            "items": {
+              "$ref": "#/components/schemas/TreeNodeOut"
+            },
+            "title": "Children",
+            "type": "array"
+          },
+          "parent": {
+            "title": "Parent",
+            "type": "string"
+          }
+        },
+        "required": [
+          "parent",
+          "children"
+        ],
+        "title": "TreeChildren",
+        "type": "object"
+      },
+      "TreeNodeOut": {
+        "properties": {
+          "child_count": {
+            "title": "Child Count",
+            "type": "integer"
+          },
+          "file_path": {
+            "title": "File Path",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "line": {
+            "title": "Line",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          },
+          "usage_count": {
+            "title": "Usage Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "type",
+          "child_count",
+          "file_path",
+          "line",
+          "usage_count"
+        ],
+        "title": "TreeNodeOut",
+        "type": "object"
+      },
+      "UsageFileCount": {
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "file_path": {
+            "title": "File Path",
+            "type": "string"
+          }
+        },
+        "required": [
+          "file_path",
+          "count"
+        ],
+        "title": "UsageFileCount",
+        "type": "object"
+      },
+      "UsageOut": {
+        "properties": {
+          "column": {
+            "title": "Column",
+            "type": "integer"
+          },
+          "context": {
+            "title": "Context",
+            "type": "string"
+          },
+          "file_path": {
+            "title": "File Path",
+            "type": "string"
+          },
+          "line": {
+            "title": "Line",
+            "type": "integer"
+          },
+          "usage_type": {
+            "$ref": "#/components/schemas/UsageType"
+          },
+          "used_by": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ElementRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "file_path",
+          "line",
+          "column",
+          "context",
+          "usage_type",
+          "used_by"
+        ],
+        "title": "UsageOut",
+        "type": "object"
+      },
+      "UsagePage": {
+        "properties": {
+          "by_file": {
+            "items": {
+              "$ref": "#/components/schemas/UsageFileCount"
+            },
+            "title": "By File",
+            "type": "array"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/UsageOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "next_offset": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Offset"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "offset",
+          "limit",
+          "next_offset",
+          "by_file"
+        ],
+        "title": "UsagePage",
+        "type": "object"
+      },
+      "UsageType": {
+        "description": "How a code element is used at a given location.",
+        "enum": [
+          "call",
+          "import",
+          "inheritance",
+          "reference",
+          "type_hint",
+          "decorator"
+        ],
+        "title": "UsageType",
+        "type": "string"
+      },
+      "ValidationError": {
+        "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "description": "Static analysis and visual exploration of Python projects",
+    "title": "Python Code Analyzer",
+    "version": "1.0.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/api/analysis": {
+      "delete": {
+        "description": "Stop any running analysis and discard the stored results.",
+        "operationId": "reset_analysis_api_analysis_delete",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnalysisStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Reset Analysis",
+        "tags": [
+          "analysis"
+        ]
+      },
+      "get": {
+        "description": "State and progress of the current or most recent analysis.",
+        "operationId": "analysis_status_api_analysis_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnalysisStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Analysis Status",
+        "tags": [
+          "analysis"
+        ]
+      },
+      "post": {
+        "description": "Start analyzing a project in the background; poll ``GET /analysis`` for progress.",
+        "operationId": "start_analysis_api_analysis_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnalysisRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnalysisStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Start Analysis",
+        "tags": [
+          "analysis"
+        ]
+      }
+    },
+    "/api/analysis/cancel": {
+      "post": {
+        "description": "Stop a running analysis. Results of an earlier analysis are kept.",
+        "operationId": "cancel_analysis_api_analysis_cancel_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnalysisStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Cancel Analysis",
+        "tags": [
+          "analysis"
+        ]
+      }
+    },
+    "/api/cycles": {
+      "get": {
+        "description": "Groups of modules that import each other, largest first.",
+        "operationId": "cycles_api_cycles_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CycleList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Cycles",
+        "tags": [
+          "explore"
+        ]
+      }
+    },
+    "/api/element": {
+      "get": {
+        "description": "Full detail for one element, including its place in the class hierarchy.",
+        "operationId": "element_detail_api_element_get",
+        "parameters": [
+          {
+            "description": "Element id",
+            "in": "query",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "description": "Element id",
+              "maxLength": 2000,
+              "minLength": 1,
+              "title": "Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ElementDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Element Detail",
+        "tags": [
+          "explore"
+        ]
+      }
+    },
+    "/api/elements": {
+      "get": {
+        "description": "Elements ordered by file and line, optionally filtered by type or file.",
+        "operationId": "elements_api_elements_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/ElementType"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Type"
+            }
+          },
+          {
+            "in": "query",
+            "name": "file",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 2000,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "File"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ElementPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Elements",
+        "tags": [
+          "explore"
+        ]
+      }
+    },
+    "/api/graph": {
+      "get": {
+        "description": "A bounded dependency graph at package, module, or class level.",
+        "operationId": "graph_api_graph_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "level",
+            "required": false,
+            "schema": {
+              "default": "module",
+              "enum": [
+                "package",
+                "module",
+                "class"
+              ],
+              "title": "Level",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "package_depth",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "maximum": 10,
+              "minimum": 1,
+              "title": "Package Depth",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "focus",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 2000,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Focus"
+            }
+          },
+          {
+            "in": "query",
+            "name": "depth",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "maximum": 5,
+              "minimum": 1,
+              "title": "Depth",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "max_nodes",
+            "required": false,
+            "schema": {
+              "default": 300,
+              "maximum": 2000,
+              "minimum": 1,
+              "title": "Max Nodes",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "connected_only",
+            "required": false,
+            "schema": {
+              "default": true,
+              "title": "Connected Only",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GraphOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Graph",
+        "tags": [
+          "explore"
+        ]
+      }
+    },
+    "/api/health": {
+      "get": {
+        "description": "Liveness check.",
+        "operationId": "health_api_health_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Health"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Health",
+        "tags": [
+          "service"
+        ]
+      }
+    },
+    "/api/issues": {
+      "get": {
+        "description": "Findings: import cycles, unused imports, dead-code candidates, and smells.",
+        "operationId": "issues_api_issues_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "kind",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/IssueKind"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Kind"
+            }
+          },
+          {
+            "in": "query",
+            "name": "severity",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/Severity"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Severity"
+            }
+          },
+          {
+            "in": "query",
+            "name": "file",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 2000,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "File"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IssuePage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Issues",
+        "tags": [
+          "explore"
+        ]
+      }
+    },
+    "/api/patterns": {
+      "get": {
+        "description": "Detected architectural patterns.",
+        "operationId": "patterns_api_patterns_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PatternList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          }
+        },
+        "summary": "Patterns",
+        "tags": [
+          "explore"
+        ]
+      }
+    },
+    "/api/search": {
+      "get": {
+        "description": "Search by name, qualified name, and path; optionally docstrings too.",
+        "operationId": "search_api_search_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "default": "",
+              "maxLength": 200,
+              "title": "Q",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/ElementType"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Type"
+            }
+          },
+          {
+            "in": "query",
+            "name": "docstrings",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Docstrings",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Search",
+        "tags": [
+          "explore"
+        ]
+      }
+    },
+    "/api/source": {
+      "get": {
+        "description": "Lines of an analyzed file. Only files that are part of the analysis can be read.",
+        "operationId": "source_api_source_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "file",
+            "required": true,
+            "schema": {
+              "maxLength": 2000,
+              "minLength": 1,
+              "title": "File",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "start",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Start",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "end",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "End"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Source",
+        "tags": [
+          "explore"
+        ]
+      }
+    },
+    "/api/summary": {
+      "get": {
+        "description": "Headline numbers for the analyzed project.",
+        "operationId": "summary_api_summary_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Summary"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          }
+        },
+        "summary": "Summary",
+        "tags": [
+          "explore"
+        ]
+      }
+    },
+    "/api/tree": {
+      "get": {
+        "description": "Children of a directory (``dir:<path>``) or element, for lazy expansion.",
+        "operationId": "tree_api_tree_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "parent",
+            "required": false,
+            "schema": {
+              "default": "dir:",
+              "maxLength": 2000,
+              "title": "Parent",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TreeChildren"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Tree",
+        "tags": [
+          "explore"
+        ]
+      }
+    },
+    "/api/usages": {
+      "get": {
+        "description": "Where an element is used, ordered by file and line, with per-file counts.",
+        "operationId": "usages_api_usages_get",
+        "parameters": [
+          {
+            "description": "Element id",
+            "in": "query",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "description": "Element id",
+              "maxLength": 2000,
+              "minLength": 1,
+              "title": "Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/UsageType"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Type"
+            }
+          },
+          {
+            "in": "query",
+            "name": "file",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 2000,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "File"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsagePage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Usages",
+        "tags": [
+          "explore"
+        ]
+      }
+    }
+  }
+}

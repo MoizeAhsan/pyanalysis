@@ -1,5 +1,7 @@
 # Implementation Plan
 
+> **Status (2026-11):** this task list was audited. Several items marked complete were not, and the implementation has since been replaced. See `.kiro/specs/production-hardening/` for what was found and what is now true.
+
 ## Phase 1: Core MVP
 
 - [x] 1. Set up project structure and core interfaces

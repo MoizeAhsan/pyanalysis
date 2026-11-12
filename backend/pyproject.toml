@@ -1,0 +1,87 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pyanalyzer"
+description = "Static analysis and visual exploration of Python projects"
+requires-python = ">=3.12"
+dynamic = ["version"]
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "pydantic>=2.9",
+    "pydantic-settings>=2.5",
+    "networkx>=3.3",
+    "pathspec>=1.0",
+]
+
+[project.scripts]
+pyanalyzer = "pyanalyzer.cli:main"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3",
+    "pytest-cov>=5.0",
+    "httpx2>=2.0",
+    "hypothesis>=6.112",
+    "ruff>=0.7",
+    "mypy>=1.13",
+    "types-networkx",
+]
+
+[tool.setuptools.dynamic]
+version = { attr = "pyanalyzer.__version__" }
+
+[tool.setuptools.packages.find]
+include = ["pyanalyzer*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-exclude = ["tests/fixtures"]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # import sorting
+    "B",   # bugbear
+    "UP",  # pyupgrade
+    "SIM", # simplifications
+    "C4",  # comprehensions
+    "RUF", # ruff-specific
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["B011"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_unreachable = true
+files = ["pyanalyzer", "tests"]
+exclude = ["tests/fixtures/"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers --strict-config"
+markers = [
+    "slow: large synthetic-project benchmarks (deselect with -m 'not slow')",
+]
+filterwarnings = ["error"]
+
+[tool.coverage.run]
+source = ["pyanalyzer"]
+branch = true
+
+[tool.coverage.report]
+fail_under = 90
+show_missing = true
+skip_covered = true
+exclude_also = [
+    "if TYPE_CHECKING:",
+    "if __name__ == .__main__.:",
+    "raise NotImplementedError",
+]

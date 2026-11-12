@@ -1,0 +1,19 @@
+# Install once with: pip install pre-commit && pre-commit install
+repos:
+  - repo: local
+    hooks:
+      - id: ruff-check
+        name: ruff check (backend)
+        entry: backend/.venv/bin/ruff check --fix --config backend/pyproject.toml
+        language: system
+        files: ^backend/.*\.py$
+      - id: ruff-format
+        name: ruff format (backend)
+        entry: backend/.venv/bin/ruff format --config backend/pyproject.toml
+        language: system
+        files: ^backend/.*\.py$
+      - id: frontend-lint
+        name: eslint (frontend)
+        entry: bash -c 'cd frontend && npx eslint --max-warnings 0 "${@#frontend/}"' --
+        language: system
+        files: ^frontend/src/.*\.(ts|tsx)$
