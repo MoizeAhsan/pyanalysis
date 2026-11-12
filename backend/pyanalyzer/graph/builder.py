@@ -50,7 +50,7 @@ def build_module_graph(resolution: Resolution) -> DependencyGraph:
 
 
 def build_class_graph(resolution: Resolution) -> DependencyGraph:
-    """One node per class; edges for inheritance and for use of another class."""
+    """One node per class; edges for inheritance, type annotations, and other use."""
     elements = resolution.elements
     owner: dict[str, str | None] = {}
 
@@ -84,11 +84,12 @@ def build_class_graph(resolution: Resolution) -> DependencyGraph:
             source_class = owning_class(usage.used_by)
             if source_class is None or source_class == target_class:
                 continue
-            relationship = (
-                "inherits"
-                if usage.usage_type is UsageType.INHERITANCE and target == target_class
-                else "uses"
-            )
+            if usage.usage_type is UsageType.INHERITANCE and target == target_class:
+                relationship = "inherits"
+            elif usage.usage_type is UsageType.TYPE_HINT:
+                relationship = "uses_type"
+            else:
+                relationship = "uses"
             counts[source_class, target_class, relationship] += 1
 
     nodes = {

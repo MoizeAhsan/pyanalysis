@@ -2,17 +2,23 @@
 
 from __future__ import annotations
 
+import logging
 import os
 import time
 from collections.abc import Callable
 from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures.process import BrokenProcessPool
 from dataclasses import dataclass, field
 from datetime import datetime
 from itertools import repeat
+from pathlib import Path
 from typing import Final
 
+from pyanalyzer.analysis.cache import RecordCache, default_cache_dir
 from pyanalyzer.analysis.resolver import Resolution, resolve
+from pyanalyzer.analyzers.inheritance_analyzer import ClassHierarchy, build_hierarchy
 from pyanalyzer.analyzers.pattern_detector import detect_patterns
+from pyanalyzer.analyzers.quality_analyzer import Issue, QualityThresholds, find_issues
 from pyanalyzer.graph.builder import build_module_graph, find_cycles
 from pyanalyzer.models.core import (
     ArchitecturalPattern,
@@ -29,6 +35,8 @@ from pyanalyzer.scanner.file_scanner import (
     scan_project,
 )
 
+logger = logging.getLogger(__name__)
+
 #: Below this many files a process pool costs more to start than it saves.
 PARALLEL_THRESHOLD: Final = 200
 MAX_DEFAULT_WORKERS: Final = 8
@@ -37,6 +45,7 @@ PHASE_SCANNING: Final = "scanning"
 PHASE_PARSING: Final = "parsing"
 PHASE_RESOLVING: Final = "resolving"
 PHASE_GRAPH: Final = "graph"
+PHASE_ANALYZING: Final = "analyzing"
 
 type ProgressCallback = Callable[[str, int, int], None]
 type CancelCheck = Callable[[], bool]
@@ -55,6 +64,9 @@ class AnalysisOptions:
     use_default_excludes: bool = True
     max_file_size: int = DEFAULT_MAX_FILE_SIZE
     workers: int | None = None
+    use_cache: bool = True
+    cache_dir: Path | None = None
+    thresholds: QualityThresholds = field(default_factory=QualityThresholds)
 
     def scan_options(self) -> ScanOptions:
         return ScanOptions(
@@ -74,8 +86,11 @@ class AnalysisResult:
     module_graph: DependencyGraph
     cycles: list[list[str]]
     patterns: list[ArchitecturalPattern]
+    hierarchy: ClassHierarchy
+    issues: list[Issue]
     skipped: list[SkippedFile] = field(default_factory=list)
     duration_seconds: float = 0.0
+    cached_files: int = 0
 
 
 def default_workers() -> int:
@@ -105,7 +120,7 @@ def analyze_project(
     scan = scan_project(project_path, options.scan_options(), cancelled)
     _check(cancelled)
 
-    records = _extract_all(scan.root, scan.files, options.workers, progress, cancelled)
+    records, cached_files = _extract_with_cache(scan.root, scan.files, options, progress, cancelled)
 
     progress(PHASE_RESOLVING, 0, 0)
     resolution = resolve(records)
@@ -114,7 +129,12 @@ def analyze_project(
     progress(PHASE_GRAPH, 0, 0)
     module_graph = build_module_graph(resolution)
     cycles = find_cycles(module_graph)
+    _check(cancelled)
+
+    progress(PHASE_ANALYZING, 0, 0)
+    hierarchy = build_hierarchy(resolution)
     patterns = detect_patterns(resolution)
+    issues = find_issues(records, resolution, hierarchy, cycles, options.thresholds)
     _check(cancelled)
 
     skipped = [
@@ -135,45 +155,98 @@ def analyze_project(
         module_graph=module_graph,
         cycles=cycles,
         patterns=patterns,
+        hierarchy=hierarchy,
+        issues=issues,
         skipped=skipped,
         duration_seconds=time.perf_counter() - started,
+        cached_files=cached_files,
     )
 
 
-def _extract_all(
+def _extract_with_cache(
+    root: str,
+    files: list[ScannedFile],
+    options: AnalysisOptions,
+    progress: ProgressCallback,
+    cancelled: CancelCheck,
+) -> tuple[list[FileRecord], int]:
+    """Records for ``files`` in order, re-extracting only what the cache lacks."""
+    total = len(files)
+    progress(PHASE_PARSING, 0, total)
+    if not options.use_cache:
+        fresh = _extract(root, files, options.workers, progress, cancelled, 0, total)
+        return [fresh[scanned.rel_path] for scanned in files], 0
+
+    cache_dir = options.cache_dir or default_cache_dir()
+    with RecordCache.for_project(cache_dir, root) as cache:
+        known = cache.load(files)
+        missing = [scanned for scanned in files if scanned.rel_path not in known]
+        if known:
+            progress(PHASE_PARSING, len(known), total)
+        fresh = _extract(root, missing, options.workers, progress, cancelled, len(known), total)
+        cache.store((scanned, fresh[scanned.rel_path]) for scanned in missing)
+        cache.prune(scanned.rel_path for scanned in files)
+    known.update(fresh)
+    return [known[scanned.rel_path] for scanned in files], total - len(missing)
+
+
+def _extract(
     root: str,
     files: list[ScannedFile],
     workers: int | None,
     progress: ProgressCallback,
     cancelled: CancelCheck,
-) -> list[FileRecord]:
-    """Extract every file, in parallel when the project is large enough to benefit."""
-    total = len(files)
+    already_done: int,
+    total: int,
+) -> dict[str, FileRecord]:
+    """Extract ``files``, in parallel when there are enough of them to benefit."""
     paths = [scanned.rel_path for scanned in files]
     worker_count = default_workers() if workers is None else max(1, workers)
-    progress(PHASE_PARSING, 0, total)
-    records: list[FileRecord] = []
+    records: dict[str, FileRecord] = {}
 
-    if worker_count == 1 or total < PARALLEL_THRESHOLD:
-        for done, path in enumerate(paths, start=1):
-            _check(cancelled)
-            records.append(extract_file(root, path))
-            progress(PHASE_PARSING, done, total)
-        return records
+    if worker_count > 1 and len(paths) >= PARALLEL_THRESHOLD:
+        try:
+            _extract_parallel(
+                root, paths, worker_count, progress, cancelled, already_done, total, records
+            )
+        except (BrokenProcessPool, OSError) as exc:
+            # Worker processes can be unavailable (restricted sandboxes, frozen
+            # executables). Analysis still has to work, just more slowly.
+            logger.warning("Parallel extraction unavailable, continuing serially: %s", exc)
+        else:
+            return records
 
-    chunk_size = max(1, min(64, total // (worker_count * 4)))
+    for path in paths:
+        if path in records:
+            continue
+        _check(cancelled)
+        records[path] = extract_file(root, path)
+        progress(PHASE_PARSING, already_done + len(records), total)
+    return records
+
+
+def _extract_parallel(
+    root: str,
+    paths: list[str],
+    worker_count: int,
+    progress: ProgressCallback,
+    cancelled: CancelCheck,
+    already_done: int,
+    total: int,
+    records: dict[str, FileRecord],
+) -> None:
+    chunk_size = max(1, min(64, len(paths) // (worker_count * 4)))
     executor = ProcessPoolExecutor(max_workers=worker_count)
     try:
         results = executor.map(extract_file, repeat(root), paths, chunksize=chunk_size)
-        for done, record in enumerate(results, start=1):
+        for record in results:
             if cancelled():
                 raise AnalysisCancelled
-            records.append(record)
-            if done % chunk_size == 0 or done == total:
-                progress(PHASE_PARSING, done, total)
+            records[record.rel_path] = record
+            if len(records) % chunk_size == 0 or len(records) == len(paths):
+                progress(PHASE_PARSING, already_done + len(records), total)
     finally:
         executor.shutdown(wait=True, cancel_futures=True)
-    return records
 
 
 def _check(cancelled: CancelCheck) -> None:

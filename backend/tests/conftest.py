@@ -16,6 +16,16 @@ ProjectFactory = Callable[[Mapping[str, str]], Path]
 Analyze = Callable[[Mapping[str, str]], AnalysisResult]
 
 
+@pytest.fixture(autouse=True)
+def _isolated_cache(
+    tmp_path_factory: pytest.TempPathFactory, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Point the analysis cache at a throwaway directory for every test."""
+    monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path_factory.mktemp("cache")))
+    monkeypatch.setenv("LOCALAPPDATA", str(tmp_path_factory.mktemp("cache")))
+    monkeypatch.setenv("HOME", str(tmp_path_factory.mktemp("home")))
+
+
 @pytest.fixture
 def make_project(tmp_path: Path) -> ProjectFactory:
     """Return a factory that writes ``{relative_path: source}`` into a new temp project.

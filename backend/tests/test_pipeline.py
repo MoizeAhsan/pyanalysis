@@ -45,6 +45,7 @@ def test_progress_reports_each_phase_and_every_file(sample_project: Path) -> Non
         "scanning",
         "resolving",
         "graph",
+        "analyzing",
     ]
     assert [(done, total) for phase, done, total in events if phase == "parsing"] == [
         (i, 5) for i in range(6)

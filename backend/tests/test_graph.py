@@ -71,13 +71,14 @@ def test_module_graph_node_degrees_and_metrics(analyze: Analyze) -> None:
     assert graph.metrics.avg_degree == pytest.approx(8 / 7)
 
 
-def test_class_graph_separates_inheritance_from_use(analyze: Analyze) -> None:
+def test_class_graph_separates_inheritance_type_hints_and_use(analyze: Analyze) -> None:
     graph = build_class_graph(analyze(LAYERED).resolution)
 
     assert edges(graph) == {
         ("app/models.py:User", "app/models.py:Base", "inherits", 1),
         ("app/services/users.py:UserService", "app/models.py:Base", "inherits", 1),
-        ("app/services/users.py:UserService", "app/models.py:User", "uses", 3),
+        ("app/services/users.py:UserService", "app/models.py:User", "uses", 2),
+        ("app/services/users.py:UserService", "app/models.py:User", "uses_type", 1),
     }
     assert set(graph.nodes) == {
         "class:app/models.py:Base",

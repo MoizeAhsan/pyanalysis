@@ -43,6 +43,8 @@ class Resolution:
     class_bases: dict[str, list[str]] = field(default_factory=dict)
     external_packages: dict[str, int] = field(default_factory=dict)
     stdlib_modules: dict[str, int] = field(default_factory=dict)
+    #: ``(file, local name)`` of imports that another module reached through.
+    reexported: set[tuple[str, str]] = field(default_factory=set)
 
 
 class ModuleIndex:
@@ -134,6 +136,7 @@ class _Resolver:
         self._class_bases: dict[str, list[str]] = defaultdict(list)
         self._externals: Counter[str] = Counter()
         self._stdlib: Counter[str] = Counter()
+        self._reexported: set[tuple[str, str]] = set()
         self._chain_cache: dict[tuple[str, int, tuple[str, ...]], str | None] = {}
 
     # ------------------------------------------------------------------ driver
@@ -159,6 +162,7 @@ class _Resolver:
             class_bases=dict(self._class_bases),
             external_packages=dict(self._externals.most_common()),
             stdlib_modules=dict(self._stdlib.most_common()),
+            reexported=self._reexported,
         )
 
     def _index_elements(self) -> None:
@@ -329,6 +333,7 @@ class _Resolver:
                 return module_id(submodule)
         binding = self._bindings.get(rel_path, {}).get(name)
         if binding is not None:
+            self._reexported.add((rel_path, name))
             parts = self._binding_parts(binding, statement=False)
             return self._resolve_chain_uncached(rel_path, binding.level, parts, depth + 1)
         for star in self._stars.get(rel_path, ()):
