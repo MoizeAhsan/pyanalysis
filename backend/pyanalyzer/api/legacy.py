@@ -1,19 +1,21 @@
 """Original (v1) endpoints, kept as thin adapters over the new analysis core.
 
 These return whole-project payloads and exist only until the frontend has
-moved to the paginated API; they are then removed.
+moved to the paginated API; they are then removed. The v1 search endpoint is
+already gone: ``/api/search`` is served by the v2 API.
 """
 
 from __future__ import annotations
 
 import logging
-from typing import Annotated, Any
+from typing import Any
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
 from pyanalyzer.analysis.pipeline import AnalysisResult, analyze_project
-from pyanalyzer.api.dependencies import StoreDep
+from pyanalyzer.api.analysis import build_options
+from pyanalyzer.api.dependencies import ManagerDep, SettingsDep, StoreDep
 from pyanalyzer.models.core import CodeElement, DependencyGraph, ElementType, SourceLocation
 from pyanalyzer.scanner.file_scanner import ProjectPathError
 
@@ -168,10 +170,10 @@ def _project_info(result: AnalysisResult) -> dict[str, Any]:
 
 
 @router.post("/analyze")
-def analyze(request: AnalyzeRequest, store: StoreDep) -> AnalyzeResponse:
+def analyze(request: AnalyzeRequest, store: StoreDep, settings: SettingsDep) -> AnalyzeResponse:
     """Analyze a project synchronously and store the result."""
     try:
-        result = analyze_project(request.project_path)
+        result = analyze_project(request.project_path, build_options(settings))
     except ProjectPathError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except PermissionError as exc:
@@ -200,9 +202,9 @@ def analyze(request: AnalyzeRequest, store: StoreDep) -> AnalyzeResponse:
 
 
 @router.post("/reset")
-def reset(store: StoreDep) -> AnalyzeResponse:
+def reset(manager: ManagerDep) -> AnalyzeResponse:
     """Discard the current analysis."""
-    store.clear()
+    manager.reset()
     return AnalyzeResponse(
         success=True,
         message="Analysis session reset successfully",
@@ -249,98 +251,5 @@ def architecture(store: StoreDep) -> AnalyzeResponse:
             "architectural_patterns": _patterns(result),
             "circular_dependencies": result.cycles,
             "statistics": _statistics(result),
-        },
-    )
-
-
-def _match(element: CodeElement, query: str) -> tuple[int, str, str] | None:
-    """Rank, match type, and matched text for an element, or ``None``."""
-    if query in element.name.lower():
-        return 0, "name", element.name
-    docstring = element.docstring
-    if docstring:
-        position = docstring.lower().find(query)
-        if position >= 0:
-            start = max(0, position - 50)
-            end = min(len(docstring), position + len(query) + 50)
-            snippet = docstring[start:end]
-            if start > 0:
-                snippet = "..." + snippet
-            if end < len(docstring):
-                snippet += "..."
-            return 1, "docstring", snippet
-    if query in element.location.file_path.lower():
-        return 2, "file_path", element.location.file_path
-    return None
-
-
-@router.get("/search")
-def search(
-    store: StoreDep,
-    q: str = "",
-    element_type: str | None = None,
-    page: Annotated[int, Query(ge=1)] = 1,
-    page_size: Annotated[int, Query(ge=1, le=200)] = 20,
-    max_results: Annotated[int, Query(ge=1, le=5000)] = 100,
-) -> AnalyzeResponse:
-    """Search elements by name, docstring, or file path."""
-    result = store.result
-    if result is None:
-        return AnalyzeResponse(
-            success=True, message=_NO_DATA, data={"has_data": False, "results": []}
-        )
-    query = q.strip().lower()
-    if not query:
-        return AnalyzeResponse(
-            success=True,
-            message="Empty search query",
-            data={"has_data": True, "results": [], "query": query, "element_type": element_type},
-        )
-
-    wanted = None
-    if element_type and element_type.lower() in ElementType:
-        wanted = ElementType(element_type.lower())
-    matches: list[tuple[int, str, str, str, CodeElement]] = []
-    for element in result.resolution.elements.values():
-        if wanted is not None and element.type is not wanted:
-            continue
-        found = _match(element, query)
-        if found is not None:
-            rank, match_type, text = found
-            matches.append((rank, element.name.lower(), match_type, text, element))
-    matches.sort(key=lambda match: match[:2])
-
-    truncated = len(matches) > max_results
-    matches = matches[:max_results]
-    total = len(matches)
-    total_pages = (total + page_size - 1) // page_size
-    start = (page - 1) * page_size
-    shown = matches[start : start + page_size]
-    return AnalyzeResponse(
-        success=True,
-        message=f"Found {total} results for '{query}' (page {page}/{total_pages})",
-        data={
-            "has_data": True,
-            "results": [
-                {
-                    "element": _element(result, element),
-                    "match_type": match_type,
-                    "match_text": text,
-                }
-                for _, _, match_type, text, element in shown
-            ],
-            "query": query,
-            "element_type": element_type,
-            "pagination": {
-                "page": page,
-                "page_size": page_size,
-                "total_results": total,
-                "total_pages": total_pages,
-                "has_next": page < total_pages,
-                "has_prev": page > 1,
-                "start_index": start + 1 if shown else 0,
-                "end_index": start + len(shown),
-            },
-            "truncated": truncated,
         },
     )

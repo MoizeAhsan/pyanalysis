@@ -11,6 +11,7 @@ from fastapi.testclient import TestClient
 
 from pyanalyzer.analysis.pipeline import AnalysisOptions, AnalysisResult, analyze_project
 from pyanalyzer.main import create_app
+from pyanalyzer.settings import Settings
 
 ProjectFactory = Callable[[Mapping[str, str]], Path]
 Analyze = Callable[[Mapping[str, str]], AnalysisResult]
@@ -124,7 +125,13 @@ def analyze(make_project: ProjectFactory) -> Analyze:
 
 
 @pytest.fixture
-def client() -> Iterator[TestClient]:
+def settings(tmp_path: Path) -> Settings:
+    """Server settings that keep all state inside the test's temp directory."""
+    return Settings(cache_dir=tmp_path / "analysis-cache", workers=1, static_dir=None)
+
+
+@pytest.fixture
+def client(settings: Settings) -> Iterator[TestClient]:
     """API client backed by a fresh application and an empty analysis store."""
-    with TestClient(create_app()) as test_client:
+    with TestClient(create_app(settings), base_url="http://localhost") as test_client:
         yield test_client
