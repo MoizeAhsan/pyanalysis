@@ -123,7 +123,8 @@ def analyze_project(
     records, cached_files = _extract_with_cache(scan.root, scan.files, options, progress, cancelled)
 
     progress(PHASE_RESOLVING, 0, 0)
-    resolution = resolve(records)
+    root_name = os.path.basename(scan.root) or scan.root
+    resolution = resolve(records, root_name)
     _check(cancelled)
 
     progress(PHASE_GRAPH, 0, 0)
@@ -142,7 +143,6 @@ def analyze_project(
         *(SkippedFile(r.rel_path, r.error) for r in records if r.error is not None),
     ]
     skipped.sort(key=lambda item: item.file_path)
-    root_name = os.path.basename(scan.root) or scan.root
     return AnalysisResult(
         project=ProjectInfo(
             name=root_name,

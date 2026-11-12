@@ -17,7 +17,6 @@ import {
   Box,
   useTheme,
   useMediaQuery,
-
   Collapse,
 } from '@mui/material';
 import {
@@ -28,13 +27,10 @@ import {
   AccountTree as ArchitectureIcon,
   Search as SearchIcon,
   Code as CodeIcon,
-  Settings as SettingsIcon,
   ExpandLess,
   ExpandMore,
   Visibility as VisibilityIcon,
-  PlayArrow as DemoIcon,
   Dashboard as DashboardIcon,
-  PlayArrow,
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import { ThemeSwitcher } from '@design-system/components/ThemeSwitcher';
@@ -86,35 +82,17 @@ const navigationItems: NavigationItem[] = [
         label: 'Code Explorer',
         icon: <CodeIcon />,
       },
+      {
+        id: 'issues',
+        label: 'Findings',
+        icon: <DashboardIcon />,
+      },
     ],
   },
   {
     id: 'search',
     label: 'Search',
     icon: <SearchIcon />,
-  },
-  {
-    id: 'demo',
-    label: 'Demo',
-    icon: <DemoIcon />,
-    children: [
-      {
-        id: 'visualization-demo',
-        label: 'Visualization Components',
-        icon: <DashboardIcon />,
-      },
-      {
-        id: 'component-demo',
-        label: 'Interactive Demo',
-        icon: <PlayArrow />,
-      },
-    ],
-  },
-  {
-    id: 'settings',
-    label: 'Settings',
-    icon: <SettingsIcon />,
-    disabled: true,
   },
 ];
 
@@ -130,15 +108,15 @@ export function AppShell({ children, currentView = 'home', onViewChange }: AppSh
   const [announcementId] = useState(() => AriaUtils.generateId('navigation-announcement'));
   const drawerRef = useRef<HTMLDivElement>(null);
   const mainContentRef = useRef<HTMLElement>(null);
-  
+
   // Enable keyboard navigation detection
   useKeyboardDetection();
-  
+
   // Keyboard navigation for drawer items
   const flatNavigationItems = React.useMemo(() => {
     const items: NavigationItem[] = [];
     const addItems = (navItems: NavigationItem[], depth = 0) => {
-      navItems.forEach(item => {
+      navItems.forEach((item) => {
         items.push({ ...item, depth });
         if (item.children && expandedItems.has(item.id)) {
           addItems(item.children, depth + 1);
@@ -149,19 +127,19 @@ export function AppShell({ children, currentView = 'home', onViewChange }: AppSh
     return items;
   }, [expandedItems]);
 
-  const {
-    containerRef: navigationContainerRef,
-    getItemProps,
-  } = useKeyboardNavigation(flatNavigationItems.length, {
-    orientation: 'vertical',
-    wrap: true,
-    onSelect: (index) => {
-      const item = flatNavigationItems[index];
-      if (item && !item.disabled) {
-        handleItemClick(item.id, Boolean(item.children));
-      }
+  const { containerRef: navigationContainerRef, getItemProps } = useKeyboardNavigation(
+    flatNavigationItems.length,
+    {
+      orientation: 'vertical',
+      wrap: true,
+      onSelect: (index) => {
+        const item = flatNavigationItems[index];
+        if (item && !item.disabled) {
+          handleItemClick(item.id, Boolean(item.children));
+        }
+      },
     },
-  });
+  );
 
   // Close mobile drawer when view changes
   useEffect(() => {
@@ -173,15 +151,11 @@ export function AppShell({ children, currentView = 'home', onViewChange }: AppSh
   // Announce navigation changes to screen readers
   useEffect(() => {
     const currentItem = navigationItems
-      .flatMap(item => [item, ...(item.children || [])])
-      .find(item => item.id === currentView);
-    
+      .flatMap((item) => [item, ...(item.children || [])])
+      .find((item) => item.id === currentView);
+
     if (currentItem) {
-      AriaUtils.updateLiveRegion(
-        announcementId,
-        `Navigated to ${currentItem.label}`,
-        'polite'
-      );
+      AriaUtils.updateLiveRegion(announcementId, `Navigated to ${currentItem.label}`, 'polite');
     }
   }, [currentView, announcementId]);
 
@@ -196,12 +170,12 @@ export function AppShell({ children, currentView = 'home', onViewChange }: AppSh
 
   const handleDrawerToggle = useCallback(() => {
     setMobileOpen(!mobileOpen);
-    
+
     // Announce drawer state change
     AriaUtils.updateLiveRegion(
       announcementId,
       `Navigation menu ${!mobileOpen ? 'opened' : 'closed'}`,
-      'polite'
+      'polite',
     );
   }, [mobileOpen, announcementId]);
 
@@ -211,185 +185,184 @@ export function AppShell({ children, currentView = 'home', onViewChange }: AppSh
   const hideHelp = useCallback(() => setHelpOpen(false), []);
 
   // Set up global keyboard shortcuts
-  const shortcuts = React.useMemo(() => createCommonShortcuts({
-    onHome: () => onViewChange?.('home'),
-    onSearch: () => onViewChange?.('search'),
-    onHelp: showHelp,
-    onToggleTheme: toggleMode,
-    onToggleNavigation: handleDrawerToggle,
-    onMainContent: () => mainContentRef.current?.focus(),
-  }), [onViewChange, showHelp, toggleMode, handleDrawerToggle]);
-  
+  const shortcuts = React.useMemo(
+    () =>
+      createCommonShortcuts({
+        onHome: () => onViewChange?.('home'),
+        onSearch: () => onViewChange?.('search'),
+        onHelp: showHelp,
+        onToggleTheme: toggleMode,
+        onToggleNavigation: handleDrawerToggle,
+        onMainContent: () => mainContentRef.current?.focus(),
+      }),
+    [onViewChange, showHelp, toggleMode, handleDrawerToggle],
+  );
+
   useKeyboardShortcuts({ shortcuts });
 
-  const handleItemClick = useCallback((itemId: string, hasChildren: boolean = false) => {
-    if (hasChildren) {
-      setExpandedItems(prev => {
-        const newSet = new Set(prev);
-        const isExpanding = !newSet.has(itemId);
-        
-        if (newSet.has(itemId)) {
-          newSet.delete(itemId);
-        } else {
-          newSet.add(itemId);
+  const handleItemClick = useCallback(
+    (itemId: string, hasChildren: boolean = false) => {
+      if (hasChildren) {
+        setExpandedItems((prev) => {
+          const newSet = new Set(prev);
+          const isExpanding = !newSet.has(itemId);
+
+          if (newSet.has(itemId)) {
+            newSet.delete(itemId);
+          } else {
+            newSet.add(itemId);
+          }
+
+          // Announce expansion state change
+          const item = navigationItems.find((nav) => nav.id === itemId);
+          if (item) {
+            AriaUtils.updateLiveRegion(
+              announcementId,
+              `${item.label} ${isExpanding ? 'expanded' : 'collapsed'}`,
+              'polite',
+            );
+          }
+
+          return newSet;
+        });
+      } else {
+        onViewChange?.(itemId);
+
+        // Close mobile drawer after navigation
+        if (isMobile) {
+          setMobileOpen(false);
         }
-        
-        // Announce expansion state change
-        const item = navigationItems.find(nav => nav.id === itemId);
-        if (item) {
-          AriaUtils.updateLiveRegion(
-            announcementId,
-            `${item.label} ${isExpanding ? 'expanded' : 'collapsed'}`,
-            'polite'
-          );
-        }
-        
-        return newSet;
-      });
-    } else {
-      onViewChange?.(itemId);
-      
-      // Close mobile drawer after navigation
-      if (isMobile) {
-        setMobileOpen(false);
+
+        // Focus main content after navigation
+        setTimeout(() => {
+          mainContentRef.current?.focus();
+        }, 100);
       }
-      
-      // Focus main content after navigation
-      setTimeout(() => {
-        mainContentRef.current?.focus();
-      }, 100);
-    }
-  }, [onViewChange, isMobile, announcementId]);
+    },
+    [onViewChange, isMobile, announcementId],
+  );
 
   const renderNavigationItem = (item: NavigationItem, depth = 0, flatIndex?: number) => {
     const hasChildren = item.children && item.children.length > 0;
     const isExpanded = expandedItems.has(item.id);
     const isSelected = currentView === item.id;
-    const isChildSelected = item.children?.some(child => child.id === currentView);
+    const isChildSelected = item.children?.some((child) => child.id === currentView);
     const itemProps = flatIndex !== undefined ? getItemProps(flatIndex) : {};
 
     return (
-      <ListItem 
-        key={item.id} 
-        disablePadding 
+      <ListItem
+        key={item.id}
+        disablePadding
         sx={{ display: 'block' }}
         component={motion.li}
         {...(!item.disabled && {
           whileHover: { x: 4, transition: { duration: 0.15, ease: [0, 0, 0.2, 1] } },
-          whileTap: { scale: 0.98, transition: { duration: 0.15, ease: [0, 0, 0.2, 1] } }
+          whileTap: { scale: 0.98, transition: { duration: 0.15, ease: [0, 0, 0.2, 1] } },
         })}
         style={{ borderRadius: 8, margin: '0 8px 4px 8px' }}
       >
-            <ListItemButton
-              {...itemProps}
-              onClick={() => handleItemClick(item.id, hasChildren)}
-              disabled={item.disabled || false}
-              selected={Boolean(isSelected || isChildSelected)}
-              sx={{
-                minHeight: { xs: 52, sm: 48 }, // Larger touch target on mobile
-                pl: 2 + depth * 2,
-                pr: 2,
-                borderRadius: 1,
-                transition: 'all 0.2s ease-in-out',
-                // Better touch feedback
-                WebkitTapHighlightColor: 'transparent',
-                touchAction: 'manipulation',
-                '&:hover': {
-                  backgroundColor: 'action.hover',
-                },
-                '&:active': {
-                  backgroundColor: 'action.selected',
-                },
-                '&:focus-visible': {
-                  outline: `2px solid ${theme.palette.primary.main}`,
-                  outlineOffset: 2,
-                  backgroundColor: 'action.focus',
-                },
-                '&.Mui-selected': {
-                  backgroundColor: 'primary.main',
-                  color: 'primary.contrastText',
-                  '&:hover': {
-                    backgroundColor: 'primary.dark',
-                  },
-                  '&:focus-visible': {
-                    outline: `2px solid ${theme.palette.primary.contrastText}`,
-                  },
-                  '& .MuiListItemIcon-root': {
-                    color: 'primary.contrastText',
-                  },
-                },
-                '&.Mui-disabled': {
-                  opacity: 0.5,
-                },
-              }}
-              aria-label={`${item.label}${hasChildren ? (isExpanded ? ', expanded' : ', collapsed') : ''}${item.disabled ? ', disabled' : ''}`}
-              aria-expanded={hasChildren ? isExpanded : undefined}
-              aria-current={isSelected ? 'page' : undefined}
-              aria-describedby={item.disabled ? `${item.id}-disabled-desc` : undefined}
-            >
-              <ListItemIcon
-                sx={{
-                  minWidth: 40,
-                  color: 'inherit',
-                  transition: 'transform 0.2s ease-in-out',
-                }}
-                aria-hidden="true"
-              >
-                {item.icon}
-              </ListItemIcon>
-              <ListItemText
-                primary={item.label}
-                sx={{
-                  '& .MuiTypography-root': {
-                    fontWeight: isSelected ? 600 : 400,
-                    fontSize: depth > 0 ? '0.875rem' : '1rem',
-                  },
-                }}
-              />
-              {hasChildren && (
-                <Box
-                  component="span"
-                  sx={{ 
-                    color: 'inherit',
-                    display: 'flex',
-                    alignItems: 'center',
-                    ml: 1,
-                  }}
-                  aria-hidden="true"
-                >
-                  {isExpanded ? <ExpandLess /> : <ExpandMore />}
-                </Box>
-              )}
-            </ListItemButton>
-          
-          {/* Hidden description for disabled items */}
-          {item.disabled && (
+        <ListItemButton
+          {...itemProps}
+          onClick={() => handleItemClick(item.id, hasChildren)}
+          disabled={item.disabled || false}
+          selected={Boolean(isSelected || isChildSelected)}
+          sx={{
+            minHeight: { xs: 52, sm: 48 }, // Larger touch target on mobile
+            pl: 2 + depth * 2,
+            pr: 2,
+            borderRadius: 1,
+            transition: 'all 0.2s ease-in-out',
+            // Better touch feedback
+            WebkitTapHighlightColor: 'transparent',
+            touchAction: 'manipulation',
+            '&:hover': {
+              backgroundColor: 'action.hover',
+            },
+            '&:active': {
+              backgroundColor: 'action.selected',
+            },
+            '&:focus-visible': {
+              outline: `2px solid ${theme.palette.primary.main}`,
+              outlineOffset: 2,
+              backgroundColor: 'action.focus',
+            },
+            '&.Mui-selected': {
+              backgroundColor: 'primary.main',
+              color: 'primary.contrastText',
+              '&:hover': {
+                backgroundColor: 'primary.dark',
+              },
+              '&:focus-visible': {
+                outline: `2px solid ${theme.palette.primary.contrastText}`,
+              },
+              '& .MuiListItemIcon-root': {
+                color: 'primary.contrastText',
+              },
+            },
+            '&.Mui-disabled': {
+              opacity: 0.5,
+            },
+          }}
+          aria-label={`${item.label}${hasChildren ? (isExpanded ? ', expanded' : ', collapsed') : ''}${item.disabled ? ', disabled' : ''}`}
+          aria-expanded={hasChildren ? isExpanded : undefined}
+          aria-current={isSelected ? 'page' : undefined}
+          aria-describedby={item.disabled ? `${item.id}-disabled-desc` : undefined}
+        >
+          <ListItemIcon
+            sx={{
+              minWidth: 40,
+              color: 'inherit',
+              transition: 'transform 0.2s ease-in-out',
+            }}
+            aria-hidden="true"
+          >
+            {item.icon}
+          </ListItemIcon>
+          <ListItemText
+            primary={item.label}
+            sx={{
+              '& .MuiTypography-root': {
+                fontWeight: isSelected ? 600 : 400,
+                fontSize: depth > 0 ? '0.875rem' : '1rem',
+              },
+            }}
+          />
+          {hasChildren && (
             <Box
-              id={`${item.id}-disabled-desc`}
-              sx={{ 
-                position: 'absolute',
-                left: '-10000px',
-                width: '1px',
-                height: '1px',
-                overflow: 'hidden',
+              component="span"
+              sx={{
+                color: 'inherit',
+                display: 'flex',
+                alignItems: 'center',
+                ml: 1,
               }}
+              aria-hidden="true"
             >
-              This feature is currently disabled
+              {isExpanded ? <ExpandLess /> : <ExpandMore />}
             </Box>
           )}
+        </ListItemButton>
+
+        {/* Hidden description for disabled items */}
+        {item.disabled && (
+          <Box
+            id={`${item.id}-disabled-desc`}
+            sx={{
+              position: 'absolute',
+              left: '-10000px',
+              width: '1px',
+              height: '1px',
+              overflow: 'hidden',
+            }}
+          >
+            This feature is currently disabled
+          </Box>
+        )}
 
         {hasChildren && (
-          <Collapse 
-            in={isExpanded} 
-            timeout="auto" 
-            unmountOnExit
-          >
-            <List 
-              component="ul" 
-              disablePadding
-              aria-label={`${item.label} submenu`}
-            >
-              {item.children?.map(child => renderNavigationItem(child, depth + 1))}
+          <Collapse in={isExpanded} timeout="auto" unmountOnExit>
+            <List component="ul" disablePadding aria-label={`${item.label} submenu`}>
+              {item.children?.map((child) => renderNavigationItem(child, depth + 1))}
             </List>
           </Collapse>
         )}
@@ -433,14 +406,16 @@ export function AppShell({ children, currentView = 'home', onViewChange }: AppSh
             gap: 1,
           }}
         >
-          <span role="img" aria-label="Python snake">🐍</span>
+          <span role="img" aria-label="Python snake">
+            🐍
+          </span>
           Code Analyzer
         </Typography>
         {isMobile && (
           <IconButton
             onClick={handleDrawerToggle}
             aria-label="Close navigation menu"
-            sx={{ 
+            sx={{
               color: 'text.secondary',
               '&:focus-visible': {
                 outline: `2px solid ${theme.palette.primary.main}`,
@@ -454,11 +429,8 @@ export function AppShell({ children, currentView = 'home', onViewChange }: AppSh
       </Box>
 
       {/* Navigation Items */}
-      <Box 
-        sx={{ flex: 1, overflow: 'auto', py: 1 }}
-        {...navigationContainerRef}
-      >
-        <List 
+      <Box sx={{ flex: 1, overflow: 'auto', py: 1 }} {...navigationContainerRef}>
+        <List
           component="ul"
           aria-label="Main navigation menu"
           sx={{
@@ -471,7 +443,7 @@ export function AppShell({ children, currentView = 'home', onViewChange }: AppSh
           }}
         >
           {navigationItems.map((item) => {
-            const flatIndex = flatNavigationItems.findIndex(flatItem => flatItem.id === item.id);
+            const flatIndex = flatNavigationItems.findIndex((flatItem) => flatItem.id === item.id);
             return renderNavigationItem(item, 0, flatIndex);
           })}
         </List>
@@ -564,12 +536,18 @@ export function AppShell({ children, currentView = 'home', onViewChange }: AppSh
               fontSize: { xs: '0.95rem', sm: '1.1rem', md: '1.25rem' },
               whiteSpace: 'nowrap',
               overflow: 'hidden',
-              textOverflow: 'ellipsis'
+              textOverflow: 'ellipsis',
             }}
           >
-            <span role="img" aria-label="Python snake" style={{ fontSize: '1.3em' }}>🐍</span>
-            <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>Python Code Analyzer</Box>
-            <Box component="span" sx={{ display: { xs: 'inline', sm: 'none' } }}>PyAnalyzer</Box>
+            <span role="img" aria-label="Python snake" style={{ fontSize: '1.3em' }}>
+              🐍
+            </span>
+            <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
+              Python Code Analyzer
+            </Box>
+            <Box component="span" sx={{ display: { xs: 'inline', sm: 'none' } }}>
+              PyAnalyzer
+            </Box>
           </Typography>
 
           {/* Theme Switcher */}
@@ -650,16 +628,18 @@ export function AppShell({ children, currentView = 'home', onViewChange }: AppSh
       >
         {/* Toolbar spacer */}
         <Toolbar />
-        
+
         {/* Page Content */}
-        <Box sx={{ 
-          p: { xs: 1, sm: 2, md: 3 },
-          pb: { xs: 8, sm: 3, md: 4 }, // Extra bottom padding on mobile for safe area
-        }}>
+        <Box
+          sx={{
+            p: { xs: 1, sm: 2, md: 3 },
+            pb: { xs: 8, sm: 3, md: 4 }, // Extra bottom padding on mobile for safe area
+          }}
+        >
           {children}
         </Box>
       </Box>
-      
+
       {/* Live region for announcements */}
       <Box
         id={announcementId}
@@ -675,12 +655,8 @@ export function AppShell({ children, currentView = 'home', onViewChange }: AppSh
       />
 
       {/* Keyboard Help Dialog */}
-      <KeyboardHelpDialog
-        open={helpOpen}
-        onClose={hideHelp}
-        shortcuts={shortcuts}
-      />
-      
+      <KeyboardHelpDialog open={helpOpen} onClose={hideHelp} shortcuts={shortcuts} />
+
       {/* Footer - contentinfo landmark at top level */}
       <Box
         component="footer"

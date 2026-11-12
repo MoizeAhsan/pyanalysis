@@ -24,12 +24,15 @@ export function useFocusTrap({
   const previousFocusRef = useRef<HTMLElement | null>(null);
   const cleanupRef = useRef<(() => void) | null>(null);
 
-  const handleEscape = useCallback((event: KeyboardEvent) => {
-    if (event.key === 'Escape') {
-      event.preventDefault();
-      onEscape?.();
-    }
-  }, [onEscape]);
+  const handleEscape = useCallback(
+    (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        onEscape?.();
+      }
+    },
+    [onEscape],
+  );
 
   useEffect(() => {
     if (!active || !containerRef.current) {
@@ -37,7 +40,7 @@ export function useFocusTrap({
     }
 
     const container = containerRef.current;
-    
+
     // Store the currently focused element
     if (restoreFocus) {
       previousFocusRef.current = document.activeElement as HTMLElement;
@@ -98,7 +101,7 @@ export function useFocusRegion() {
 
   const focusFirstElement = useCallback(() => {
     if (!containerRef.current) return;
-    
+
     const focusableElements = FocusManager.getFocusableElements(containerRef.current);
     if (focusableElements.length > 0) {
       focusableElements[0]?.focus();
@@ -107,7 +110,7 @@ export function useFocusRegion() {
 
   const focusLastElement = useCallback(() => {
     if (!containerRef.current) return;
-    
+
     const focusableElements = FocusManager.getFocusableElements(containerRef.current);
     if (focusableElements.length > 0) {
       focusableElements[focusableElements.length - 1]?.focus();

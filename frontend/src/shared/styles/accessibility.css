@@ -39,7 +39,7 @@
   .MuiListItemButton-root {
     border: 1px solid currentColor !important;
   }
-  
+
   .MuiDrawer-paper {
     border: 2px solid currentColor !important;
   }
@@ -55,7 +55,7 @@
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
-  
+
   /* Keep essential animations for accessibility */
   .MuiCollapse-root,
   .MuiDrawer-root,
@@ -81,8 +81,8 @@ body.no-focus-outline .focus-visible {
 }
 
 /* Dark theme focus indicators */
-[data-theme="dark"] .focus-visible,
-[data-theme="dark"] *:focus-visible {
+[data-theme='dark'] .focus-visible,
+[data-theme='dark'] *:focus-visible {
   outline-color: #64b5f6 !important;
 }
 
@@ -100,7 +100,7 @@ body.no-focus-outline .focus-visible {
   background-color: rgba(25, 118, 210, 0.08) !important;
 }
 
-[data-theme="dark"] .keyboard-navigation-active .MuiListItemButton-root:focus {
+[data-theme='dark'] .keyboard-navigation-active .MuiListItemButton-root:focus {
   background-color: rgba(100, 181, 246, 0.08) !important;
 }
 
@@ -110,7 +110,7 @@ body.no-focus-outline .focus-visible {
     min-width: 44px !important;
     min-height: 44px !important;
   }
-  
+
   .MuiListItemButton-root {
     min-height: 48px !important;
   }
@@ -123,11 +123,11 @@ body.no-focus-outline .focus-visible {
   .MuiListItemButton-root {
     border: 1px solid WindowText !important;
   }
-  
+
   .MuiDrawer-paper {
     border: 2px solid WindowText !important;
   }
-  
+
   .MuiAppBar-root {
     background: WindowText !important;
     color: Window !important;
@@ -191,7 +191,7 @@ body.no-focus-outline .focus-visible {
   border: 1px solid rgba(224, 224, 224, 1);
 }
 
-[data-theme="dark"] .MuiTableCell-root {
+[data-theme='dark'] .MuiTableCell-root {
   border-color: rgba(81, 81, 81, 1);
 }
 

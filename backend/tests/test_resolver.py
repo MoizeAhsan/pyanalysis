@@ -36,6 +36,23 @@ class TestModuleIndex:
             "setup.py": "setup",
         }
 
+    def test_a_root_directory_that_is_a_package_contributes_its_name(self) -> None:
+        paths = ["__init__.py", "core.py", "sub/__init__.py", "sub/mod.py", "scripts/run.py"]
+
+        index = ModuleIndex(paths, root_name="mypkg")
+
+        assert index.names == {
+            "__init__.py": "mypkg",
+            "core.py": "mypkg.core",
+            "sub/__init__.py": "mypkg.sub",
+            "sub/mod.py": "mypkg.sub.mod",
+            "scripts/run.py": "run",
+        }
+        assert index.absolute("mypkg.sub.mod", "core.py") == "sub/mod.py"
+        assert index.absolute("mypkg", "core.py") == "__init__.py"
+        # Without a root __init__.py the directory name is not part of any import.
+        assert ModuleIndex(["core.py"], root_name="mypkg").absolute("mypkg.core", "x.py") is None
+
     def test_absolute_lookup_accepts_anchored_and_root_relative_names(self) -> None:
         index = ModuleIndex(["src/app/__init__.py", "src/app/engine.py"])
 
@@ -322,3 +339,26 @@ def test_children_index_lists_direct_members(analyze: Analyze) -> None:
     children = result.resolution.children
     assert children["module:m.py"] == ["class:m.py:A", "function:m.py:f"]
     assert children["class:m.py:A"] == ["function:m.py:A.x", "function:m.py:A.y"]
+
+
+def test_analyzing_a_package_directory_resolves_its_own_absolute_imports(
+    analyze: Analyze,
+) -> None:
+    """The project directory is named ``project`` by the fixture and is itself a package."""
+    result = analyze(
+        {
+            "__init__.py": "",
+            "core.py": "def run(): ...\n",
+            "sub/__init__.py": "",
+            "sub/mod.py": "from project.core import run\nimport project.sub\n\nrun()\n",
+        }
+    )
+
+    assert used_by(result, "function:core.py:run") == {
+        ("import", "sub/mod.py"),
+        ("call", "sub/mod.py"),
+    }
+    assert [(e.source, e.target) for e in result.module_graph.edges] == [
+        ("module:sub/mod.py", "module:core.py"),
+        ("module:sub/mod.py", "module:sub/__init__.py"),
+    ]

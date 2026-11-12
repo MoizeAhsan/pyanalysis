@@ -14,9 +14,9 @@ html {
 
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell',
+    'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background-color: #fafafa;
@@ -27,8 +27,7 @@ body {
 }
 
 code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
-    monospace;
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
 }
 
 /* ==================== */
@@ -127,7 +126,7 @@ code {
   html {
     font-size: 14px;
   }
-  
+
   /* Full width containers on mobile */
   .mobile-full-width {
     width: 100% !important;
@@ -135,23 +134,23 @@ code {
     padding-left: 8px !important;
     padding-right: 8px !important;
   }
-  
+
   /* Horizontal scroll prevention */
   body {
     overflow-x: hidden;
   }
-  
+
   /* Stack buttons vertically on mobile */
   .mobile-stack {
     flex-direction: column !important;
     gap: 8px !important;
   }
-  
+
   /* Adjust spacing for mobile */
   .mobile-spacing {
     padding: 12px !important;
   }
-  
+
   /* Smaller border radius on mobile */
   .mobile-rounded {
     border-radius: 8px !important;
@@ -204,7 +203,7 @@ code {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
-  
+
   .fade-in {
     animation: none;
   }

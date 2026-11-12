@@ -9,9 +9,16 @@ export function useKeyboardDetection() {
     let isKeyboardNavigation = false;
 
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Tab' || event.key === 'ArrowUp' || event.key === 'ArrowDown' || 
-          event.key === 'ArrowLeft' || event.key === 'ArrowRight' || event.key === 'Enter' || 
-          event.key === ' ' || event.key === 'Escape') {
+      if (
+        event.key === 'Tab' ||
+        event.key === 'ArrowUp' ||
+        event.key === 'ArrowDown' ||
+        event.key === 'ArrowLeft' ||
+        event.key === 'ArrowRight' ||
+        event.key === 'Enter' ||
+        event.key === ' ' ||
+        event.key === 'Escape'
+      ) {
         if (!isKeyboardNavigation) {
           isKeyboardNavigation = true;
           document.body.classList.add('keyboard-navigation-active');

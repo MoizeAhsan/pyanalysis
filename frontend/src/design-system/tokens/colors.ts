@@ -17,7 +17,7 @@ export const colorTokens = {
     800: '#1565c0',
     900: '#0d47a1',
   },
-  
+
   // Secondary colors - Material Design 3 Teal palette
   secondary: {
     50: '#e0f2f1',
@@ -31,7 +31,7 @@ export const colorTokens = {
     800: '#00695c',
     900: '#004d40',
   },
-  
+
   // Error colors
   error: {
     50: '#ffebee',
@@ -45,7 +45,7 @@ export const colorTokens = {
     800: '#c62828',
     900: '#b71c1c',
   },
-  
+
   // Warning colors
   warning: {
     50: '#fff8e1',
@@ -59,7 +59,7 @@ export const colorTokens = {
     800: '#ff8f00',
     900: '#ff6f00',
   },
-  
+
   // Success colors
   success: {
     50: '#e8f5e8',
@@ -73,7 +73,7 @@ export const colorTokens = {
     800: '#2e7d32',
     900: '#1b5e20',
   },
-  
+
   // Info colors
   info: {
     50: '#e1f5fe',
@@ -87,7 +87,7 @@ export const colorTokens = {
     800: '#0277bd',
     900: '#01579b',
   },
-  
+
   // Neutral colors for light theme
   neutral: {
     50: '#fafafa',
@@ -101,7 +101,7 @@ export const colorTokens = {
     800: '#424242',
     900: '#212121',
   },
-  
+
   // Surface colors
   surface: {
     light: {
@@ -117,7 +117,7 @@ export const colorTokens = {
       overlay: 'rgba(255, 255, 255, 0.08)',
     },
   },
-  
+
   // Text colors
   text: {
     light: {
@@ -133,13 +133,13 @@ export const colorTokens = {
       hint: 'rgba(255, 255, 255, 0.38)',
     },
   },
-  
+
   // Divider colors
   divider: {
     light: 'rgba(0, 0, 0, 0.12)',
     dark: 'rgba(255, 255, 255, 0.12)',
   },
-  
+
   // Action colors
   action: {
     light: {

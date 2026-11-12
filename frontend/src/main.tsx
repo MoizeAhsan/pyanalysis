@@ -1,26 +1,34 @@
-import React from 'react'
-import ReactDOM from 'react-dom/client'
-import App from '@app/App'
-import { ThemeProvider } from '@design-system/providers/ThemeProvider'
-import { ErrorBoundary } from '@app/components/ErrorBoundary'
-import { NotificationProvider } from '@shared/components/NotificationSystem'
-import '@design-system/styles/cssVariables.css'
-import '@shared/styles/global.css'
-import '@shared/styles/accessibility.css'
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { BrowserRouter } from 'react-router-dom';
+import App from '@app/App';
+import { ErrorBoundary } from '@app/components/ErrorBoundary';
+import { ThemeProvider } from '@design-system/providers/ThemeProvider';
+import { createQueryClient } from '@shared/api/queries';
+import { NotificationProvider } from '@shared/components/NotificationSystem';
+import { logger } from '@shared/lib/logger';
+import '@design-system/styles/cssVariables.css';
+import '@shared/styles/global.css';
+import '@shared/styles/accessibility.css';
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
+const root = document.getElementById('root');
+if (!root) throw new Error('Missing #root element');
+
+const queryClient = createQueryClient();
+
+ReactDOM.createRoot(root).render(
   <React.StrictMode>
-    <ErrorBoundary
-      onError={(error, errorInfo) => {
-        // In production, you might want to send this to an error reporting service
-        console.error('Global error caught:', error, errorInfo);
-      }}
-    >
-      <ThemeProvider>
-        <NotificationProvider>
-          <App />
-        </NotificationProvider>
-      </ThemeProvider>
+    <ErrorBoundary onError={(error, info) => logger.error('Unhandled UI error', error, info)}>
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider>
+          <NotificationProvider>
+            <BrowserRouter>
+              <App />
+            </BrowserRouter>
+          </NotificationProvider>
+        </ThemeProvider>
+      </QueryClientProvider>
     </ErrorBoundary>
   </React.StrictMode>,
-)
+);

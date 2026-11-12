@@ -19,10 +19,7 @@ import {
   useTheme,
   useMediaQuery,
 } from '@mui/material';
-import {
-  Close as CloseIcon,
-  Keyboard as KeyboardIcon,
-} from '@mui/icons-material';
+import { Close as CloseIcon, Keyboard as KeyboardIcon } from '@mui/icons-material';
 import { useFocusTrap } from '@shared/hooks/useFocusTrap';
 
 interface KeyboardShortcut {
@@ -43,7 +40,7 @@ interface KeyboardHelpDialogProps {
 export function KeyboardHelpDialog({ open, onClose, shortcuts }: KeyboardHelpDialogProps) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  
+
   const { containerProps } = useFocusTrap({
     active: open,
     onEscape: onClose,
@@ -56,7 +53,7 @@ export function KeyboardHelpDialog({ open, onClose, shortcuts }: KeyboardHelpDia
     if (shortcut.altKey) keys.push(isMobile ? 'Alt' : '⌥');
     if (shortcut.shiftKey) keys.push(isMobile ? 'Shift' : '⇧');
     keys.push(shortcut.key === ' ' ? 'Space' : shortcut.key.toUpperCase());
-    
+
     return keys;
   };
 
@@ -77,9 +74,9 @@ export function KeyboardHelpDialog({ open, onClose, shortcuts }: KeyboardHelpDia
         },
       }}
     >
-      <DialogTitle 
+      <DialogTitle
         id="keyboard-help-title"
-        sx={{ 
+        sx={{
           pb: 2,
           display: 'flex',
           alignItems: 'center',
@@ -108,13 +105,14 @@ export function KeyboardHelpDialog({ open, onClose, shortcuts }: KeyboardHelpDia
       </DialogTitle>
 
       <DialogContent dividers>
-        <Typography 
+        <Typography
           id="keyboard-help-description"
-          variant="body2" 
-          color="text.secondary" 
+          variant="body2"
+          color="text.secondary"
           sx={{ mb: 3 }}
         >
-          Use these keyboard shortcuts to navigate and interact with the application more efficiently.
+          Use these keyboard shortcuts to navigate and interact with the application more
+          efficiently.
         </Typography>
 
         <List dense sx={{ '& .MuiListItem-root': { px: 0 } }}>
@@ -133,7 +131,7 @@ export function KeyboardHelpDialog({ open, onClose, shortcuts }: KeyboardHelpDia
               <ListItemText
                 primary={shortcut.description}
                 primaryTypographyProps={{
-                  sx: { 
+                  sx: {
                     fontWeight: 500,
                     fontSize: '0.925rem',
                   },
@@ -167,17 +165,19 @@ export function KeyboardHelpDialog({ open, onClose, shortcuts }: KeyboardHelpDia
 
         <Box sx={{ mt: 3, p: 2, backgroundColor: 'action.hover', borderRadius: 1 }}>
           <Typography variant="body2" color="text.secondary">
-            <strong>Tip:</strong> Press <Chip 
-              label="?" 
-              size="small" 
+            <strong>Tip:</strong> Press{' '}
+            <Chip
+              label="?"
+              size="small"
               variant="outlined"
-              sx={{ 
-                fontFamily: 'monospace', 
+              sx={{
+                fontFamily: 'monospace',
                 fontSize: '0.7rem',
                 height: 20,
                 mx: 0.5,
-              }} 
-            /> at any time to open this help dialog.
+              }}
+            />{' '}
+            at any time to open this help dialog.
           </Typography>
         </Box>
       </DialogContent>
@@ -211,11 +211,7 @@ export function useKeyboardHelp(shortcuts: KeyboardShortcut[]) {
   const hideHelp = () => setOpen(false);
 
   const KeyboardHelpComponent = () => (
-    <KeyboardHelpDialog
-      open={open}
-      onClose={hideHelp}
-      shortcuts={shortcuts}
-    />
+    <KeyboardHelpDialog open={open} onClose={hideHelp} shortcuts={shortcuts} />
   );
 
   return {

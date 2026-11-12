@@ -2,18 +2,9 @@
  * Global Error Boundary with fallback UI and error reporting
  */
 
-import { Component, ErrorInfo, ReactNode } from 'react';
-import {
-  Box,
-  Typography,
-  Button,
-  Paper,
-  Alert,
-  AlertTitle,
-  Collapse,
-
-  Stack,
-} from '@mui/material';
+import { Component, type ErrorInfo, type ReactNode } from 'react';
+import { logger } from '@shared/lib/logger';
+import { Box, Typography, Button, Paper, Alert, AlertTitle, Collapse, Stack } from '@mui/material';
 import {
   ErrorOutline as ErrorIcon,
   Refresh as RefreshIcon,
@@ -62,13 +53,7 @@ export class ErrorBoundary extends Component<Props, State> {
     // Call custom error handler if provided
     this.props.onError?.(error, errorInfo);
 
-    // Log error to console in development
-    if (process.env.NODE_ENV === 'development') {
-      console.error('Error Boundary caught an error:', error, errorInfo);
-    }
-
-    // In production, you might want to send this to an error reporting service
-    // Example: Sentry.captureException(error, { contexts: { react: errorInfo } });
+    logger.error('Error boundary caught an error:', error, errorInfo);
   }
 
   handleRetry = () => {
@@ -85,7 +70,7 @@ export class ErrorBoundary extends Component<Props, State> {
   };
 
   toggleDetails = () => {
-    this.setState(prevState => ({
+    this.setState((prevState) => ({
       showDetails: !prevState.showDetails,
     }));
   };
@@ -126,7 +111,7 @@ export class ErrorBoundary extends Component<Props, State> {
                 mb: 2,
               }}
             />
-            
+
             <Typography
               variant="h4"
               component="h1"
@@ -135,14 +120,10 @@ export class ErrorBoundary extends Component<Props, State> {
             >
               Oops! Something went wrong
             </Typography>
-            
-            <Typography
-              variant="body1"
-              color="text.secondary"
-              sx={{ mb: 3, lineHeight: 1.6 }}
-            >
-              We're sorry, but something unexpected happened. The application has encountered an error
-              and needs to be refreshed. Your work may not be saved.
+
+            <Typography variant="body1" color="text.secondary" sx={{ mb: 3, lineHeight: 1.6 }}>
+              We're sorry, but something unexpected happened. The application has encountered an
+              error and needs to be refreshed. Your work may not be saved.
             </Typography>
 
             <Stack direction="row" spacing={2} justifyContent="center" sx={{ mb: 3 }}>
@@ -154,18 +135,14 @@ export class ErrorBoundary extends Component<Props, State> {
               >
                 Try Again
               </Button>
-              
-              <Button
-                variant="outlined"
-                onClick={this.handleReload}
-                size="large"
-              >
+
+              <Button variant="outlined" onClick={this.handleReload} size="large">
                 Reload Page
               </Button>
             </Stack>
 
             {/* Error Details (Development/Debug) */}
-            {(process.env.NODE_ENV === 'development' || this.state.showDetails) && (
+            {(import.meta.env.DEV || this.state.showDetails) && (
               <Box sx={{ textAlign: 'left' }}>
                 <Button
                   startIcon={this.state.showDetails ? <ExpandLessIcon /> : <ExpandMoreIcon />}
@@ -175,15 +152,11 @@ export class ErrorBoundary extends Component<Props, State> {
                 >
                   {this.state.showDetails ? 'Hide' : 'Show'} Error Details
                 </Button>
-                
+
                 <Collapse in={this.state.showDetails}>
-                  <Alert
-                    severity="error"
-                    icon={<BugReportIcon />}
-                    sx={{ textAlign: 'left' }}
-                  >
+                  <Alert severity="error" icon={<BugReportIcon />} sx={{ textAlign: 'left' }}>
                     <AlertTitle>Error Details</AlertTitle>
-                    
+
                     {this.state.error && (
                       <Box sx={{ mb: 2 }}>
                         <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
@@ -259,11 +232,7 @@ export class ErrorBoundary extends Component<Props, State> {
               </Box>
             )}
 
-            <Typography
-              variant="caption"
-              color="text.secondary"
-              sx={{ display: 'block', mt: 3 }}
-            >
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 3 }}>
               If this problem persists, please contact support with the error details above.
             </Typography>
           </Paper>
@@ -282,10 +251,10 @@ interface FeatureErrorBoundaryProps {
   onError?: (error: Error, errorInfo: ErrorInfo) => void;
 }
 
-export function FeatureErrorBoundary({ 
-  children, 
-  featureName, 
-  onError 
+export function FeatureErrorBoundary({
+  children,
+  featureName,
+  onError,
 }: FeatureErrorBoundaryProps) {
   return (
     <ErrorBoundary
@@ -298,11 +267,7 @@ export function FeatureErrorBoundary({
             borderRadius: 2,
           }}
           action={
-            <Button
-              color="inherit"
-              size="small"
-              onClick={() => window.location.reload()}
-            >
+            <Button color="inherit" size="small" onClick={() => window.location.reload()}>
               Reload
             </Button>
           }

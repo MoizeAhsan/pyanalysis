@@ -50,11 +50,18 @@ class Resolution:
 class ModuleIndex:
     """Maps dotted module names and relative imports to project files."""
 
-    def __init__(self, rel_paths: Iterable[str]) -> None:
+    def __init__(self, rel_paths: Iterable[str], root_name: str | None = None) -> None:
+        """Index ``rel_paths``.
+
+        ``root_name`` is the name of the project directory. It matters only when
+        that directory is itself a package (it contains ``__init__.py``): its
+        modules are then imported as ``<root_name>.<module>``.
+        """
         self._paths = set(rel_paths)
         package_dirs = {
             path.rpartition("/")[0] for path in self._paths if path.endswith("__init__.py")
         }
+        root_is_package = bool(root_name) and "" in package_dirs
         self._by_name: dict[str, list[str]] = defaultdict(list)
         self.names: dict[str, str] = {}
 
@@ -67,6 +74,8 @@ class ModuleIndex:
             while top > 0 and "/".join(directories[:top]) in package_dirs:
                 top -= 1
             anchored_parts = directories[top:] if is_package else [*directories[top:], parts[-1]]
+            if top == 0 and root_is_package and root_name:
+                anchored_parts = [root_name, *anchored_parts]
             path_parts = directories if is_package else parts
             anchored = ".".join(anchored_parts)
             from_root = ".".join(path_parts)
@@ -123,9 +132,9 @@ class ModuleIndex:
 
 
 class _Resolver:
-    def __init__(self, records: Sequence[FileRecord]) -> None:
+    def __init__(self, records: Sequence[FileRecord], root_name: str | None) -> None:
         self._records = records
-        self._index = ModuleIndex(record.rel_path for record in records)
+        self._index = ModuleIndex((record.rel_path for record in records), root_name)
         self._elements: dict[str, CodeElement] = {}
         self._members: dict[str, dict[str, str]] = defaultdict(dict)
         self._children: dict[str, list[str]] = defaultdict(list)
@@ -377,6 +386,9 @@ def _import_text(binding: ImportBinding) -> str:
     return f"from {'.' * binding.level}{binding.module} import {imported}{suffix}"
 
 
-def resolve(records: Sequence[FileRecord]) -> Resolution:
-    """Resolve all cross-file relationships for a set of file records."""
-    return _Resolver(records).run()
+def resolve(records: Sequence[FileRecord], root_name: str | None = None) -> Resolution:
+    """Resolve all cross-file relationships for a set of file records.
+
+    ``root_name`` is the project directory's name; see :class:`ModuleIndex`.
+    """
+    return _Resolver(records, root_name).run()

@@ -1,10 +1,8 @@
 /// <reference types="vite/client" />
 
 interface ImportMetaEnv {
-  readonly VITE_API_BASE_URL: string;
-  readonly VITE_DEV_MODE: string;
-  readonly VITE_ENABLE_PERFORMANCE_MONITORING: string;
-  readonly VITE_ENABLE_DEBUG_MODE: string;
+  /** Origin of the backend when it is not the page's own origin. Usually unset. */
+  readonly VITE_API_BASE_URL?: string;
 }
 
 interface ImportMeta {

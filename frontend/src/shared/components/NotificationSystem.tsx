@@ -2,17 +2,8 @@
  * Global Notification System with Toast Messages
  */
 
-import { createContext, useContext, useState, useCallback, ReactNode } from 'react';
-import {
-  Snackbar,
-  Alert,
-  AlertTitle,
-  IconButton,
-  Slide,
-  Stack,
-  Portal,
-  Box,
-} from '@mui/material';
+import { createContext, useContext, useState, useCallback, type ReactNode } from 'react';
+import { Snackbar, Alert, AlertTitle, IconButton, Slide, Stack, Portal, Box } from '@mui/material';
 import {
   Close as CloseIcon,
   CheckCircle as SuccessIcon,
@@ -55,65 +46,80 @@ interface NotificationProviderProps {
   maxNotifications?: number;
 }
 
-export function NotificationProvider({ 
-  children, 
-  maxNotifications = 5 
+export function NotificationProvider({
+  children,
+  maxNotifications = 5,
 }: NotificationProviderProps) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
 
-  const addNotification = useCallback((notification: Omit<Notification, 'id'>) => {
-    const id = `notification-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    const newNotification: Notification = {
-      id,
-      duration: 6000, // Default 6 seconds
-      ...notification,
-    };
-
-    setNotifications(prev => {
-      const updated = [newNotification, ...prev];
-      // Limit the number of notifications
-      return updated.slice(0, maxNotifications);
-    });
-
-    // Auto-remove non-persistent notifications
-    if (!newNotification.persistent && newNotification.duration && newNotification.duration > 0) {
-      setTimeout(() => {
-        removeNotification(id);
-      }, newNotification.duration);
-    }
-
-    return id;
-  }, [maxNotifications]);
-
   const removeNotification = useCallback((id: string) => {
-    setNotifications(prev => prev.filter(notification => notification.id !== id));
+    setNotifications((prev) => prev.filter((notification) => notification.id !== id));
   }, []);
+
+  const addNotification = useCallback(
+    (notification: Omit<Notification, 'id'>) => {
+      const id = `notification-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
+      const newNotification: Notification = {
+        id,
+        duration: 6000, // Default 6 seconds
+        ...notification,
+      };
+
+      setNotifications((prev) => {
+        const updated = [newNotification, ...prev];
+        // Limit the number of notifications
+        return updated.slice(0, maxNotifications);
+      });
+
+      // Auto-remove non-persistent notifications
+      if (!newNotification.persistent && newNotification.duration && newNotification.duration > 0) {
+        setTimeout(() => {
+          removeNotification(id);
+        }, newNotification.duration);
+      }
+
+      return id;
+    },
+    [maxNotifications, removeNotification],
+  );
 
   const clearAll = useCallback(() => {
     setNotifications([]);
   }, []);
 
   // Convenience methods
-  const success = useCallback((message: string, options?: Partial<Notification>) => {
-    return addNotification({ type: 'success', message, ...options });
-  }, [addNotification]);
+  const success = useCallback(
+    (message: string, options?: Partial<Notification>) => {
+      return addNotification({ type: 'success', message, ...options });
+    },
+    [addNotification],
+  );
 
-  const error = useCallback((message: string, options?: Partial<Notification>) => {
-    return addNotification({ 
-      type: 'error', 
-      message, 
-      duration: 8000, // Errors stay longer
-      ...options 
-    });
-  }, [addNotification]);
+  const error = useCallback(
+    (message: string, options?: Partial<Notification>) => {
+      return addNotification({
+        type: 'error',
+        message,
+        duration: 8000, // Errors stay longer
+        ...options,
+      });
+    },
+    [addNotification],
+  );
 
-  const warning = useCallback((message: string, options?: Partial<Notification>) => {
-    return addNotification({ type: 'warning', message, ...options });
-  }, [addNotification]);
+  const warning = useCallback(
+    (message: string, options?: Partial<Notification>) => {
+      return addNotification({ type: 'warning', message, ...options });
+    },
+    [addNotification],
+  );
 
-  const info = useCallback((message: string, options?: Partial<Notification>) => {
-    return addNotification({ type: 'info', message, ...options });
-  }, [addNotification]);
+  const info = useCallback(
+    (message: string, options?: Partial<Notification>) => {
+      return addNotification({ type: 'info', message, ...options });
+    },
+    [addNotification],
+  );
 
   const contextValue: NotificationContextType = {
     notifications,
@@ -230,9 +236,7 @@ function NotificationItem({ notification, onClose }: NotificationItemProps) {
         }
       >
         {notification.title && (
-          <AlertTitle sx={{ fontWeight: 600 }}>
-            {notification.title}
-          </AlertTitle>
+          <AlertTitle sx={{ fontWeight: 600 }}>{notification.title}</AlertTitle>
         )}
         {notification.message}
       </Alert>

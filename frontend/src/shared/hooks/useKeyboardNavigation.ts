@@ -15,7 +15,7 @@ interface UseKeyboardNavigationOptions {
 
 export function useKeyboardNavigation(
   itemCount: number,
-  options: UseKeyboardNavigationOptions = {}
+  options: UseKeyboardNavigationOptions = {},
 ) {
   const {
     orientation = 'vertical',
@@ -46,19 +46,14 @@ export function useKeyboardNavigation(
       const elements = itemRefs.current.filter(Boolean) as HTMLElement[];
       if (elements.length === 0) return;
 
-      KeyboardNavigation.handleArrowNavigation(
-        event,
-        elements,
-        currentIndex,
-        {
-          orientation,
-          wrap,
-          onNavigate: (index) => {
-            setCurrentIndex(index);
-            onNavigate?.(index);
-          },
-        }
-      );
+      KeyboardNavigation.handleArrowNavigation(event, elements, currentIndex, {
+        orientation,
+        wrap,
+        onNavigate: (index) => {
+          setCurrentIndex(index);
+          onNavigate?.(index);
+        },
+      });
 
       // Handle Enter and Space for selection
       if (event.key === 'Enter' || event.key === ' ') {
@@ -66,7 +61,7 @@ export function useKeyboardNavigation(
         onSelect?.(currentIndex);
       }
     },
-    [currentIndex, orientation, wrap, onNavigate, onSelect]
+    [currentIndex, orientation, wrap, onNavigate, onSelect],
   );
 
   // Attach keyboard event listener

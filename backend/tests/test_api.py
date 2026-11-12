@@ -638,11 +638,30 @@ def test_large_responses_are_gzipped(client: TestClient, make_project: ProjectFa
     assert response.json()["total"] == 201
 
 
-def test_openapi_schema_documents_the_v2_api_only(client: TestClient) -> None:
+def test_openapi_schema_documents_every_endpoint(client: TestClient) -> None:
     paths = client.get("/openapi.json").json()["paths"]
 
-    assert "/api/graph" in paths
-    assert "/api/data" not in paths
+    assert set(paths) == {
+        "/api/health",
+        "/api/analysis",
+        "/api/analysis/cancel",
+        "/api/summary",
+        "/api/tree",
+        "/api/elements",
+        "/api/element",
+        "/api/usages",
+        "/api/search",
+        "/api/graph",
+        "/api/issues",
+        "/api/cycles",
+        "/api/patterns",
+        "/api/source",
+    }
+
+
+def test_the_whole_project_dump_endpoints_are_gone(client: TestClient) -> None:
+    assert client.get("/api/data").status_code == 404
+    assert client.post("/api/analyze", json={"project_path": "/tmp"}).status_code == 404
 
 
 def test_root_without_a_frontend_build_points_at_the_docs(client: TestClient) -> None:

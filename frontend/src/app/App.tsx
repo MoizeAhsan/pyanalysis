@@ -1,386 +1,84 @@
-import { useEffect, useCallback, useMemo } from 'react';
-import { Container, Box, Typography } from '@mui/material';
-import { AnimatePresence } from 'framer-motion';
-import { AppShell } from './components/AppShell';
-import { AnimatedPage } from '@shared/components/AnimatedPage';
-import { useNotifications } from '@shared/components/NotificationSystem';
+import { Suspense, useCallback, useEffect, useRef } from 'react';
+import { Box, Button, CircularProgress, Container, Typography } from '@mui/material';
+import { useQueryClient } from '@tanstack/react-query';
+import { Link as RouterLink, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
+import { DATA_KEY, useAnalysisStatus } from '@shared/api/queries';
 import { AccessibilityButton } from '@shared/components/AccessibilitySettings';
-import {
-  useAnalysisTriggered,
-  useAnalysisData,
-  useLoading,
-  useCurrentView,
-  useSelectedElement,
-  useSetAnalysisTriggered,
-  useSetAnalysisData,
-  useSetLoading,
-  useSetCurrentView,
-  useSetSelectedElement
-} from '@shared/stores/appStore';
-import ProjectInput from '@features/analysis/components/ProjectInput';
-import AnalysisResults from '@features/analysis/components/AnalysisResults';
-import {
-  LazyMindMapViewer,
-  LazyArchitectureViewer,
-  LazyCodeExplorer,
-  LazySearchInterface,
-  LazyVisualizationDemo,
-  preloadMindMapViewer,
-  preloadArchitectureViewer,
-  preloadCodeExplorer
-} from './components/LazyRoutes';
-import type { AnalysisData, CodeElement } from '@shared/types';
+import { AppShell } from './components/AppShell';
+import { ErrorBoundary } from './components/ErrorBoundary';
+import { ROUTES, pathForId, routeForPath } from './routes';
 
-function App() {
-  // Use individual Zustand selectors to prevent object recreation
-  const analysisTriggered = useAnalysisTriggered();
-  const analysisData = useAnalysisData();
-  const loading = useLoading();
-  const currentView = useCurrentView();
-  const selectedElement = useSelectedElement();
-  const setAnalysisTriggered = useSetAnalysisTriggered();
-  const setAnalysisData = useSetAnalysisData();
-  const setLoading = useSetLoading();
-  const setCurrentView = useSetCurrentView();
-  const setSelectedElement = useSetSelectedElement();
-  const { success, error } = useNotifications();
+const APP_NAME = 'Python Code Analyzer';
 
-  // Preload critical components when analysis data is available
+function PageFallback() {
+  return (
+    <Box role="status" sx={{ display: 'grid', placeItems: 'center', minHeight: 240 }}>
+      <CircularProgress aria-label="Loading page" />
+    </Box>
+  );
+}
+
+function NotFound() {
+  return (
+    <Box sx={{ textAlign: 'center', py: 6 }}>
+      <Typography variant="h4" component="h2" gutterBottom>
+        Page not found
+      </Typography>
+      <Button component={RouterLink} to="/" variant="contained">
+        Go to the start page
+      </Button>
+    </Box>
+  );
+}
+
+/** Drop cached analysis data whenever a new analysis finishes, so views refetch. */
+function useRefreshOnNewAnalysis(): void {
+  const client = useQueryClient();
+  const status = useAnalysisStatus();
+  const state = status.data?.state;
+  const previous = useRef(state);
   useEffect(() => {
-    if (analysisData) {
-      // Preload visualization components likely to be used
-      preloadMindMapViewer();
-      preloadArchitectureViewer();
-      preloadCodeExplorer();
+    if (previous.current === 'running' && state === 'completed') {
+      void client.invalidateQueries({ queryKey: DATA_KEY });
     }
-  }, [analysisData]);
+    previous.current = state;
+  }, [client, state]);
+}
 
-  const handleAnalysisStart = useCallback(() => {
-    setLoading(true);
-    setAnalysisTriggered(false);
-    setAnalysisData(null);
-  }, [setLoading, setAnalysisTriggered, setAnalysisData]);
+export default function App() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const current = routeForPath(location.pathname);
+  useRefreshOnNewAnalysis();
 
-  const handleAnalysisComplete = useCallback((message = 'Analysis completed successfully') => {
-    setLoading(false);
-    setAnalysisTriggered(true);
-    success(message);
-  }, [setLoading, setAnalysisTriggered, success]);
+  useEffect(() => {
+    document.title = current && current.id !== 'home' ? `${current.title} · ${APP_NAME}` : APP_NAME;
+  }, [current]);
 
-  const handleAnalysisError = useCallback((errorMessage: string) => {
-    setLoading(false);
-    error(errorMessage);
-    setAnalysisTriggered(false);
-    setAnalysisData(null);
-  }, [setLoading, error, setAnalysisTriggered, setAnalysisData]);
-
-  const handleReset = useCallback(() => {
-    setAnalysisTriggered(false);
-    setAnalysisData(null);
-    setLoading(false);
-    setCurrentView('home');
-  }, [setAnalysisTriggered, setAnalysisData, setLoading, setCurrentView]);
-
-  const handleDataLoaded = useCallback((data: AnalysisData) => {
-    setAnalysisData(data);
-  }, [setAnalysisData]);
-
-  const handleViewChange = useCallback((view: string) => {
-    setCurrentView(view);
-  }, [setCurrentView]);
-
-  const handleElementSelect = useCallback((element: CodeElement) => {
-    setSelectedElement(element);
-    // Switch to Code Explorer view to show the selected element
-    setCurrentView('code-explorer');
-  }, [setSelectedElement, setCurrentView]);
-
-  // Memoize the main content components to prevent unnecessary re-renders
-  const homeContent = useMemo(() => (
-    <AnimatedPage pageKey="home">
-      <Container maxWidth="xl" className="fade-in" sx={{ px: { xs: 1.5, sm: 2, md: 3 } }}>
-        <Box sx={{
-          mb: { xs: 1.5, sm: 2, md: 3 },
-          textAlign: 'center',
-          animation: 'fadeIn 0.8s cubic-bezier(0.4, 0, 0.2, 1)'
-        }}>
-          {/* Short title for mobile */}
-          <Typography
-            variant="h4"
-            component="h2"
-            gutterBottom
-            sx={{
-              display: { xs: 'block', sm: 'none' },
-              fontWeight: 700,
-              fontSize: '1.1rem',
-              lineHeight: 1.3,
-              background: 'linear-gradient(135deg, #1976d2 0%, #42a5f5 100%)',
-              backgroundClip: 'text',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              mb: 1,
-              px: 1,
-              width: '100%',
-              textAlign: 'center',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap'
-            }}
-          >
-            Py Project Explorer
-          </Typography>
-          {/* Full title for larger screens */}
-          <Typography
-            variant="h3"
-            component="h2"
-            gutterBottom
-            sx={{
-              display: { xs: 'none', sm: 'block' },
-              fontWeight: 700,
-              color: 'primary.main',
-              fontSize: { sm: '1.75rem', md: '2.25rem', lg: '3rem' },
-              lineHeight: 1.2,
-              background: 'linear-gradient(135deg, #1976d2 0%, #42a5f5 100%)',
-              backgroundClip: 'text',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              mb: 2
-            }}
-            className="responsive-title"
-          >
-            Visual Python Project Explorer
-          </Typography>
-          {/* Subtitle - hidden on very small screens */}
-          <Typography
-            variant="body1"
-            component="p"
-            color="text.secondary"
-            sx={{
-              display: { xs: 'none', sm: 'block' },
-              maxWidth: 600,
-              mx: 'auto',
-              fontSize: { sm: '0.9rem', md: '1rem' },
-              lineHeight: 1.5,
-              fontWeight: 400
-            }}
-          >
-            Analyze Python projects with interactive mind maps and architectural overviews.
-          </Typography>
-        </Box>
-
-        <ProjectInput
-          onAnalysisStart={handleAnalysisStart}
-          onAnalysisComplete={handleAnalysisComplete}
-          onAnalysisError={handleAnalysisError}
-          onReset={handleReset}
-          loading={loading}
-        />
-
-        {analysisTriggered && (
-          <AnalysisResults
-            analysisTriggered={analysisTriggered}
-            onDataLoaded={handleDataLoaded}
-            loading={loading}
-          />
-        )}
-      </Container>
-    </AnimatedPage>
-  ), [analysisTriggered, loading, handleAnalysisStart, handleAnalysisComplete, handleAnalysisError, handleReset, handleDataLoaded]);
-
-  const noDataMessage = useMemo(() => (
-    <AnimatedPage pageKey="no-data">
-      <Container maxWidth="xl">
-        <Typography variant="h6" color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
-          Please analyze a project first to view this section.
-        </Typography>
-      </Container>
-    </AnimatedPage>
-  ), []);
-
-  const renderContent = () => {
-    switch (currentView) {
-      case 'home':
-        return homeContent;
-
-      case 'mindmap':
-        return analysisData ? (
-          <AnimatedPage pageKey="mindmap">
-            <Container maxWidth="xl" className="fade-in" sx={{ px: { xs: 1, sm: 2, md: 3 } }}>
-              <Typography 
-                variant="h4" 
-                component="h2" 
-                gutterBottom 
-                sx={{ 
-                  fontWeight: 600, 
-                  mb: { xs: 2, sm: 3 },
-                  fontSize: { xs: '1.25rem', sm: '1.5rem', md: '2rem' }
-                }}
-              >
-                Mind Map View
-              </Typography>
-              <Box sx={{
-                backgroundColor: 'background.paper',
-                borderRadius: { xs: 1, sm: 2 },
-                minHeight: { xs: '400px', sm: '500px', md: '600px' },
-                height: { xs: 'calc(100vh - 200px)', sm: 'auto' },
-                boxShadow: '0px 4px 16px rgba(0, 0, 0, 0.08)',
-                overflow: 'hidden'
-              }}>
-                <LazyMindMapViewer data={analysisData} />
-              </Box>
-            </Container>
-          </AnimatedPage>
-        ) : noDataMessage;
-
-      case 'architecture':
-        return analysisData ? (
-          <AnimatedPage pageKey="architecture">
-            <Container maxWidth="xl" className="fade-in" sx={{ px: { xs: 1, sm: 2, md: 3 } }}>
-              <Typography 
-                variant="h4" 
-                component="h2" 
-                gutterBottom 
-                sx={{ 
-                  fontWeight: 600, 
-                  mb: { xs: 2, sm: 3 },
-                  fontSize: { xs: '1.25rem', sm: '1.5rem', md: '2rem' }
-                }}
-              >
-                Architecture View
-              </Typography>
-              <Box sx={{
-                backgroundColor: 'background.paper',
-                borderRadius: { xs: 1, sm: 2 },
-                minHeight: { xs: '400px', sm: '500px', md: '600px' },
-                height: { xs: 'calc(100vh - 200px)', sm: 'auto' },
-                boxShadow: '0px 4px 16px rgba(0, 0, 0, 0.08)',
-                overflow: 'hidden'
-              }}>
-                <LazyArchitectureViewer data={analysisData} />
-              </Box>
-            </Container>
-          </AnimatedPage>
-        ) : noDataMessage;
-
-      case 'code-explorer':
-        return analysisData ? (
-          <AnimatedPage pageKey="code-explorer">
-            <Container maxWidth="xl" className="fade-in" sx={{ px: { xs: 1, sm: 2, md: 3 } }}>
-              <Typography 
-                variant="h4" 
-                component="h2" 
-                gutterBottom 
-                sx={{ 
-                  fontWeight: 600, 
-                  mb: { xs: 2, sm: 3 },
-                  fontSize: { xs: '1.25rem', sm: '1.5rem', md: '2rem' }
-                }}
-              >
-                Code Explorer
-              </Typography>
-              <Box sx={{
-                backgroundColor: 'background.paper',
-                borderRadius: { xs: 1, sm: 2 },
-                minHeight: { xs: '400px', sm: '500px', md: '600px' },
-                boxShadow: '0px 4px 16px rgba(0, 0, 0, 0.08)',
-                overflow: 'auto'
-              }}>
-                <LazyCodeExplorer data={analysisData} selectedElement={selectedElement} />
-              </Box>
-            </Container>
-          </AnimatedPage>
-        ) : noDataMessage;
-
-      case 'search':
-        return analysisData ? (
-          <AnimatedPage pageKey="search">
-            <Container maxWidth="xl" className="fade-in" sx={{ px: { xs: 1, sm: 2, md: 3 } }}>
-              <Typography 
-                variant="h4" 
-                component="h2" 
-                gutterBottom 
-                sx={{ 
-                  fontWeight: 600, 
-                  mb: { xs: 2, sm: 3 },
-                  fontSize: { xs: '1.25rem', sm: '1.5rem', md: '2rem' }
-                }}
-              >
-                Search Interface
-              </Typography>
-              <Box sx={{
-                backgroundColor: 'background.paper',
-                borderRadius: { xs: 1, sm: 2 },
-                minHeight: { xs: '400px', sm: '500px', md: '600px' },
-                boxShadow: '0px 4px 16px rgba(0, 0, 0, 0.08)',
-                overflow: 'auto'
-              }}>
-                <LazySearchInterface data={analysisData} onElementSelect={handleElementSelect} />
-              </Box>
-            </Container>
-          </AnimatedPage>
-        ) : noDataMessage;
-
-      case 'visualization-demo':
-        return (
-          <AnimatedPage pageKey="visualization-demo">
-            <Container maxWidth="xl" className="fade-in">
-              <Typography variant="h4" component="h2" gutterBottom sx={{ fontWeight: 600, mb: 3 }}>
-                🚀 Modernized Visualization Components
-              </Typography>
-              <Box sx={{
-                backgroundColor: 'background.paper',
-                borderRadius: 2,
-                minHeight: '600px',
-                boxShadow: '0px 4px 16px rgba(0, 0, 0, 0.08)'
-              }}>
-                <LazyMindMapViewer />
-              </Box>
-            </Container>
-          </AnimatedPage>
-        );
-
-      case 'component-demo':
-        return (
-          <AnimatedPage pageKey="component-demo">
-            <Container maxWidth="xl" className="fade-in">
-              <Typography variant="h4" component="h2" gutterBottom sx={{ fontWeight: 600, mb: 3 }}>
-                🎮 Interactive Visualization Demo
-              </Typography>
-              <Box sx={{
-                backgroundColor: 'background.paper',
-                borderRadius: 2,
-                minHeight: '600px',
-                boxShadow: '0px 4px 16px rgba(0, 0, 0, 0.08)'
-              }}>
-                <LazyVisualizationDemo />
-              </Box>
-            </Container>
-          </AnimatedPage>
-        );
-
-      default:
-        return (
-          <AnimatedPage pageKey="404">
-            <Container maxWidth="xl">
-              <Typography variant="h6" color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
-                View not found.
-              </Typography>
-            </Container>
-          </AnimatedPage>
-        );
-    }
-  };
+  const handleViewChange = useCallback(
+    (id: string) => {
+      const path = pathForId(id);
+      if (path) navigate(path);
+    },
+    [navigate],
+  );
 
   return (
-    <AppShell currentView={currentView} onViewChange={handleViewChange}>
-      <AnimatePresence mode="wait" initial={false}>
-        {renderContent()}
-      </AnimatePresence>
-      
-      {/* Accessibility Settings Button */}
+    <AppShell currentView={current?.id ?? ''} onViewChange={handleViewChange}>
+      <Container maxWidth="xl" sx={{ px: { xs: 1.5, sm: 2, md: 3 }, py: { xs: 2, md: 3 } }}>
+        {/* A failure in one page must not take the navigation down with it. */}
+        <ErrorBoundary key={location.pathname}>
+          <Suspense fallback={<PageFallback />}>
+            <Routes>
+              {ROUTES.map(({ path, component: Page }) => (
+                <Route key={path} path={path} element={<Page />} />
+              ))}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </Suspense>
+        </ErrorBoundary>
+      </Container>
       <AccessibilityButton />
     </AppShell>
   );
 }
-
-export default App;

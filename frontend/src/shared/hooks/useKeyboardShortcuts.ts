@@ -3,7 +3,7 @@
  */
 
 import { useEffect, useCallback } from 'react';
-import { FocusManager, AriaUtils } from '@shared/utils/accessibility';
+import { FocusManager } from '@shared/utils/accessibility';
 
 interface KeyboardShortcut {
   key: string;
@@ -21,17 +21,14 @@ interface UseKeyboardShortcutsOptions {
   shortcuts: KeyboardShortcut[];
 }
 
-export function useKeyboardShortcuts({
-  enabled = true,
-  shortcuts,
-}: UseKeyboardShortcutsOptions) {
+export function useKeyboardShortcuts({ enabled = true, shortcuts }: UseKeyboardShortcutsOptions) {
   const handleKeyDown = useCallback(
     (event: KeyboardEvent) => {
       if (!enabled) return;
 
       // Don't trigger shortcuts when user is typing in an input
       const target = event.target as HTMLElement;
-      const isInputElement = 
+      const isInputElement =
         target.tagName === 'INPUT' ||
         target.tagName === 'TEXTAREA' ||
         target.contentEditable === 'true';
@@ -56,7 +53,7 @@ export function useKeyboardShortcuts({
         }
       }
     },
-    [enabled, shortcuts]
+    [enabled, shortcuts],
   );
 
   useEffect(() => {
@@ -136,33 +133,3 @@ export const createCommonShortcuts = (actions: {
     description: 'Focus main content',
   },
 ];
-
-// Hook for keyboard shortcut help
-export function useKeyboardShortcutHelp(shortcuts: KeyboardShortcut[]) {
-  const showHelp = useCallback(() => {
-    const helpText = shortcuts
-      .map(shortcut => {
-        const keys = [];
-        if (shortcut.ctrlKey) keys.push('Ctrl');
-        if (shortcut.metaKey) keys.push('Cmd');
-        if (shortcut.altKey) keys.push('Alt');
-        if (shortcut.shiftKey) keys.push('Shift');
-        keys.push(shortcut.key.toUpperCase());
-        
-        return `${keys.join(' + ')}: ${shortcut.description}`;
-      })
-      .join('\n');
-
-    // Announce to screen readers
-    AriaUtils.updateLiveRegion(
-      'shortcut-help',
-      `Keyboard shortcuts available: ${helpText}`,
-      'polite'
-    );
-
-    // Could also show a modal dialog here
-    console.log('Keyboard Shortcuts:\n' + helpText);
-  }, [shortcuts]);
-
-  return { showHelp };
-}

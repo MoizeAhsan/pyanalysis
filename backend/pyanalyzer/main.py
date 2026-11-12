@@ -13,7 +13,7 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 from pyanalyzer import __version__
 from pyanalyzer.analysis.jobs import AnalysisManager
 from pyanalyzer.analysis.store import AnalysisStore
-from pyanalyzer.api import analysis, explore, legacy
+from pyanalyzer.api import analysis, explore
 from pyanalyzer.api.errors import ApiError, install_error_handlers
 from pyanalyzer.settings import Settings
 
@@ -43,7 +43,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     application.include_router(analysis.router, prefix="/api")
     application.include_router(explore.router, prefix="/api")
-    application.include_router(legacy.router, prefix="/api", include_in_schema=False)
 
     if settings.static_dir is not None:
         _serve_frontend(application, settings.static_dir.resolve())

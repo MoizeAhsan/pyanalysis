@@ -74,3 +74,6 @@ backend/dist/
 .env.development.local
 .env.test.local
 .env.production.local
+e2e/.cache/
+test-results/
+playwright-report/

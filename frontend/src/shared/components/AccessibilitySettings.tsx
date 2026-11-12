@@ -24,7 +24,6 @@ import {
   Animation as AnimationIcon,
   VolumeUp as VolumeIcon,
   Accessibility as AccessibilityIcon,
-  SettingsAccessibility as SettingsIcon,
   Info as InfoIcon,
   Close as CloseIcon,
   TextFields as TextFieldsIcon,
@@ -32,7 +31,11 @@ import {
   CenterFocusStrong as FocusIcon,
 } from '@mui/icons-material';
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useHighContrast, useReducedMotion, useColorContrastCheck } from '@shared/hooks/useAccessibility';
+import {
+  useHighContrast,
+  useReducedMotion,
+  useColorContrastCheck,
+} from '@shared/hooks/useAccessibility';
 
 interface AccessibilitySettingsProps {
   open?: boolean;
@@ -68,14 +71,15 @@ export function AccessibilitySettings({ open = true, onClose }: AccessibilitySet
   const [focusIndicator, setFocusIndicator] = useState(() => {
     return localStorage.getItem('accessibility-focus-indicator') !== 'false';
   });
-  
-  const { isHighContrast, systemPreference, toggleHighContrast, resetToSystemPreference } = useHighContrast();
+
+  const { isHighContrast, systemPreference, toggleHighContrast, resetToSystemPreference } =
+    useHighContrast();
   const { prefersReducedMotion } = useReducedMotion();
-  const { checkThemeContrast, getContrastRatio } = useColorContrastCheck();
+  const { checkThemeContrast } = useColorContrastCheck();
   const panelRef = useRef<HTMLDivElement>(null);
 
   const contrastResults = checkThemeContrast();
-  const hasContrastIssues = Object.values(contrastResults).some(result => !result);
+  const hasContrastIssues = Object.values(contrastResults).some((result) => !result);
 
   // Handle font size changes
   const handleFontSizeChange = (_event: Event, newValue: number | number[]) => {
@@ -90,7 +94,7 @@ export function AccessibilitySettings({ open = true, onClose }: AccessibilitySet
     const newValue = !focusIndicator;
     setFocusIndicator(newValue);
     localStorage.setItem('accessibility-focus-indicator', newValue.toString());
-    
+
     if (newValue) {
       document.body.classList.remove('no-focus-outline');
     } else {
@@ -99,18 +103,23 @@ export function AccessibilitySettings({ open = true, onClose }: AccessibilitySet
   };
 
   // Handle escape key
-  const handleKeyDown = useCallback((event: KeyboardEvent) => {
-    if (event.key === 'Escape' && onClose) {
-      onClose();
-    }
-  }, [onClose]);
+  const handleKeyDown = useCallback(
+    (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && onClose) {
+        onClose();
+      }
+    },
+    [onClose],
+  );
 
   useEffect(() => {
     if (open) {
       document.addEventListener('keydown', handleKeyDown);
       // Focus first interactive element
       setTimeout(() => {
-        const firstFocusable = panelRef.current?.querySelector('button, [tabindex="0"]') as HTMLElement;
+        const firstFocusable = panelRef.current?.querySelector(
+          'button, [tabindex="0"]',
+        ) as HTMLElement;
         firstFocusable?.focus();
       }, 100);
     }
@@ -125,7 +134,7 @@ export function AccessibilitySettings({ open = true, onClose }: AccessibilitySet
     if (savedFontSize) {
       document.documentElement.style.fontSize = `${savedFontSize}%`;
     }
-    
+
     const savedFocusIndicator = localStorage.getItem('accessibility-focus-indicator');
     if (savedFocusIndicator === 'false') {
       document.body.classList.add('no-focus-outline');
@@ -251,8 +260,7 @@ export function AccessibilitySettings({ open = true, onClose }: AccessibilitySet
         >
           {systemPreference
             ? 'System preference detected: High contrast'
-            : 'Improves visibility with stronger color differences'
-          }
+            : 'Improves visibility with stronger color differences'}
         </Typography>
 
         {systemPreference && !isHighContrast && (
@@ -264,10 +272,11 @@ export function AccessibilitySettings({ open = true, onClose }: AccessibilitySet
         <Collapse in={showContrastInfo}>
           <Alert severity="info" sx={{ mt: 2 }}>
             <Typography variant="body2" gutterBottom>
-              High contrast mode improves text readability by using stronger color differences. 
-              This is especially helpful for users with visual impairments or in bright lighting conditions.
+              High contrast mode improves text readability by using stronger color differences. This
+              is especially helpful for users with visual impairments or in bright lighting
+              conditions.
             </Typography>
-            
+
             {hasContrastIssues && (
               <Box sx={{ mt: 2 }}>
                 <Typography variant="body2" sx={{ fontWeight: 500 }}>
@@ -299,10 +308,10 @@ export function AccessibilitySettings({ open = true, onClose }: AccessibilitySet
           <Typography variant="subtitle1" sx={{ fontWeight: 500 }}>
             Text Size
           </Typography>
-          <Chip 
-            label={`${fontSize}%`} 
-            size="small" 
-            color="primary" 
+          <Chip
+            label={`${fontSize}%`}
+            size="small"
+            color="primary"
             variant="outlined"
             sx={{ ml: 'auto' }}
           />
@@ -376,7 +385,6 @@ export function AccessibilitySettings({ open = true, onClose }: AccessibilitySet
 
         <Box sx={{ ml: 4 }}>
           <Chip
-            icon={prefersReducedMotion ? undefined : undefined}
             label={prefersReducedMotion ? '✓ Reduced motion active' : 'Normal animations enabled'}
             color={prefersReducedMotion ? 'success' : 'default'}
             variant="outlined"
@@ -435,10 +443,10 @@ export function AccessibilitySettings({ open = true, onClose }: AccessibilitySet
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
             Use keyboard shortcuts for faster navigation:
           </Typography>
-          
+
           {/* Always visible shortcut */}
           <KeyBadge shortcut={{ key: '?', description: 'Show all shortcuts' }} />
-          
+
           <Collapse in={showShortcuts}>
             <Fade in={showShortcuts}>
               <Box sx={{ mt: 1 }}>
@@ -461,11 +469,11 @@ export function AccessibilitySettings({ open = true, onClose }: AccessibilitySet
             setFontSize(100);
             document.documentElement.style.fontSize = '100%';
             localStorage.removeItem('accessibility-font-size');
-            
+
             setFocusIndicator(true);
             document.body.classList.remove('no-focus-outline');
             localStorage.removeItem('accessibility-focus-indicator');
-            
+
             resetToSystemPreference();
           }}
         >
@@ -549,10 +557,7 @@ export function AccessibilityButton() {
               },
             }}
           >
-            <AccessibilitySettings
-              open={settingsOpen}
-              onClose={handleClose}
-            />
+            <AccessibilitySettings open={settingsOpen} onClose={handleClose} />
           </Box>
         </ClickAwayListener>
       )}

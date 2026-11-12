@@ -2,6 +2,7 @@
  * High contrast theme support and accessibility enhancements
  */
 
+import { createTheme, type Theme } from '@mui/material/styles';
 import { useEffect, useState, useCallback } from 'react';
 import { useTheme } from '@mui/material/styles';
 import { ColorContrast } from '@shared/utils/accessibility';
@@ -36,7 +37,7 @@ export function useHighContrast() {
     const checkSystemPreference = () => {
       const mediaQuery = window.matchMedia('(prefers-contrast: high)');
       setSystemPreference(mediaQuery.matches);
-      
+
       // If no user preference is set, follow system preference
       const userPreference = localStorage.getItem('high-contrast-mode');
       if (userPreference === null) {
@@ -79,7 +80,7 @@ export function useHighContrast() {
     mediaQuery.addListener(handleChange);
     window.addEventListener(HIGH_CONTRAST_CHANGE_EVENT, handleHighContrastChange);
     window.addEventListener('storage', handleStorageChange);
-    
+
     return () => {
       mediaQuery.removeListener(handleChange);
       window.removeEventListener(HIGH_CONTRAST_CHANGE_EVENT, handleHighContrastChange);
@@ -91,21 +92,25 @@ export function useHighContrast() {
     const newValue = !isHighContrast;
     setIsHighContrast(newValue);
     localStorage.setItem('high-contrast-mode', newValue.toString());
-    
+
     // Dispatch custom event to notify other instances
-    window.dispatchEvent(new CustomEvent(HIGH_CONTRAST_CHANGE_EVENT, {
-      detail: { isHighContrast: newValue }
-    }));
+    window.dispatchEvent(
+      new CustomEvent(HIGH_CONTRAST_CHANGE_EVENT, {
+        detail: { isHighContrast: newValue },
+      }),
+    );
   }, [isHighContrast]);
 
   const resetToSystemPreference = useCallback(() => {
     localStorage.removeItem('high-contrast-mode');
     setIsHighContrast(systemPreference);
-    
+
     // Dispatch custom event to notify other instances
-    window.dispatchEvent(new CustomEvent(HIGH_CONTRAST_CHANGE_EVENT, {
-      detail: { isHighContrast: systemPreference }
-    }));
+    window.dispatchEvent(
+      new CustomEvent(HIGH_CONTRAST_CHANGE_EVENT, {
+        detail: { isHighContrast: systemPreference },
+      }),
+    );
   }, [systemPreference]);
 
   return {
@@ -132,11 +137,20 @@ export function useColorContrastCheck() {
 
   const checkThemeContrast = () => {
     const results = {
-      primaryOnBackground: checkContrast(theme.palette.primary.main, theme.palette.background.default),
+      primaryOnBackground: checkContrast(
+        theme.palette.primary.main,
+        theme.palette.background.default,
+      ),
       textOnBackground: checkContrast(theme.palette.text.primary, theme.palette.background.default),
       textOnPaper: checkContrast(theme.palette.text.primary, theme.palette.background.paper),
-      primaryContrastOnPrimary: checkContrast(theme.palette.primary.contrastText, theme.palette.primary.main),
-      secondaryContrastOnSecondary: checkContrast(theme.palette.secondary.contrastText, theme.palette.secondary.main),
+      primaryContrastOnPrimary: checkContrast(
+        theme.palette.primary.contrastText,
+        theme.palette.primary.main,
+      ),
+      secondaryContrastOnSecondary: checkContrast(
+        theme.palette.secondary.contrastText,
+        theme.palette.secondary.main,
+      ),
     };
 
     return results;
@@ -150,83 +164,35 @@ export function useColorContrastCheck() {
 }
 
 /**
- * High contrast theme modifications
+ * High contrast theme: pure black and white with a heavy focus outline,
+ * layered over the base theme so everything else is inherited.
  */
-export const getHighContrastTheme = (baseTheme: any) => ({
-  ...baseTheme,
-  palette: {
-    ...baseTheme.palette,
-    mode: baseTheme.palette.mode,
-    primary: {
-      ...baseTheme.palette.primary,
-      main: baseTheme.palette.mode === 'dark' ? '#ffffff' : '#000000',
-      contrastText: baseTheme.palette.mode === 'dark' ? '#000000' : '#ffffff',
-    },
-    secondary: {
-      ...baseTheme.palette.secondary,
-      main: baseTheme.palette.mode === 'dark' ? '#ffffff' : '#000000',
-      contrastText: baseTheme.palette.mode === 'dark' ? '#000000' : '#ffffff',
-    },
-    text: {
-      primary: baseTheme.palette.mode === 'dark' ? '#ffffff' : '#000000',
-      secondary: baseTheme.palette.mode === 'dark' ? '#cccccc' : '#333333',
-    },
-    background: {
-      default: baseTheme.palette.mode === 'dark' ? '#000000' : '#ffffff',
-      paper: baseTheme.palette.mode === 'dark' ? '#111111' : '#f5f5f5',
-    },
-    divider: baseTheme.palette.mode === 'dark' ? '#ffffff' : '#000000',
-    action: {
-      ...baseTheme.palette.action,
-      hover: baseTheme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)',
-      selected: baseTheme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.08)',
-    },
-  },
-  components: {
-    ...baseTheme.components,
-    MuiButton: {
-      ...baseTheme.components?.MuiButton,
-      styleOverrides: {
-        ...baseTheme.components?.MuiButton?.styleOverrides,
-        root: {
-          ...baseTheme.components?.MuiButton?.styleOverrides?.root,
-          '&:focus-visible': {
-            outline: `3px solid ${baseTheme.palette.mode === 'dark' ? '#ffffff' : '#000000'}`,
-            outlineOffset: 2,
-          },
-        },
+export const getHighContrastTheme = (baseTheme: Theme): Theme => {
+  const dark = baseTheme.palette.mode === 'dark';
+  const foreground = dark ? '#ffffff' : '#000000';
+  const background = dark ? '#000000' : '#ffffff';
+  const focusRing = {
+    '&:focus-visible': { outline: `3px solid ${foreground}`, outlineOffset: 2 },
+  };
+  return createTheme(baseTheme, {
+    palette: {
+      primary: { main: foreground, contrastText: background },
+      secondary: { main: foreground, contrastText: background },
+      text: { primary: foreground, secondary: dark ? '#cccccc' : '#333333' },
+      background: { default: background, paper: dark ? '#111111' : '#f5f5f5' },
+      divider: foreground,
+      action: {
+        hover: dark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)',
+        selected: dark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.08)',
       },
     },
-    MuiIconButton: {
-      ...baseTheme.components?.MuiIconButton,
-      styleOverrides: {
-        ...baseTheme.components?.MuiIconButton?.styleOverrides,
-        root: {
-          ...baseTheme.components?.MuiIconButton?.styleOverrides?.root,
-          '&:focus-visible': {
-            outline: `3px solid ${baseTheme.palette.mode === 'dark' ? '#ffffff' : '#000000'}`,
-            outlineOffset: 2,
-          },
-        },
-      },
+    components: {
+      MuiButton: { styleOverrides: { root: focusRing } },
+      MuiIconButton: { styleOverrides: { root: focusRing } },
+      MuiTextField: { styleOverrides: { root: { '& .MuiOutlinedInput-root': focusRing } } },
     },
-    MuiTextField: {
-      ...baseTheme.components?.MuiTextField,
-      styleOverrides: {
-        ...baseTheme.components?.MuiTextField?.styleOverrides,
-        root: {
-          ...baseTheme.components?.MuiTextField?.styleOverrides?.root,
-          '& .MuiOutlinedInput-root': {
-            '&:focus-visible': {
-              outline: `3px solid ${baseTheme.palette.mode === 'dark' ? '#ffffff' : '#000000'}`,
-              outlineOffset: 2,
-            },
-          },
-        },
-      },
-    },
-  },
-});
+  });
+};
 
 /**
  * Reduced motion preferences
@@ -248,27 +214,5 @@ export function useReducedMotion() {
 
   return {
     prefersReducedMotion,
-  };
-}
-
-/**
- * Accessible animation settings based on user preferences
- */
-export function useAccessibleAnimation() {
-  const { prefersReducedMotion } = useReducedMotion();
-
-  const getAnimationProps = (normalProps: any, reducedProps?: any) => {
-    if (prefersReducedMotion) {
-      return reducedProps || { transition: { duration: 0 } };
-    }
-    return normalProps;
-  };
-
-  const shouldAnimate = () => !prefersReducedMotion;
-
-  return {
-    prefersReducedMotion,
-    getAnimationProps,
-    shouldAnimate,
   };
 }
