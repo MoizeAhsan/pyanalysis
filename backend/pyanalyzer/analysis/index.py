@@ -161,8 +161,12 @@ class AnalysisIndex:
         file_path: str | None,
         offset: int,
         limit: int,
+        name: str | None = None,
     ) -> tuple[int, list[CodeElement]]:
-        """A page of elements ordered by file and line, with the total count."""
+        """A page of elements ordered by file and line, with the total count.
+
+        ``name`` keeps elements whose qualified name contains it, ignoring case.
+        """
         if file_path is not None:
             source = self.by_file.get(file_path, [])
             if element_type is not None:
@@ -171,6 +175,9 @@ class AnalysisIndex:
             source = self.by_type[element_type]
         else:
             source = self._ordered
+        needle = (name or "").strip().lower()
+        if needle:
+            source = [e for e in source if needle in e.qualified_name.lower()]
         return len(source), source[offset : offset + limit]
 
     # ------------------------------------------------------------------ search

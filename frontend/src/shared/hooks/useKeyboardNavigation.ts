@@ -55,8 +55,9 @@ export function useKeyboardNavigation(
         },
       });
 
-      // Handle Enter and Space for selection
-      if (event.key === 'Enter' || event.key === ' ') {
+      // Handle Enter and Space for selection, unless the focused control already
+      // acted on the key (a button's own click), which would select twice.
+      if ((event.key === 'Enter' || event.key === ' ') && !event.defaultPrevented) {
         event.preventDefault();
         onSelect?.(currentIndex);
       }
@@ -98,6 +99,8 @@ export function useKeyboardNavigation(
     getItemProps: (index: number) => ({
       ref: setItemRef(index),
       tabIndex: index === currentIndex ? 0 : -1,
+      // Keep arrow keys moving from whichever item was focused, e.g. by a click.
+      onFocus: () => setCurrentIndex(index),
     }),
   };
 }

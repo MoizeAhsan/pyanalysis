@@ -174,6 +174,32 @@ describe('ExplorePage', () => {
     );
   });
 
+  it('filters by name after typing pauses, and marks the match', async () => {
+    withAnalysis();
+    const { user } = renderApp(<ExplorePage />, { route: '/explore' });
+    await screen.findByText('4 elements');
+    await user.type(screen.getByLabelText('Filter by name'), 'TOTAL');
+
+    await waitFor(() =>
+      expect(screen.getByTestId('location')).toHaveTextContent('/explore?name=TOTAL'),
+    );
+    const nameRequests = api.requests.filter((entry) => entry.includes('name='));
+    expect(nameRequests).toEqual(['GET /api/elements?name=TOTAL&offset=0&limit=100']);
+    const list = screen.getByRole('region', { name: 'Elements' });
+    expect(await within(list).findByText('1 element')).toBeInTheDocument();
+    for (const mark of list.querySelectorAll('mark')) {
+      expect(mark.textContent?.toLowerCase()).toBe('total');
+    }
+    expect(list.querySelectorAll('mark').length).toBeGreaterThan(0);
+  });
+
+  it('says why the list is empty when no name matches', async () => {
+    withAnalysis();
+    renderApp(<ExplorePage />, { route: '/explore?name=zzz' });
+    expect(await screen.findByText('No element names contain “zzz”.')).toBeInTheDocument();
+    expect(screen.getByLabelText('Filter by name')).toHaveValue('zzz');
+  });
+
   it('filters by kind through the API and the URL', async () => {
     withAnalysis();
     const { user } = renderApp(<ExplorePage />, { route: '/explore' });

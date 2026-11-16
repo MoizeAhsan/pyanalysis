@@ -101,7 +101,7 @@ export interface paths {
         };
         /**
          * Elements
-         * @description Elements ordered by file and line, optionally filtered by type or file.
+         * @description Elements ordered by file and line, filtered by type, file, or part of the name.
          */
         get: operations["elements_api_elements_get"];
         put?: never;
@@ -1049,6 +1049,7 @@ export interface operations {
             query?: {
                 type?: components["schemas"]["ElementType"] | null;
                 file?: string | null;
+                name?: string | null;
                 offset?: number;
                 limit?: number;
             };

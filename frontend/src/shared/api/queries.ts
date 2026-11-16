@@ -128,6 +128,8 @@ export function treeQuery(parent: string) {
 export interface ElementFilters {
   type?: ElementType | undefined;
   file?: string | undefined;
+  /** Part of the qualified name, matched without regard to case. */
+  name?: string | undefined;
 }
 
 const PAGE_SIZE = 100;
@@ -143,6 +145,8 @@ export function useElements(filters: ElementFilters, { enabled = true }: Enabled
       }),
     initialPageParam: 0,
     getNextPageParam: (page) => page.next_offset ?? undefined,
+    // Keep showing the current list while a narrower filter loads.
+    placeholderData: keepPreviousData,
     enabled,
   });
 }

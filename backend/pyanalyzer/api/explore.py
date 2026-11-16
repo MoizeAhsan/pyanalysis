@@ -147,11 +147,12 @@ def elements(
     index: IndexDep,
     type: ElementType | None = None,
     file: Annotated[str | None, Query(max_length=2000)] = None,
+    name: Annotated[str | None, Query(max_length=200)] = None,
     offset: Offset = 0,
     limit: Limit = 100,
 ) -> ElementPage:
-    """Elements ordered by file and line, optionally filtered by type or file."""
-    total, page = index.list_elements(type, file, offset, limit)
+    """Elements ordered by file and line, filtered by type, file, or part of the name."""
+    total, page = index.list_elements(type, file, offset, limit, name)
     return ElementPage(
         items=[ElementSummary.of(element, index) for element in page],
         total=total,

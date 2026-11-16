@@ -30,7 +30,7 @@ export function Highlight({ text, query }: { text: string; query?: string | unde
         sx={{
           display: 'inline',
           bgcolor: 'warning.light',
-          color: 'text.primary',
+          color: 'common.black', // the highlight is light in both themes
           borderRadius: 0.5,
           px: 0.25,
         }}

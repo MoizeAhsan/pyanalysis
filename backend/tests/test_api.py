@@ -345,6 +345,16 @@ def test_elements_filter_by_type_and_file(analyzed: TestClient) -> None:
     assert "docstring" not in in_file["items"][0]
 
 
+def test_elements_filter_by_part_of_the_name(analyzed: TestClient) -> None:
+    found = analyzed.get("/api/elements", params={"name": "  USER "}).json()
+    names = [item["qualified_name"] for item in found["items"]]
+    assert names and all("user" in name.lower() for name in names)
+    assert found["total"] == len(names)
+    narrowed = analyzed.get("/api/elements", params={"name": "user", "type": "class"}).json()
+    assert [item["name"] for item in narrowed["items"]] == ["User"]
+    assert analyzed.get("/api/elements", params={"name": "x" * 201}).status_code == 422
+
+
 @pytest.mark.parametrize(
     "params", [{"limit": 0}, {"limit": 501}, {"offset": -1}, {"type": "bogus"}]
 )

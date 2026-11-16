@@ -372,7 +372,13 @@ export function AppShell({ children, currentView = 'home', onViewChange }: AppSh
         {hasChildren && (
           <Collapse in={isExpanded} timeout="auto" unmountOnExit>
             <List component="ul" disablePadding aria-label={`${item.label} submenu`}>
-              {item.children?.map((child) => renderNavigationItem(child, depth + 1))}
+              {item.children?.map((child) =>
+                renderNavigationItem(
+                  child,
+                  depth + 1,
+                  flatNavigationItems.findIndex((flatItem) => flatItem.id === child.id),
+                ),
+              )}
             </List>
           </Collapse>
         )}
@@ -439,7 +445,7 @@ export function AppShell({ children, currentView = 'home', onViewChange }: AppSh
       </Box>
 
       {/* Navigation Items */}
-      <Box sx={{ flex: 1, overflow: 'auto', py: 1 }} {...navigationContainerRef}>
+      <Box sx={{ flex: 1, overflow: 'auto', py: 1 }} ref={navigationContainerRef}>
         <List
           component="ul"
           aria-label="Main navigation menu"

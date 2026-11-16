@@ -116,8 +116,13 @@ export const handlers = [
     '*/api/elements',
     guarded((url) => {
       const type = url.searchParams.get('type');
+      const name = url.searchParams.get('name')?.toLowerCase();
       return page(
-        ELEMENTS.filter((item) => !type || item.type === type),
+        ELEMENTS.filter(
+          (item) =>
+            (!type || item.type === type) &&
+            (!name || item.qualified_name.toLowerCase().includes(name)),
+        ),
         url,
       );
     }),
