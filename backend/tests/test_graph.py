@@ -49,8 +49,8 @@ def test_module_graph_edges_are_weighted_by_reference_count(analyze: Analyze) ->
     graph = build_module_graph(analyze(LAYERED).resolution)
 
     assert edges(graph) == {
-        # import + the UserService() call; ``.all()`` on the instance is not guessed at
-        ("app/api/routes.py", "app/services/users.py", "import", 2),
+        # import + the UserService() call + ``.all()`` on the new instance
+        ("app/api/routes.py", "app/services/users.py", "import", 3),
         ("app/api/routes.py", "app/models.py", "import", 2),
         ("app/services/users.py", "app/models.py", "import", 6),
         ("main.py", "app/api/routes.py", "import", 2),
@@ -98,7 +98,7 @@ def test_package_graph_collapses_modules_by_directory_depth(analyze: Analyze) ->
     assert set(deep.nodes) == {".", "app", "app/api", "app/services"}
     assert edges(deep) == {
         (".", "app/api", "import", 2),
-        ("app/api", "app/services", "import", 2),
+        ("app/api", "app/services", "import", 3),
         ("app/api", "app", "import", 2),
         ("app/services", "app", "import", 6),
     }

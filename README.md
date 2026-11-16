@@ -72,7 +72,7 @@ The server is a local tool with no authentication: anyone who can reach it can a
 
 Results come from reading source code, so anything decided at run time is invisible:
 
-- A call on a value of unknown type, such as `thing.save()`, is not linked to any `save` method. Usages are recorded only where a name provably refers to an element (through an import, a definition in the same file, or `self`/`super()` in a method).
+- Calls on instances are linked when the instance's class is known from a constructor (`repo = Repo()`), a parameter or variable annotation (`repo: Repo`, `Optional[Repo]`, `Repo | None`), a function's return annotation (`repo = make_repo()`), a typed instance attribute (`self.repo = Repo()`, dataclass fields), or a call result (`Repo().save()`). Methods are looked up along Python's method resolution order. A variable bound to different or unknown types (reassigned, a loop variable, unpacked, an untyped parameter) is not guessed at, and neither are containers (`list[Repo]`), so some real uses are still missed.
 - "Dead-code candidates" are code with no reference found inside the project. Code reached dynamically, registered with a framework, or used by other projects will appear here. Decorated functions, dunder methods, test code, names in `__all__`, and methods of classes with external base classes are never reported.
 - Symbolic links are not followed.
 

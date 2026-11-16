@@ -148,6 +148,11 @@ class _Resolver:
         self._class_bases: dict[str, list[str]] = defaultdict(list)
         self._base_names: dict[str, set[str]] = defaultdict(set)
         self._mro_cache: dict[str, list[str]] = {}
+        self._return_types: dict[str, tuple[FileRecord, Reference]] = {}
+        self._attribute_types: dict[str, dict[str, tuple[FileRecord, Reference]]] = defaultdict(
+            dict
+        )
+        self._instance_cache: dict[str, str | None] = {}
         self._externals: Counter[str] = Counter()
         self._stdlib: Counter[str] = Counter()
         self._reexported: set[tuple[str, str]] = set()
@@ -157,6 +162,11 @@ class _Resolver:
 
     def run(self) -> Resolution:
         self._index_elements()
+        for record in self._records:
+            for function_id, returns in record.return_types.items():
+                self._return_types[function_id] = (record, returns)
+            for class_id, attr, source in record.attribute_types:
+                self._attribute_types[class_id][attr] = (record, source)
         # Bases first: member lookup on a class needs its ancestors resolved.
         for record in self._records:
             for reference in record.references:
@@ -287,9 +297,14 @@ class _Resolver:
                 return None
             return target
         if kind is TargetKind.SELF:
-            return self._class_member(
-                reference.target_id, reference.attrs[0], skip_own=reference.name == "super"
+            return self._instance_member(
+                reference.target_id, reference.attrs, skip_own=reference.name == "super"
             )
+        if kind is TargetKind.TYPED:
+            if reference.via is None:
+                return None
+            class_id = self._instance_class(record, reference.via)
+            return None if class_id is None else self._instance_member(class_id, reference.attrs)
         for star in self._stars.get(record.rel_path, ()):
             module = self._resolve_chain(
                 record.rel_path, star.level, self._binding_parts(star, statement=True)
@@ -363,6 +378,60 @@ class _Resolver:
                 member = self._member(module, name, depth + 1)
                 if member is not None:
                     return member
+        return None
+
+    def _instance_class(self, record: FileRecord, source: Reference) -> str | None:
+        """The project class whose instance a type source describes."""
+        target = self._resolve_reference(record, source)
+        if target is None:
+            return None
+        element = self._elements[target]
+        if element.type is ElementType.CLASS:
+            return target
+        if source.kind is RefKind.CALL and element.type is ElementType.FUNCTION:
+            return self._returned_class(target)
+        return None
+
+    def _returned_class(self, function_id: str) -> str | None:
+        """The project class named by a function's return annotation."""
+        if function_id in self._instance_cache:
+            return self._instance_cache[function_id]
+        self._instance_cache[function_id] = None  # guards against cycles
+        entry = self._return_types.get(function_id)
+        result = None
+        if entry is not None:
+            target = self._resolve_reference(*entry)
+            if target is not None and self._elements[target].type is ElementType.CLASS:
+                result = target
+        self._instance_cache[function_id] = result
+        return result
+
+    def _instance_member(
+        self, class_id: str, attrs: Sequence[str], *, skip_own: bool = False, depth: int = 0
+    ) -> str | None:
+        """Follow ``attrs`` from an instance of ``class_id``.
+
+        Methods and class attributes are found along the MRO; a typed
+        instance attribute (``self.repo = Repo()``) continues the chain on
+        its own class. Stops at the first name that cannot be resolved.
+        """
+        if not attrs or depth > _MAX_REEXPORT_DEPTH:
+            return None
+        name, rest = attrs[0], attrs[1:]
+        member = self._class_member(class_id, name, skip_own=skip_own)
+        if member is not None:
+            return self._descend(member, rest, 1)
+        order = linearize(class_id, self._class_bases, self._mro_cache)
+        for owner in order[1:] if skip_own else order:
+            entry = self._attribute_types.get(owner, {}).get(name)
+            if entry is None:
+                continue
+            attribute_class = self._instance_class(*entry)
+            if attribute_class is None:
+                return None
+            if not rest:
+                return None
+            return self._instance_member(attribute_class, rest, depth=depth + 1)
         return None
 
     def _class_member(self, class_id: str, name: str, *, skip_own: bool) -> str | None:

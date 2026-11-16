@@ -46,4 +46,4 @@
 
 - [ ] Lighthouse performance audit (frontend-modernization 10.2)
 - [ ] Screen-reader testing with real assistive technology (frontend-modernization 10.3); automated axe scans pass
-- [ ] Resolving calls on instances by type inference
+- [x] Resolving calls on instances by type inference (constructors, annotations, return annotations, typed instance attributes, call results; C3 method resolution order)
