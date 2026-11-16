@@ -1780,7 +1780,7 @@
     },
     "/api/elements": {
       "get": {
-        "description": "Elements ordered by file and line, optionally filtered by type or file.",
+        "description": "Elements ordered by file and line, filtered by type, file, or part of the name.",
         "operationId": "elements_api_elements_get",
         "parameters": [
           {
@@ -1814,6 +1814,23 @@
                 }
               ],
               "title": "File"
+            }
+          },
+          {
+            "in": "query",
+            "name": "name",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 200,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Name"
             }
           },
           {

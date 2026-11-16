@@ -14,6 +14,7 @@ import {
   GraphCanvas,
   LARGE_GRAPH_NODES,
   buildStylesheet,
+  graphToSvg,
   layoutOptions,
   toElements,
 } from './GraphCanvas';
@@ -67,15 +68,49 @@ describe('toElements', () => {
 });
 
 describe('layoutOptions', () => {
-  it('never animates and spends fewer iterations on large graphs', () => {
+  it('animates only when asked, never on large graphs, and iterates less on them', () => {
     const small = layoutOptions('cose', 10) as { animate: boolean; numIter: number };
-    const large = layoutOptions('cose', LARGE_GRAPH_NODES + 1) as { numIter: number };
+    const large = layoutOptions('cose', LARGE_GRAPH_NODES + 1, true) as {
+      animate: boolean;
+      numIter: number;
+    };
     expect(small.animate).toBe(false);
+    expect((layoutOptions('cose', 10, true) as { animate: boolean }).animate).toBe(true);
+    expect(large.animate).toBe(false);
     expect(large.numIter).toBeLessThan(small.numIter);
   });
 
   it.each(['breadthfirst', 'concentric', 'circle', 'grid'] as const)('supports %s', (name) => {
     expect(layoutOptions(name, 5).name).toBe(name);
+  });
+});
+
+describe('graphToSvg', () => {
+  const theme = createTheme();
+  const placed = [
+    { id: 'module:a.py', label: 'a <main>', type: 'module', x: 0, y: 0, size: 20 },
+    { id: 'class:a.py:C', label: 'C', type: 'class', x: 100, y: 50, size: 30 },
+    { id: 'pkg', label: 'pkg', type: 'package', x: -50, y: 80, size: 24 },
+  ];
+
+  it('draws every node with its shape and colour, and escapes labels', () => {
+    const svg = graphToSvg(
+      placed,
+      [
+        { source: 'module:a.py', target: 'class:a.py:C', kind: 'uses_type' },
+        { source: 'pkg', target: 'missing' },
+      ],
+      theme,
+    );
+    const doc = new DOMParser().parseFromString(svg, 'image/svg+xml');
+    expect(doc.querySelector('parsererror')).toBeNull();
+    expect(doc.querySelectorAll('circle')).toHaveLength(1);
+    expect(doc.querySelectorAll('polygon')).toHaveLength(1);
+    expect(doc.querySelectorAll('rect[rx]')).toHaveLength(1);
+    expect(doc.querySelectorAll('line')).toHaveLength(1); // edge to an absent node is dropped
+    expect(doc.querySelector('line')?.getAttribute('stroke-dasharray')).toBe('6 4');
+    expect(svg).toContain('a &#60;main&#62;');
+    expect(doc.querySelector('circle')?.getAttribute('fill')).toBe(theme.palette.primary.main);
   });
 });
 
@@ -122,6 +157,26 @@ describe('GraphCanvas', () => {
 
     view.unmount();
     expect(graph.destroyed).toBe(true);
+  });
+
+  it('animates a layout change on the same data instead of redrawing it', async () => {
+    const edges: { source: string; target: string }[] = [];
+    function Harness() {
+      const [layout, setLayout] = useState<'grid' | 'circle'>('grid');
+      return (
+        <>
+          <button onClick={() => setLayout('circle')}>relayout</button>
+          <GraphCanvas nodes={nodes} edges={edges} layout={layout} ariaLabel="g" />
+        </>
+      );
+    }
+    const { user } = renderApp(<Harness />);
+    await waitFor(() => expect(lastGraph().layouts.at(-1)?.name).toBe('grid'));
+    expect(lastGraph().layouts.at(-1)?.animate).toBe(false);
+    await user.click(screen.getByRole('button', { name: 'relayout' }));
+    await waitFor(() => expect(lastGraph().layouts.at(-1)?.name).toBe('circle'));
+    expect(lastGraph().layouts.at(-1)?.animate).toBe(true);
+    expect(nodeIds()).toEqual(['a', 'b']);
   });
 
   it('updates the existing graph when data changes instead of creating another', async () => {
@@ -292,7 +347,7 @@ describe('ArchitecturePage', () => {
 
     await waitFor(() =>
       expect(api.requests).toContain(
-        'GET /api/graph?level=module&max_nodes=300&focus=module:shop%2Forders.py&depth=1',
+        'GET /api/graph?level=module&max_nodes=300&focus=module:shop/orders.py&depth=1',
       ),
     );
     expect(await screen.findByText('Focused on shop.orders')).toBeInTheDocument();

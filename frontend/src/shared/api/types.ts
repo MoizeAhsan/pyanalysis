@@ -8,7 +8,6 @@ type Schemas = components['schemas'];
 
 export type AnalysisRequest = Schemas['AnalysisRequest'];
 export type AnalysisStatus = Schemas['AnalysisStatus'];
-export type JobState = Schemas['JobState'];
 export type Summary = Schemas['Summary'];
 export type TreeNode = Schemas['TreeNodeOut'];
 export type TreeChildren = Schemas['TreeChildren'];
@@ -25,16 +24,13 @@ export type SearchPage = Schemas['SearchPage'];
 export type SearchResult = Schemas['SearchResult'];
 export type Graph = Schemas['GraphOut'];
 export type GraphNode = Schemas['GraphNodeOut'];
-export type GraphEdge = Schemas['GraphEdgeOut'];
 export type Issue = Schemas['IssueOut'];
 export type IssuePage = Schemas['IssuePage'];
 export type IssueKind = Schemas['IssueKind'];
 export type Severity = Schemas['Severity'];
 export type CycleList = Schemas['CycleList'];
 export type PatternList = Schemas['PatternList'];
-export type Pattern = Schemas['PatternOut'];
 export type Source = Schemas['SourceOut'];
-export type Health = Schemas['Health'];
 
 export type GraphLevel = NonNullable<
   NonNullable<operations['graph_api_graph_get']['parameters']['query']>['level']

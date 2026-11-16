@@ -13,7 +13,7 @@ interface SourceSnippetProps {
   highlightLine?: number | undefined;
 }
 
-export const CONTEXT_LINES = 4;
+const CONTEXT_LINES = 4;
 
 /** The range to request so that `line` is shown with a few lines either side. */
 export function rangeAround(file: string, line: number): SourceRange {

@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { startTransition } from 'react';
 import ReactDOM from 'react-dom/client';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter } from 'react-router-dom';
 import App from '@app/App';
+import { preloadRoute } from '@app/routes';
 import { ErrorBoundary } from '@app/components/ErrorBoundary';
 import { ThemeProvider } from '@design-system/providers/ThemeProvider';
 import { createQueryClient } from '@shared/api/queries';
@@ -15,20 +16,26 @@ import '@shared/styles/accessibility.css';
 const root = document.getElementById('root');
 if (!root) throw new Error('Missing #root element');
 
+preloadRoute(window.location.pathname);
+
 const queryClient = createQueryClient();
 
-ReactDOM.createRoot(root).render(
-  <React.StrictMode>
-    <ErrorBoundary onError={(error, info) => logger.error('Unhandled UI error', error, info)}>
-      <QueryClientProvider client={queryClient}>
-        <ThemeProvider>
-          <NotificationProvider>
-            <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-              <App />
-            </BrowserRouter>
-          </NotificationProvider>
-        </ThemeProvider>
-      </QueryClientProvider>
-    </ErrorBoundary>
-  </React.StrictMode>,
-);
+// A transition lets React yield while drawing the first screen, so the page
+// stays responsive instead of blocking on one long task.
+startTransition(() => {
+  ReactDOM.createRoot(root).render(
+    <React.StrictMode>
+      <ErrorBoundary onError={(error, info) => logger.error('Unhandled UI error', error, info)}>
+        <QueryClientProvider client={queryClient}>
+          <ThemeProvider>
+            <NotificationProvider>
+              <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+                <App />
+              </BrowserRouter>
+            </NotificationProvider>
+          </ThemeProvider>
+        </QueryClientProvider>
+      </ErrorBoundary>
+    </React.StrictMode>,
+  );
+});

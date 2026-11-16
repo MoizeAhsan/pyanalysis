@@ -1,5 +1,5 @@
-import type { ReactNode } from 'react';
-import { Alert, Box, Chip, Divider, Link, Stack, Typography } from '@mui/material';
+import { useState, type ReactNode } from 'react';
+import { Alert, Box, Chip, Divider, Link, Stack, Tab, Tabs, Typography } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
 import { useElement } from '@shared/api/queries';
 import type { ElementDetail, ElementRef, Parameter } from '@shared/api/types';
@@ -85,12 +85,20 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
   );
 }
 
+type DetailTab = 'overview' | 'uses' | 'source';
+
 function Detail({ element }: { element: ElementDetail }) {
-  const isClass = element.type === 'class';
   const isFunction = element.type === 'function';
   const snippetEnd = Math.min(element.end_line, element.line + MAX_SNIPPET_LINES - 1);
+  const totalUses = Object.values(element.usage_counts).reduce((sum, count) => sum + count, 0);
+  const [tab, setTab] = useState<DetailTab>('overview');
+  const tabProps = (value: DetailTab) => ({
+    value,
+    id: `detail-tab-${value}`,
+    'aria-controls': `detail-panel-${value}`,
+  });
   return (
-    <Stack spacing={2} divider={<Divider flexItem />}>
+    <Stack spacing={2}>
       <Stack spacing={1} alignItems="flex-start">
         <ElementTypeChip type={element.type} isMethod={element.is_method} />
         <Typography variant="h5" component="h3" sx={{ wordBreak: 'break-word' }}>
@@ -124,6 +132,58 @@ function Detail({ element }: { element: ElementDetail }) {
         </Stack>
       </Stack>
 
+      <Tabs
+        value={tab}
+        onChange={(_event, value: DetailTab) => setTab(value)}
+        aria-label="Element information"
+        variant="scrollable"
+        allowScrollButtonsMobile
+        sx={{ borderBottom: 1, borderColor: 'divider' }}
+      >
+        <Tab label="Overview" {...tabProps('overview')} />
+        <Tab label={`Used by (${totalUses})`} {...tabProps('uses')} />
+        {element.type !== 'module' && <Tab label="Source" {...tabProps('source')} />}
+      </Tabs>
+
+      {/* Only the visible tab is mounted, so uses and source load on demand. */}
+      <Box role="tabpanel" id={`detail-panel-${tab}`} aria-labelledby={`detail-tab-${tab}`}>
+        {tab === 'overview' && <Overview element={element} />}
+        {tab === 'uses' && <UsageList elementId={element.id} usageCounts={element.usage_counts} />}
+        {tab === 'source' && (
+          <>
+            <SourceSnippet file={element.file_path} start={element.line} end={snippetEnd} />
+            {snippetEnd < element.end_line && (
+              <Typography variant="caption" color="text.secondary">
+                Showing the first {MAX_SNIPPET_LINES} of {element.line_count} lines.
+              </Typography>
+            )}
+          </>
+        )}
+      </Box>
+    </Stack>
+  );
+}
+
+/** Findings, documentation, and relationships: the default tab. */
+function Overview({ element }: { element: ElementDetail }) {
+  const isClass = element.type === 'class';
+  const hasContent =
+    element.issues.length > 0 ||
+    Boolean(element.docstring) ||
+    isClass ||
+    Boolean(element.overrides) ||
+    element.overridden_by.length > 0 ||
+    element.children.length > 0 ||
+    element.dependencies.length > 0;
+  if (!hasContent) {
+    return (
+      <Typography color="text.secondary">
+        No documentation, findings, or relationships for this element.
+      </Typography>
+    );
+  }
+  return (
+    <Stack spacing={2} divider={<Divider flexItem />}>
       {element.issues.length > 0 && (
         <Stack spacing={1}>
           {element.issues.map((issue) => (
@@ -196,21 +256,6 @@ function Detail({ element }: { element: ElementDetail }) {
       {element.dependencies.length > 0 && (
         <Section title="Uses">
           <RefLinks refs={element.dependencies} />
-        </Section>
-      )}
-
-      <Section title="Used by">
-        <UsageList elementId={element.id} usageCounts={element.usage_counts} />
-      </Section>
-
-      {element.type !== 'module' && (
-        <Section title="Source">
-          <SourceSnippet file={element.file_path} start={element.line} end={snippetEnd} />
-          {snippetEnd < element.end_line && (
-            <Typography variant="caption" color="text.secondary">
-              Showing the first {MAX_SNIPPET_LINES} of {element.line_count} lines.
-            </Typography>
-          )}
         </Section>
       )}
     </Stack>

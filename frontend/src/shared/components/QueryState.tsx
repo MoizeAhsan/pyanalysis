@@ -1,7 +1,10 @@
 import type { ReactNode } from 'react';
-import { Alert, AlertTitle, Box, Button, CircularProgress, Typography } from '@mui/material';
+import { Alert, AlertTitle, Box, Button, Skeleton, Stack, Typography } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
 import { ApiError } from '@shared/api/client';
+
+/** Placeholder rows shown while data loads, shaped like the list that will replace them. */
+const SKELETON_ROWS = ['62%', '48%', '55%'] as const;
 
 interface QueryStateProps {
   isPending: boolean;
@@ -41,19 +44,25 @@ export function QueryState({ isPending, error, onRetry, loadingLabel, children }
   }
   if (isPending) {
     return (
-      <Box
-        role="status"
-        sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 2, p: 4 }}
-      >
-        <CircularProgress size={24} aria-hidden="true" />
-        <Typography color="text.secondary">{loadingLabel ?? 'Loading'}…</Typography>
+      <Box role="status" sx={{ p: 2 }}>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+          {loadingLabel ?? 'Loading'}…
+        </Typography>
+        <Stack spacing={1.5} aria-hidden="true">
+          {SKELETON_ROWS.map((width) => (
+            <Box key={width}>
+              <Skeleton variant="text" width={width} sx={{ fontSize: '1rem' }} />
+              <Skeleton variant="text" width="35%" sx={{ fontSize: '0.875rem' }} />
+            </Box>
+          ))}
+        </Stack>
       </Box>
     );
   }
   return <>{children}</>;
 }
 
-export function NoAnalysis() {
+function NoAnalysis() {
   return (
     <Box sx={{ textAlign: 'center', p: 4 }}>
       <Typography variant="h6" component="p" gutterBottom>

@@ -15,6 +15,7 @@ from pyanalyzer.analysis.jobs import AnalysisManager
 from pyanalyzer.analysis.store import AnalysisStore
 from pyanalyzer.api import analysis, explore
 from pyanalyzer.api.errors import ApiError, install_error_handlers
+from pyanalyzer.api.origin import SameOriginMiddleware
 from pyanalyzer.settings import Settings
 
 
@@ -38,6 +39,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         allow_methods=["GET", "POST", "DELETE"],
         allow_headers=["Content-Type"],
     )
+    application.add_middleware(SameOriginMiddleware, trusted_origins=settings.cors_origins)
     application.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.allowed_hosts)
     install_error_handlers(application)
 
@@ -55,6 +57,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     return application
 
 
+#: Vite puts a content hash in every file name under ``assets/``, so a cached
+#: copy can never be stale; everything else must be revalidated.
+_IMMUTABLE = "public, max-age=31536000, immutable"
+_REVALIDATE = "no-cache"
+
+
 def _serve_frontend(application: FastAPI, static_dir: Path) -> None:
     """Serve the built single-page app, falling back to index.html for client routes."""
     index_file = static_dir / "index.html"
@@ -65,8 +73,9 @@ def _serve_frontend(application: FastAPI, static_dir: Path) -> None:
             raise ApiError(404, "not_found", f"No such endpoint: /{path}")
         candidate = (static_dir / path).resolve()
         if path and candidate.is_file() and candidate.is_relative_to(static_dir):
-            return FileResponse(candidate)
-        return FileResponse(index_file)
+            cache = _IMMUTABLE if path.startswith("assets/") else _REVALIDATE
+            return FileResponse(candidate, headers={"Cache-Control": cache})
+        return FileResponse(index_file, headers={"Cache-Control": _REVALIDATE})
 
 
 def _default_app() -> FastAPI:

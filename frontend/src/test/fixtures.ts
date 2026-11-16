@@ -73,7 +73,7 @@ export const SUMMARY: Summary = {
   ],
 };
 
-export function element(
+function element(
   overrides: Partial<ElementSummary> & { id: string; name: string },
 ): ElementSummary {
   return {

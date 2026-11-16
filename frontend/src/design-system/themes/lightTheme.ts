@@ -15,15 +15,17 @@ export const lightTheme = createTheme({
       contrastText: '#ffffff',
     },
     secondary: {
-      main: colorTokens.secondary[600],
+      // Step chosen for at least 4.5:1 against white, so it is legible as text.
+      main: colorTokens.secondary[700],
       light: colorTokens.secondary[400],
-      dark: colorTokens.secondary[800],
+      dark: colorTokens.secondary[900],
       contrastText: '#ffffff',
     },
     error: {
-      main: colorTokens.error[600],
+      // Step chosen for at least 4.5:1 against white, so it is legible as text.
+      main: colorTokens.error[700],
       light: colorTokens.error[400],
-      dark: colorTokens.error[800],
+      dark: colorTokens.error[900],
       contrastText: '#ffffff',
     },
     warning: {
@@ -33,15 +35,17 @@ export const lightTheme = createTheme({
       contrastText: 'rgba(0, 0, 0, 0.87)',
     },
     info: {
-      main: colorTokens.info[600],
+      // Step chosen for at least 4.5:1 against white, so it is legible as text.
+      main: colorTokens.info[800],
       light: colorTokens.info[400],
-      dark: colorTokens.info[800],
+      dark: colorTokens.info[900],
       contrastText: '#ffffff',
     },
     success: {
-      main: colorTokens.success[600],
+      // Step chosen for at least 4.5:1 against white, so it is legible as text.
+      main: colorTokens.success[800],
       light: colorTokens.success[400],
-      dark: colorTokens.success[800],
+      dark: colorTokens.success[900],
       contrastText: '#ffffff',
     },
     background: {

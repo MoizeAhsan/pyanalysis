@@ -25,6 +25,17 @@ interface UsageListProps {
 
 const MAX_FILE_CHIPS = 12;
 
+/** Consecutive usages from the same file, in server order (file, then line). */
+export function groupByFile(usages: readonly Usage[]): [string, Usage[]][] {
+  const groups: [string, Usage[]][] = [];
+  for (const usage of usages) {
+    const last = groups.at(-1);
+    if (last && last[0] === usage.file_path) last[1].push(usage);
+    else groups.push([usage.file_path, [usage]]);
+  }
+  return groups;
+}
+
 function UsageRow({ usage }: { usage: Usage }) {
   const [open, setOpen] = useState(false);
   const range = rangeAround(usage.file_path, usage.line);
@@ -33,7 +44,7 @@ function UsageRow({ usage }: { usage: Usage }) {
       <Stack direction="row" spacing={1} alignItems="center" useFlexGap flexWrap="wrap">
         <Chip size="small" label={USAGE_LABELS[usage.usage_type]} />
         <Typography variant="body2" sx={{ wordBreak: 'break-all' }}>
-          {usage.file_path}:{usage.line}
+          line {usage.line}
         </Typography>
         {usage.used_by && (
           <Typography variant="body2" color="text.secondary">
@@ -136,14 +147,30 @@ export function UsageList({ elementId, usageCounts }: UsageListProps) {
         {items.length === 0 ? (
           <Typography color="text.secondary">No uses were found in the project.</Typography>
         ) : (
-          <Box component="ul" sx={{ m: 0, p: 0 }}>
-            {items.map((usage) => (
-              <UsageRow
-                key={`${usage.file_path}:${usage.line}:${usage.column}:${usage.usage_type}`}
-                usage={usage}
-              />
+          <Stack spacing={2}>
+            {groupByFile(items).map(([path, group]) => (
+              <Box component="section" key={path} aria-label={`Uses in ${path}`}>
+                <Typography
+                  variant="subtitle2"
+                  component="h4"
+                  sx={{ wordBreak: 'break-all', borderBottom: 2, borderColor: 'divider', pb: 0.5 }}
+                >
+                  {path}{' '}
+                  <Typography component="span" variant="body2" color="text.secondary">
+                    ({plural(group.length, 'use')} shown)
+                  </Typography>
+                </Typography>
+                <Box component="ul" sx={{ m: 0, p: 0 }}>
+                  {group.map((usage) => (
+                    <UsageRow
+                      key={`${usage.file_path}:${usage.line}:${usage.column}:${usage.usage_type}`}
+                      usage={usage}
+                    />
+                  ))}
+                </Box>
+              </Box>
             ))}
-          </Box>
+          </Stack>
         )}
         {usages.hasNextPage && (
           <Button onClick={() => void usages.fetchNextPage()} disabled={usages.isFetchingNextPage}>

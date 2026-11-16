@@ -31,6 +31,7 @@ class TargetKind(StrEnum):
     IMPORT = "import"  # a name bound by an import statement
     SELF = "self"  # the instance/class parameter of a method
     UNBOUND = "unbound"  # not bound in the file; may come from a star import
+    TYPED = "typed"  # a variable whose type is known; see Reference.via
 
 
 @dataclass(slots=True)
@@ -63,6 +64,10 @@ class Reference:
     name: str = ""
     attrs: tuple[str, ...] = ()
     context: str = ""
+    #: For ``TYPED`` references: where the variable's type comes from. Its
+    #: kind is ``CALL`` for ``x = make()`` (a class, or a function whose
+    #: return annotation names one) and ``ANNOTATION`` for ``x: Foo``.
+    via: Reference | None = None
 
 
 @dataclass(slots=True)
@@ -76,4 +81,8 @@ class FileRecord:
     references: list[Reference] = field(default_factory=list)
     exports: list[str] | None = None
     attribute_names: list[str] = field(default_factory=list)
+    #: Return annotation of each function that has a simple one.
+    return_types: dict[str, Reference] = field(default_factory=dict)
+    #: ``(class_id, attribute, type source)`` for typed instance attributes.
+    attribute_types: list[tuple[str, str, Reference]] = field(default_factory=list)
     error: str | None = None

@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import {
   Box,
   FormControl,
@@ -6,18 +7,21 @@ import {
   Paper,
   Select,
   Stack,
+  TextField,
   Typography,
 } from '@mui/material';
 import { useElements } from '@shared/api/queries';
 import type { ElementType } from '@shared/api/types';
 import { EmptyState, QueryState } from '@shared/components/QueryState';
 import { VirtualList } from '@shared/components/VirtualList';
+import { useDebounce } from '@shared/hooks/useDebounce';
 import { optionalOneOf, useUrlState } from '@shared/hooks/useUrlState';
 import { plural } from '@shared/lib/format';
 import { ElementDetailPanel } from './ElementDetailPanel';
 import { ELEMENT_ROW_HEIGHT, ElementRow } from './ElementRow';
 
 const TYPES: readonly ElementType[] = ['module', 'class', 'function'];
+const FILTER_DEBOUNCE_MS = 250;
 const TYPE_LABELS: Record<ElementType, string> = {
   module: 'Modules',
   class: 'Classes',
@@ -28,8 +32,18 @@ export default function ExplorePage() {
   const [params, setParams] = useUrlState();
   const type = optionalOneOf(params.get('type'), TYPES);
   const selectedId = params.get('id');
+  const urlName = params.get('name') ?? '';
+  const [text, setText] = useState(urlName);
+  const debounced = useDebounce(text, FILTER_DEBOUNCE_MS);
 
-  const elements = useElements({ type });
+  // Typing updates the URL after a pause, so the filter survives reloads and links.
+  useEffect(() => {
+    if (debounced.trim() !== urlName) setParams({ name: debounced.trim() || null });
+    // Only react to typing, not to URL changes it caused.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debounced]);
+
+  const elements = useElements({ type, name: urlName || undefined });
   const items = elements.data?.pages.flatMap((page) => page.items) ?? [];
   const total = elements.data?.pages[0]?.total ?? 0;
 
@@ -50,8 +64,23 @@ export default function ExplorePage() {
           aria-label="Elements"
           sx={{ width: { xs: '100%', md: 420 }, flexShrink: 0 }}
         >
-          <Stack direction="row" spacing={2} alignItems="center" sx={{ p: 2 }}>
-            <FormControl size="small" sx={{ minWidth: 160 }}>
+          <Stack
+            direction="row"
+            spacing={2}
+            alignItems="center"
+            useFlexGap
+            flexWrap="wrap"
+            sx={{ p: 2 }}
+          >
+            <TextField
+              size="small"
+              label="Filter by name"
+              value={text}
+              onChange={(event) => setText(event.target.value)}
+              sx={{ flex: '1 1 160px' }}
+              inputProps={{ maxLength: 200 }}
+            />
+            <FormControl size="small" sx={{ minWidth: 140 }}>
               <InputLabel id="explore-type-label">Show</InputLabel>
               <Select
                 labelId="explore-type-label"
@@ -78,7 +107,14 @@ export default function ExplorePage() {
             loadingLabel="Loading elements"
           >
             {items.length === 0 ? (
-              <EmptyState title="Nothing to show" hint="No elements of this kind were found." />
+              <EmptyState
+                title="Nothing to show"
+                hint={
+                  urlName
+                    ? `No element names contain “${urlName}”.`
+                    : 'No elements of this kind were found.'
+                }
+              />
             ) : (
               <VirtualList
                 items={items}
@@ -93,6 +129,7 @@ export default function ExplorePage() {
                   <ElementRow
                     element={element}
                     selected={element.id === selectedId}
+                    highlight={urlName}
                     onSelect={(id) => setParams({ id }, { replace: false })}
                   />
                 )}

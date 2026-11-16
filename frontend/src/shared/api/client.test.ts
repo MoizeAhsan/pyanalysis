@@ -1,7 +1,7 @@
 import { http, HttpResponse } from 'msw';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { apiError, server } from '@/test/server';
-import { ApiError, compact, request } from './client';
+import { ApiError, REQUEST_TIMEOUT_MS, buildUrl, compact, request } from './client';
 
 async function failure(run: () => Promise<unknown>): Promise<ApiError> {
   try {
@@ -56,6 +56,45 @@ describe('request', () => {
     controller.abort();
     const error = await failure(() => request({ url: '/summary', signal: controller.signal }));
     expect(error.code).toBe('cancelled');
+  });
+});
+
+describe('buildUrl', () => {
+  it('repeats keys for lists and skips missing values', () => {
+    const url = new URL(
+      buildUrl('/elements', { type: ['class', 'function'], file: undefined, n: 0 }),
+    );
+    expect(url.pathname).toBe('/api/elements');
+    expect(url.searchParams.getAll('type')).toEqual(['class', 'function']);
+    expect(url.searchParams.has('file')).toBe(false);
+    expect(url.searchParams.get('n')).toBe('0');
+  });
+});
+
+describe('request timeouts', () => {
+  it('gives up after the timeout with a retryable error', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    try {
+      server.use(http.get('*/api/summary', () => new Promise<never>(() => undefined)));
+      const pending = failure(() => request({ url: '/summary' }));
+      await vi.advanceTimersByTimeAsync(REQUEST_TIMEOUT_MS + 1);
+      const error = await pending;
+      expect([error.code, error.retryable]).toEqual(['timeout', true]);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('sends JSON bodies with a content type', async () => {
+    let seen: { type: string | null; body: unknown } | null = null;
+    server.use(
+      http.post('*/api/analysis', async ({ request: incoming }) => {
+        seen = { type: incoming.headers.get('content-type'), body: await incoming.json() };
+        return HttpResponse.json({ ok: true });
+      }),
+    );
+    await request({ url: '/analysis', method: 'POST', data: { project_path: '/p' } });
+    expect(seen).toEqual({ type: 'application/json', body: { project_path: '/p' } });
   });
 });
 

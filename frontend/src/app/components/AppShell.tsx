@@ -2,7 +2,7 @@
  * Modern App Shell with responsive navigation and accessibility features
  */
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { Suspense, lazy, useState, useEffect, useRef, useCallback } from 'react';
 import {
   AppBar,
   Toolbar,
@@ -32,14 +32,20 @@ import {
   Visibility as VisibilityIcon,
   Dashboard as DashboardIcon,
 } from '@mui/icons-material';
-import { motion } from 'framer-motion';
 import { ThemeSwitcher } from '@design-system/components/ThemeSwitcher';
 import { useThemeToggle } from '@design-system/providers/ThemeProvider';
 import { FocusManager, AriaUtils } from '@shared/utils/accessibility';
 import { useKeyboardNavigation } from '@shared/hooks/useKeyboardNavigation';
 import { useKeyboardDetection } from '@shared/hooks/useKeyboardDetection';
 import { useKeyboardShortcuts, createCommonShortcuts } from '@shared/hooks/useKeyboardShortcuts';
-import { KeyboardHelpDialog } from '@shared/components/KeyboardHelpDialog';
+import { ConnectionBanner } from '@shared/components/ConnectionBanner';
+
+// Loaded on first use; it is not needed to show the page.
+const KeyboardHelpDialog = lazy(() =>
+  import('@shared/components/KeyboardHelpDialog').then((module) => ({
+    default: module.KeyboardHelpDialog,
+  })),
+);
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -102,7 +108,8 @@ const DRAWER_WIDTH_MOBILE = 260;
 export function AppShell({ children, currentView = 'home', onViewChange }: AppShellProps) {
   const theme = useTheme();
   const { toggleMode } = useThemeToggle();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  // Read synchronously so the first render already knows which drawer to draw.
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'), { noSsr: true });
   const [mobileOpen, setMobileOpen] = useState(false);
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set(['analysis']));
   const [announcementId] = useState(() => AriaUtils.generateId('navigation-announcement'));
@@ -253,13 +260,17 @@ export function AppShell({ children, currentView = 'home', onViewChange }: AppSh
       <ListItem
         key={item.id}
         disablePadding
-        sx={{ display: 'block' }}
-        component={motion.li}
-        {...(!item.disabled && {
-          whileHover: { x: 4, transition: { duration: 0.15, ease: [0, 0, 0.2, 1] } },
-          whileTap: { scale: 0.98, transition: { duration: 0.15, ease: [0, 0, 0.2, 1] } },
-        })}
-        style={{ borderRadius: 8, margin: '0 8px 4px 8px' }}
+        sx={{
+          display: 'block',
+          borderRadius: 2,
+          m: '0 8px 4px 8px',
+          transition: 'transform 0.15s cubic-bezier(0, 0, 0.2, 1)',
+          ...(!item.disabled && {
+            '&:hover': { transform: 'translateX(4px)' },
+            '&:active': { transform: 'scale(0.98)' },
+          }),
+          '@media (prefers-reduced-motion: reduce)': { transition: 'none', transform: 'none' },
+        }}
       >
         <ListItemButton
           {...itemProps}
@@ -362,7 +373,13 @@ export function AppShell({ children, currentView = 'home', onViewChange }: AppSh
         {hasChildren && (
           <Collapse in={isExpanded} timeout="auto" unmountOnExit>
             <List component="ul" disablePadding aria-label={`${item.label} submenu`}>
-              {item.children?.map((child) => renderNavigationItem(child, depth + 1))}
+              {item.children?.map((child) =>
+                renderNavigationItem(
+                  child,
+                  depth + 1,
+                  flatNavigationItems.findIndex((flatItem) => flatItem.id === child.id),
+                ),
+              )}
             </List>
           </Collapse>
         )}
@@ -429,7 +446,7 @@ export function AppShell({ children, currentView = 'home', onViewChange }: AppSh
       </Box>
 
       {/* Navigation Items */}
-      <Box sx={{ flex: 1, overflow: 'auto', py: 1 }} {...navigationContainerRef}>
+      <Box sx={{ flex: 1, overflow: 'auto', py: 1 }} ref={navigationContainerRef}>
         <List
           component="ul"
           aria-label="Main navigation menu"
@@ -570,7 +587,8 @@ export function AppShell({ children, currentView = 'home', onViewChange }: AppSh
           open={mobileOpen}
           onClose={handleDrawerToggle}
           ModalProps={{
-            keepMounted: true, // Better open performance on mobile
+            // Rendered only while open: the hidden copy doubled the first render's cost.
+            keepMounted: false,
             'aria-labelledby': 'navigation-drawer-title',
           }}
           sx={{
@@ -586,26 +604,28 @@ export function AppShell({ children, currentView = 'home', onViewChange }: AppSh
           {drawer}
         </Drawer>
 
-        {/* Desktop Drawer */}
-        <Drawer
-          variant="permanent"
-          sx={{
-            display: { xs: 'none', md: 'block' },
-            '& .MuiDrawer-paper': {
-              boxSizing: 'border-box',
-              width: DRAWER_WIDTH,
-              backgroundImage: 'none',
-              borderRight: 1,
-              borderColor: 'divider',
-            },
-          }}
-          open
-          PaperProps={{
-            'aria-labelledby': 'navigation-drawer-title',
-          }}
-        >
-          {drawer}
-        </Drawer>
+        {/* Desktop Drawer: not rendered on small screens, where it would be hidden anyway */}
+        {!isMobile && (
+          <Drawer
+            variant="permanent"
+            sx={{
+              display: { xs: 'none', md: 'block' },
+              '& .MuiDrawer-paper': {
+                boxSizing: 'border-box',
+                width: DRAWER_WIDTH,
+                backgroundImage: 'none',
+                borderRight: 1,
+                borderColor: 'divider',
+              },
+            }}
+            open
+            PaperProps={{
+              'aria-labelledby': 'navigation-drawer-title',
+            }}
+          >
+            {drawer}
+          </Drawer>
+        )}
       </Box>
 
       {/* Main Content */}
@@ -636,6 +656,7 @@ export function AppShell({ children, currentView = 'home', onViewChange }: AppSh
             pb: { xs: 8, sm: 3, md: 4 }, // Extra bottom padding on mobile for safe area
           }}
         >
+          <ConnectionBanner />
           {children}
         </Box>
       </Box>
@@ -655,7 +676,11 @@ export function AppShell({ children, currentView = 'home', onViewChange }: AppSh
       />
 
       {/* Keyboard Help Dialog */}
-      <KeyboardHelpDialog open={helpOpen} onClose={hideHelp} shortcuts={shortcuts} />
+      {helpOpen && (
+        <Suspense fallback={null}>
+          <KeyboardHelpDialog open onClose={hideHelp} shortcuts={shortcuts} />
+        </Suspense>
+      )}
 
       {/* Footer - contentinfo landmark at top level */}
       <Box
@@ -667,7 +692,7 @@ export function AppShell({ children, currentView = 'home', onViewChange }: AppSh
           right: 0,
           p: 1,
           fontSize: '0.75rem',
-          color: 'text.disabled',
+          color: 'text.secondary',
           display: { xs: 'none', md: 'block' },
         }}
       >

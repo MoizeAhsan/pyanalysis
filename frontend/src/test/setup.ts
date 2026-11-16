@@ -1,8 +1,16 @@
 import '@testing-library/jest-dom/vitest';
+import { transferableAbortController } from 'node:util';
 import { cleanup, configure } from '@testing-library/react';
 import { afterAll, afterEach, beforeAll, vi } from 'vitest';
 import { fakeInstances } from './fakeCytoscape';
 import { resetApiState, server } from './server';
+
+// jsdom replaces AbortController with its own, which Node's fetch rejects
+// ("Expected signal to be an instance of AbortSignal"). Browsers have one
+// implementation, so restore Node's for the tests.
+const nativeController = transferableAbortController();
+globalThis.AbortController = nativeController.constructor as typeof AbortController;
+globalThis.AbortSignal = nativeController.signal.constructor as typeof AbortSignal;
 
 // Status is polled every 400 ms, so a multi-step analysis outlasts the 1 s default.
 configure({ asyncUtilTimeout: 5000 });

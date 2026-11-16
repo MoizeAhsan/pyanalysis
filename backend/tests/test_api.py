@@ -345,6 +345,16 @@ def test_elements_filter_by_type_and_file(analyzed: TestClient) -> None:
     assert "docstring" not in in_file["items"][0]
 
 
+def test_elements_filter_by_part_of_the_name(analyzed: TestClient) -> None:
+    found = analyzed.get("/api/elements", params={"name": "  USER "}).json()
+    names = [item["qualified_name"] for item in found["items"]]
+    assert names and all("user" in name.lower() for name in names)
+    assert found["total"] == len(names)
+    narrowed = analyzed.get("/api/elements", params={"name": "user", "type": "class"}).json()
+    assert [item["name"] for item in narrowed["items"]] == ["User"]
+    assert analyzed.get("/api/elements", params={"name": "x" * 201}).status_code == 422
+
+
 @pytest.mark.parametrize(
     "params", [{"limit": 0}, {"limit": 501}, {"offset": -1}, {"type": "bogus"}]
 )
@@ -448,6 +458,16 @@ def test_search_matches_paths_and_optionally_docstrings(analyzed: TestClient) ->
         ("Base.save", "docstring")
     ]
     assert "storage" in with_docs["items"][0]["match_text"]
+
+
+def test_search_falls_back_to_fuzzy_name_matches(analyzed: TestClient) -> None:
+    body = analyzed.get("/api/search", params={"q": "crusr"}).json()
+    assert [(r["element"]["qualified_name"], r["match_type"]) for r in body["items"]] == [
+        ("create_user", "fuzzy")
+    ]
+    # Too short, or too spread out, to be a meaningful fuzzy match.
+    assert analyzed.get("/api/search", params={"q": "cu"}).json()["total"] == 0
+    assert analyzed.get("/api/search", params={"q": "uhr"}).json()["total"] == 0
 
 
 def test_search_is_case_insensitive_and_paginated(analyzed: TestClient) -> None:
@@ -685,3 +705,36 @@ def test_built_frontend_is_served_with_client_side_routing(
         assert client.get("/%2e%2e/secret.txt").text == "<html>app</html>"
         assert client.get("/api/health").json()["status"] == "ok"
         assert client.get("/api/nope").status_code == 404
+
+        # Hashed build assets are cached for good; the page itself is revalidated.
+        assert "immutable" in client.get("/assets/app.js").headers["cache-control"]
+        assert client.get("/").headers["cache-control"] == "no-cache"
+        assert client.get("/explore").headers["cache-control"] == "no-cache"
+
+
+# ---------------------------------------------------------- cross-origin guard
+
+
+def test_foreign_origin_cannot_change_state(client: TestClient) -> None:
+    """A form on another site must not be able to cancel or reset an analysis."""
+    evil = {"Origin": "https://evil.example"}
+
+    for method, path in (("POST", "/api/analysis/cancel"), ("DELETE", "/api/analysis")):
+        response = client.request(method, path, headers=evil)
+        assert response.status_code == 403
+        assert response.json()["error"]["code"] == "forbidden_origin"
+    assert (
+        client.request("POST", "/api/analysis/cancel", headers={"Origin": "null"}).status_code
+        == 403
+    )
+    # Reading is unaffected; CORS already stops foreign pages seeing the body.
+    assert client.get("/api/health", headers=evil).status_code == 200
+
+
+def test_own_and_configured_origins_may_change_state(client: TestClient) -> None:
+    same_origin = {"Origin": "http://localhost"}
+    dev_server = {"Origin": "http://localhost:5173"}
+
+    assert client.post("/api/analysis/cancel", headers=same_origin).status_code == 200
+    assert client.post("/api/analysis/cancel", headers=dev_server).status_code == 200
+    assert client.post("/api/analysis/cancel").status_code == 200  # no Origin: CLI clients

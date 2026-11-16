@@ -29,10 +29,10 @@ import type {
   UsageType,
 } from './types';
 
-export const STATUS_KEY = ['analysis-status'] as const;
+const STATUS_KEY = ['analysis-status'] as const;
 /** Prefix of every query whose data belongs to the current analysis. */
 export const DATA_KEY = ['analysis-data'] as const;
-export const STATUS_POLL_MS = 400;
+const STATUS_POLL_MS = 400;
 
 export function createQueryClient(): QueryClient {
   return new QueryClient({
@@ -49,6 +49,21 @@ export function createQueryClient(): QueryClient {
 }
 
 // ---------------------------------------------------------------- lifecycle
+
+const HEALTH_POLL_MS = 15_000;
+
+/** Liveness of the backend, polled so a stopped server is noticed and recovery is too. */
+export function useBackendHealth() {
+  return useQuery({
+    queryKey: ['health'],
+    queryFn: ({ signal }) => request<{ status: string }>({ url: '/health', signal }),
+    staleTime: 0,
+    retry: false,
+    refetchInterval: HEALTH_POLL_MS,
+    // Keep checking while the browser reports being offline, so the banner clears.
+    networkMode: 'always',
+  });
+}
 
 export function useAnalysisStatus() {
   return useQuery({
@@ -113,6 +128,8 @@ export function treeQuery(parent: string) {
 export interface ElementFilters {
   type?: ElementType | undefined;
   file?: string | undefined;
+  /** Part of the qualified name, matched without regard to case. */
+  name?: string | undefined;
 }
 
 const PAGE_SIZE = 100;
@@ -128,6 +145,8 @@ export function useElements(filters: ElementFilters, { enabled = true }: Enabled
       }),
     initialPageParam: 0,
     getNextPageParam: (page) => page.next_offset ?? undefined,
+    // Keep showing the current list while a narrower filter loads.
+    placeholderData: keepPreviousData,
     enabled,
   });
 }

@@ -36,7 +36,7 @@ from pyanalyzer.models.records import (
 
 #: Bump whenever the shape or meaning of :class:`FileRecord` changes, so that
 #: cached records produced by an older extractor are discarded.
-EXTRACTOR_VERSION: Final = 1
+EXTRACTOR_VERSION: Final = 3
 
 _MAX_CONTEXT: Final = 200
 _MAX_EXPR_TEXT: Final = 120
@@ -48,6 +48,10 @@ _DEF: Final = "def"
 _IMPORT: Final = "import"
 
 type _Binding = tuple[str, str, int]
+#: Where a variable's type comes from: ``(kind, root, attrs, scope)``. The
+#: dotted name ``root.attrs`` is looked up from ``scope`` once the module is
+#: complete; ``kind`` is CALL for ``x = make()`` and ANNOTATION for ``x: T``.
+type _TypeSource = tuple[RefKind, str, tuple[str, ...], "_Scope"]
 type _FunctionNode = ast.FunctionDef | ast.AsyncFunctionDef
 type _Comprehension = ast.ListComp | ast.SetComp | ast.DictComp | ast.GeneratorExp
 
@@ -140,10 +144,85 @@ def _expr_text(node: ast.AST, limit: int = _MAX_EXPR_TEXT) -> str:
     return text if len(text) <= limit else text[: limit - 3] + "..."
 
 
+def _dotted(node: ast.expr) -> tuple[str, tuple[str, ...]] | None:
+    """``a.b.c`` as ``("a", ("b", "c"))``; ``None`` for anything else."""
+    attrs: list[str] = []
+    while isinstance(node, ast.Attribute):
+        attrs.append(node.attr)
+        node = node.value
+    if isinstance(node, ast.Name):
+        return node.id, tuple(reversed(attrs))
+    return None
+
+
+def _is_none(node: ast.expr) -> bool:
+    return (isinstance(node, ast.Constant) and node.value is None) or (
+        isinstance(node, ast.Name) and node.id == "None"
+    )
+
+
+_OPTIONAL_WRAPPERS: Final = frozenset({"Optional", "Annotated", "Final", "ClassVar"})
+
+
+def _type_chain(node: ast.expr, depth: int = 0) -> tuple[str, tuple[str, ...]] | None:
+    """The class named by a type annotation, if it names exactly one.
+
+    Unwraps ``Optional[T]``, ``T | None``, ``Union[T, None]``, ``Final[T]``
+    and string annotations. ``Repo[User]`` names ``Repo``; containers such as
+    ``list[User]`` name ``list``, which never resolves to a project class.
+    """
+    if depth > 5:
+        return None
+    if isinstance(node, ast.Constant):
+        if not isinstance(node.value, str) or len(node.value) > _MAX_STRING_ANNOTATION:
+            return None
+        try:
+            parsed = ast.parse(node.value.strip(), mode="eval")
+        except (SyntaxError, ValueError, RecursionError):
+            return None
+        return _type_chain(parsed.body, depth + 1)
+    if isinstance(node, ast.BinOp) and isinstance(node.op, ast.BitOr):
+        sides = [side for side in (node.left, node.right) if not _is_none(side)]
+        return _type_chain(sides[0], depth + 1) if len(sides) == 1 else None
+    if isinstance(node, ast.Subscript):
+        head = _dotted(node.value)
+        if head is None:
+            return None
+        name = head[1][-1] if head[1] else head[0]
+        arguments = node.slice.elts if isinstance(node.slice, ast.Tuple) else [node.slice]
+        if name in _OPTIONAL_WRAPPERS and arguments:
+            return _type_chain(arguments[0], depth + 1)
+        if name == "Union":
+            members = [argument for argument in arguments if not _is_none(argument)]
+            return _type_chain(members[0], depth + 1) if len(members) == 1 else None
+        return head
+    return _dotted(node)
+
+
+def _merge_type[K](types: dict[K, _TypeSource | None], key: K, source: _TypeSource | None) -> None:
+    """Record a type source; conflicting or unknown bindings make it unknown."""
+    if source is None:
+        types[key] = None
+        return
+    existing = types.get(key, source)
+    if existing is None or existing[:3] != source[:3]:
+        types[key] = None
+    else:
+        types[key] = existing
+
+
 class _Scope:
     """A lexical scope: the module, a class body, or a function-like body."""
 
-    __slots__ = ("bindings", "class_id", "global_names", "kind", "parent", "self_name")
+    __slots__ = (
+        "bindings",
+        "class_id",
+        "global_names",
+        "kind",
+        "parent",
+        "self_name",
+        "types",
+    )
 
     def __init__(self, kind: str, parent: _Scope | None) -> None:
         self.kind = kind
@@ -152,6 +231,9 @@ class _Scope:
         self.global_names: set[str] = set()
         self.self_name = ""
         self.class_id = ""
+        #: Known type source per local name; ``None`` once the name has been
+        #: bound in a way whose type is unknown or conflicting.
+        self.types: dict[str, _TypeSource | None] = {}
 
 
 class _Extractor(ast.NodeVisitor):
@@ -173,6 +255,14 @@ class _Extractor(ast.NodeVisitor):
         self._kind: RefKind | None = None
         self._complexity: list[int] = []
         self._position: tuple[int, int] | None = None
+        self._pending_type: tuple[str, _TypeSource] | None = None
+        #: ``make().attr`` chains: (user id, callee source, attrs, line, col, kind).
+        self._pending_results: list[
+            tuple[str, _TypeSource, tuple[str, ...], int, int, RefKind]
+        ] = []
+        self._return_sources: dict[str, _TypeSource] = {}
+        self._attribute_sources: dict[tuple[str, str], _TypeSource | None] = {}
+        self._class_lines: dict[str, int] = {}
 
     # ------------------------------------------------------------------ driver
 
@@ -232,12 +322,25 @@ class _Extractor(ast.NodeVisitor):
                 reference = Reference(
                     user_id, line, col, kind, TargetKind.SELF, target_id=owner.class_id
                 )
+            elif attrs and (source := owner.types.get(root)) is not None:
+                via = self._source_reference(source, user_id, line, col)
+                if via is None:
+                    continue
+                reference = Reference(user_id, line, col, kind, TargetKind.TYPED, via=via)
             else:
                 continue
             reference.name = root
             reference.attrs = attrs
             reference.context = self._context(line)
             references.append(reference)
+
+        for user_id, source, attrs, line, col, kind in self._pending_results:
+            via = self._source_reference(source, user_id, line, col)
+            if via is not None:
+                typed = Reference(user_id, line, col, kind, TargetKind.TYPED, via=via)
+                typed.attrs = attrs
+                typed.context = self._context(line)
+                references.append(typed)
 
         exported = set(self._exports or ())
         for binding in self._imports:
@@ -253,6 +356,16 @@ class _Extractor(ast.NodeVisitor):
         record.references = references
         record.exports = self._exports
         record.attribute_names = sorted(self._attribute_names)
+        for function_id, source in self._return_sources.items():
+            via = self._source_reference(source, function_id, 0, 0)
+            if via is not None:
+                record.return_types[function_id] = via
+        for (class_id, attr), maybe_source in self._attribute_sources.items():
+            if maybe_source is None:
+                continue
+            via = self._source_reference(maybe_source, class_id, self._class_lines[class_id], 0)
+            if via is not None:
+                record.attribute_types.append((class_id, attr, via))
 
     # ----------------------------------------------------------------- helpers
 
@@ -285,8 +398,39 @@ class _Extractor(ast.NodeVisitor):
             current = current.parent
         return None
 
-    def _bind(self, name: str, tag: str = _LOCAL, target: str = "", index: int = -1) -> None:
+    def _source_reference(
+        self, source: _TypeSource, user_id: str, line: int, col: int
+    ) -> Reference | None:
+        """The reference a type source's dotted name denotes, if it is bound."""
+        kind, root, attrs, scope = source
+        found = self._lookup(scope, root)
+        if found is None:
+            return None
+        (tag, target, index), _ = found
+        if tag == _DEF:
+            reference = Reference(user_id, line, col, kind, TargetKind.LOCAL, target_id=target)
+        elif tag == _IMPORT:
+            reference = Reference(user_id, line, col, kind, TargetKind.IMPORT, import_index=index)
+        else:
+            return None
+        reference.name = root
+        reference.attrs = attrs
+        return reference
+
+    def _bind(
+        self,
+        name: str,
+        tag: str = _LOCAL,
+        target: str = "",
+        index: int = -1,
+        type_source: _TypeSource | None = None,
+    ) -> None:
         scope = self._module_scope if name in self._scope.global_names else self._scope
+        if tag == _LOCAL:
+            pending = self._pending_type
+            if type_source is None and pending is not None and pending[0] == name:
+                type_source = pending[1]
+            _merge_type(scope.types, name, type_source)
         existing = scope.bindings.get(name)
         if tag == _LOCAL and existing is not None and existing[0] != _LOCAL:
             return
@@ -334,6 +478,12 @@ class _Extractor(ast.NodeVisitor):
         ):
             self._reference("super", tuple(attrs), current, kind)
         else:
+            source = self._value_source(current)
+            if source is not None:
+                line, col = self._position or (node.lineno, node.col_offset)
+                self._pending_results.append(
+                    (self._user_id, source, tuple(attrs), line, col, self._kind or kind)
+                )
             self.visit(current)
 
     def _visit_as(self, kind: RefKind, nodes: list[ast.expr]) -> None:
@@ -391,9 +541,48 @@ class _Extractor(ast.NodeVisitor):
         self._visit_as(RefKind.ANNOTATION, annotations)
 
     def _bind_parameters(self, args: ast.arguments) -> None:
-        for arg in [*args.posonlyargs, *args.args, *args.kwonlyargs, args.vararg, args.kwarg]:
-            if arg is not None:
-                self._bind(arg.arg)
+        for arg in [*args.posonlyargs, *args.args, *args.kwonlyargs]:
+            self._bind(arg.arg, type_source=self._annotation_source(arg.annotation))
+        for variadic in (args.vararg, args.kwarg):
+            if variadic is not None:
+                self._bind(variadic.arg)
+
+    def _annotation_source(self, annotation: ast.expr | None) -> _TypeSource | None:
+        chain = _type_chain(annotation) if annotation is not None else None
+        if chain is None or self._scope.parent is None:
+            return None
+        # Annotations are evaluated where the function is defined.
+        return (RefKind.ANNOTATION, chain[0], chain[1], self._scope.parent)
+
+    def _value_source(self, value: ast.expr | None) -> _TypeSource | None:
+        """``Foo(...)`` or ``make(...)``: the callee may name the value's type."""
+        if not isinstance(value, ast.Call):
+            return None
+        chain = _dotted(value.func)
+        if chain is None:
+            return None
+        return (RefKind.CALL, chain[0], chain[1], self._scope)
+
+    def _record_assignment_type(
+        self, target: ast.expr, source: _TypeSource | None
+    ) -> tuple[str, _TypeSource] | None:
+        """Remember typed ``self.attr`` / class attributes; return a pending local type."""
+        scope = self._scope
+        if isinstance(target, ast.Name):
+            if scope.kind == "class":
+                self._merge_attribute(scope.class_id, target.id, source)
+            return (target.id, source) if source is not None else None
+        if (
+            isinstance(target, ast.Attribute)
+            and isinstance(target.value, ast.Name)
+            and scope.self_name
+            and target.value.id == scope.self_name
+        ):
+            self._merge_attribute(scope.class_id, target.attr, source)
+        return None
+
+    def _merge_attribute(self, class_id: str, attr: str, source: _TypeSource | None) -> None:
+        _merge_type(self._attribute_sources, (class_id, attr), source)
 
     # ------------------------------------------------------------- definitions
 
@@ -404,7 +593,13 @@ class _Extractor(ast.NodeVisitor):
 
         parent_id, self._user_id = self._user_id, element_id
         self._visit_as(RefKind.DECORATOR, node.decorator_list)
-        self._visit_as(RefKind.BASE, node.bases)
+        for base in node.bases:
+            # ``Generic[User]``: only ``Generic`` is a base; ``User`` is a type use.
+            if isinstance(base, ast.Subscript):
+                self._visit_as(RefKind.BASE, [base.value])
+                self._visit_as(RefKind.ANNOTATION, [base.slice])
+            else:
+                self._visit_as(RefKind.BASE, [base])
         for keyword in node.keywords:
             self.visit(keyword.value)
 
@@ -422,6 +617,7 @@ class _Extractor(ast.NodeVisitor):
             )
         )
 
+        self._class_lines[element_id] = node.lineno
         scope = _Scope("class", self._scope)
         scope.class_id = element_id
         self._scope = scope
@@ -465,6 +661,15 @@ class _Extractor(ast.NodeVisitor):
             is_async=isinstance(node, ast.AsyncFunctionDef),
         )
         self._elements.append(element)
+
+        returns = _type_chain(node.returns) if node.returns is not None else None
+        if returns is not None:
+            self._return_sources[element_id] = (
+                RefKind.ANNOTATION,
+                returns[0],
+                returns[1],
+                enclosing,
+            )
 
         scope = _Scope("function", enclosing)
         self._scope = scope
@@ -615,13 +820,26 @@ class _Extractor(ast.NodeVisitor):
         if node.value is not None:
             self.visit(node.value)
             self._collect_exports(node.target, node.value, extend=False)
-        self.visit(node.target)
+        chain = _type_chain(node.annotation)
+        source: _TypeSource | None = (
+            (RefKind.ANNOTATION, chain[0], chain[1], self._scope)
+            if chain is not None
+            else self._value_source(node.value)
+        )
+        self._visit_target(node.target, source)
 
     def visit_Assign(self, node: ast.Assign) -> None:
         self.visit(node.value)
+        source = self._value_source(node.value)
         for target in node.targets:
-            self.visit(target)
+            self._visit_target(target, source)
             self._collect_exports(target, node.value, extend=False)
+
+    def _visit_target(self, target: ast.expr, source: _TypeSource | None) -> None:
+        previous = self._pending_type
+        self._pending_type = self._record_assignment_type(target, source)
+        self.visit(target)
+        self._pending_type = previous
 
     def visit_AugAssign(self, node: ast.AugAssign) -> None:
         self.visit(node.value)

@@ -24,6 +24,8 @@ make serve     # build the frontend and start the app
 
 Then open <http://localhost:8000>, enter the path of a Python project, and choose **Analyze**.
 
+Some Linux distributions ship Python without `ensurepip` (on Debian and Ubuntu it is in the `python3-venv` package). `make setup` then uses [uv](https://docs.astral.sh/uv/) if it is installed, and otherwise stops with instructions instead of a half-made virtualenv.
+
 To analyze a project straight away, or to get a summary without the browser:
 
 ```bash
@@ -66,13 +68,13 @@ By default the scanner skips virtual environments, caches, build output, and any
 
 ## Security
 
-The server is a local tool with no authentication: anyone who can reach it can ask it to read Python files in any directory the server's user can read. It therefore binds to `127.0.0.1` and rejects requests whose `Host` header is not local. Do not expose it to a network without putting your own access control in front of it.
+The server is a local tool with no authentication: anyone who can reach it can ask it to read Python files in any directory the server's user can read. It therefore binds to `127.0.0.1`, rejects requests whose `Host` header is not local, and refuses state-changing requests (`POST`, `DELETE`) whose browser `Origin` is neither the server itself nor one of `PYANALYZER_CORS_ORIGINS`, so other web sites cannot start, cancel or reset an analysis. Do not expose it to a network without putting your own access control in front of it.
 
 ## What the analysis cannot see
 
 Results come from reading source code, so anything decided at run time is invisible:
 
-- A call on a value of unknown type, such as `thing.save()`, is not linked to any `save` method. Usages are recorded only where a name provably refers to an element (through an import, a definition in the same file, or `self`/`super()` in a method).
+- Calls on instances are linked when the instance's class is known from a constructor (`repo = Repo()`), a parameter or variable annotation (`repo: Repo`, `Optional[Repo]`, `Repo | None`), a function's return annotation (`repo = make_repo()`), a typed instance attribute (`self.repo = Repo()`, dataclass fields), or a call result (`Repo().save()`). Methods are looked up along Python's method resolution order. A variable bound to different or unknown types (reassigned, a loop variable, unpacked, an untyped parameter) is not guessed at, and neither are containers (`list[Repo]`), so some real uses are still missed.
 - "Dead-code candidates" are code with no reference found inside the project. Code reached dynamically, registered with a framework, or used by other projects will appear here. Decorated functions, dunder methods, test code, names in `__all__`, and methods of classes with external base classes are never reported.
 - Symbolic links are not followed.
 

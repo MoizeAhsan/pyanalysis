@@ -117,7 +117,11 @@ describe('AnalysisSummary', () => {
       '/issues?kind=unused_import',
     );
     expect(screen.getByRole('link', { name: 'shop.models' })).toBeInTheDocument();
-    expect(screen.getByText('requests (4 files)')).toBeInTheDocument();
+    const packages = screen.getByRole('list', { name: /Third-party packages/ });
+    expect(within(packages).getByText('requests')).toBeInTheDocument();
+    expect(within(packages).getByText('4')).toBeInTheDocument();
+    const modules = screen.getByRole('list', { name: /Most depended-on modules/ });
+    expect(within(modules).getByText('6')).toBeInTheDocument();
   });
 
   it('lists files that could not be analyzed, with the reason', async () => {

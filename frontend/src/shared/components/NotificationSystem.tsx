@@ -3,7 +3,7 @@
  */
 
 import { createContext, useContext, useState, useCallback, type ReactNode } from 'react';
-import { Snackbar, Alert, AlertTitle, IconButton, Slide, Stack, Portal, Box } from '@mui/material';
+import { Alert, AlertTitle, IconButton, Slide, Stack, Portal, Box } from '@mui/material';
 import {
   Close as CloseIcon,
   CheckCircle as SuccessIcon,
@@ -12,7 +12,7 @@ import {
   Info as InfoIcon,
 } from '@mui/icons-material';
 
-export type NotificationType = 'success' | 'error' | 'warning' | 'info';
+type NotificationType = 'success' | 'error' | 'warning' | 'info';
 
 export interface Notification {
   id: string;
@@ -251,34 +251,4 @@ export function useNotifications() {
     throw new Error('useNotifications must be used within a NotificationProvider');
   }
   return context;
-}
-
-// Legacy Snackbar component for backward compatibility
-interface LegacySnackbarProps {
-  open: boolean;
-  message: string;
-  severity?: NotificationType;
-  onClose: () => void;
-  autoHideDuration?: number;
-}
-
-export function LegacySnackbar({
-  open,
-  message,
-  severity = 'info',
-  onClose,
-  autoHideDuration = 6000,
-}: LegacySnackbarProps) {
-  return (
-    <Snackbar
-      open={open}
-      autoHideDuration={autoHideDuration}
-      onClose={onClose}
-      anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-    >
-      <Alert onClose={onClose} severity={severity} sx={{ width: '100%' }}>
-        {message}
-      </Alert>
-    </Snackbar>
-  );
 }

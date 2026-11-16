@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections import defaultdict
 from dataclasses import dataclass, field
 
+from pyanalyzer.analysis.mro import linearize
 from pyanalyzer.analysis.resolver import Resolution
 from pyanalyzer.models.core import ElementType
 
@@ -23,10 +24,11 @@ class ClassHierarchy:
     external_bases: dict[str, list[str]] = field(default_factory=dict)
     overrides: dict[str, str] = field(default_factory=dict)
     overridden_by: dict[str, list[str]] = field(default_factory=dict)
+    _mro: dict[str, list[str]] = field(default_factory=dict, repr=False)
 
     def ancestors(self, class_id: str) -> list[str]:
-        """All project ancestors, nearest first. Safe on cyclic input."""
-        return _closure(class_id, self.bases)
+        """Project ancestors in method resolution order. Safe on cyclic input."""
+        return linearize(class_id, self.bases, self._mro)[1:]
 
     def descendants(self, class_id: str) -> list[str]:
         """All project descendants, nearest first. Safe on cyclic input."""
@@ -65,11 +67,11 @@ def build_hierarchy(resolution: Resolution) -> ClassHierarchy:
     for element in elements.values():
         if element.type is not ElementType.CLASS:
             continue
-        resolved = len(hierarchy.bases.get(element.id, ()))
-        if len(element.bases) > resolved:
-            hierarchy.external_bases[element.id] = _unresolved_bases(
-                element.bases, [elements[b].name for b in hierarchy.bases.get(element.id, ())]
-            )
+        external = _unresolved_bases(
+            element.bases, resolution.resolved_base_names.get(element.id, set())
+        )
+        if external:
+            hierarchy.external_bases[element.id] = external
         methods[element.id] = {
             elements[child].name: child
             for child in reversed(resolution.children.get(element.id, ()))
@@ -90,14 +92,11 @@ def build_hierarchy(resolution: Resolution) -> ClassHierarchy:
     return hierarchy
 
 
-def _unresolved_bases(declared: list[str], resolved_names: list[str]) -> list[str]:
-    """Declared base expressions that did not resolve to a project class."""
-    remaining = list(resolved_names)
-    external: list[str] = []
-    for expression in declared:
-        short_name = expression.split("[", 1)[0].rsplit(".", 1)[-1]
-        if short_name in remaining:
-            remaining.remove(short_name)
-        else:
-            external.append(expression)
-    return external
+def _unresolved_bases(declared: list[str], resolved: set[str]) -> list[str]:
+    """Declared base expressions that did not resolve to a project class.
+
+    Compared by the expression as written (``Parent`` for
+    ``from base import Internal as Parent``), so aliases are not mistaken
+    for external bases. ``Generic[T]`` is compared without its subscript.
+    """
+    return [expression for expression in declared if expression.split("[", 1)[0] not in resolved]

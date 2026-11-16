@@ -58,9 +58,19 @@ export default defineConfig({
           ) {
             return 'react';
           }
-          if (name.startsWith('@mui/') || name.startsWith('@emotion/')) return 'mui';
+          // Only MUI's styling core is shared by every page. Components stay with
+          // the chunks that use them, so the first page does not download, say,
+          // the Slider used by a settings panel that is loaded on demand.
+          if (
+            name.startsWith('@emotion/') ||
+            ['@mui/system', '@mui/utils', '@mui/styled-engine', '@mui/private-theming'].includes(
+              name,
+            ) ||
+            /node_modules\/@mui\/material\/(styles|colors|utils)\//.test(id)
+          ) {
+            return 'mui';
+          }
           if (name === 'cytoscape') return 'cytoscape';
-          if (name === 'framer-motion' || name.startsWith('motion-')) return 'motion';
           return undefined;
         },
       },

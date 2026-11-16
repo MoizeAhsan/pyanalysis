@@ -69,5 +69,3 @@ export const shadowTokens = {
     snackbar: '0px 3px 5px rgba(0, 0, 0, 0.2), 0px 6px 10px rgba(0, 0, 0, 0.14)',
   },
 } as const;
-
-export type ShadowToken = typeof shadowTokens;

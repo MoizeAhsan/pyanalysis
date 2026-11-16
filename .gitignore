@@ -79,3 +79,6 @@ backend/dist/
 e2e/.cache/
 test-results/
 playwright-report/
+
+# Analysis cache written by the e2e server
+frontend/e2e/.cache/
