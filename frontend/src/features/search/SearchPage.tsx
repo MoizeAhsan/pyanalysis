@@ -38,6 +38,41 @@ const MATCH_NOTES: Record<string, (result: SearchResult) => string | undefined> 
   name: () => undefined,
 };
 
+const KIND_LABELS: Record<ElementType, string> = {
+  module: 'modules',
+  class: 'classes',
+  function: 'functions',
+};
+
+interface SavedSearch {
+  q: string;
+  type: ElementType | undefined;
+  docs: boolean;
+}
+
+/** A search and its filters, stored as a query string so it fits the history list. */
+function encodeSearch({ q, type, docs }: SavedSearch): string {
+  const params = new URLSearchParams({ q });
+  if (type) params.set('type', type);
+  if (docs) params.set('docs', '1');
+  return params.toString();
+}
+
+function decodeSearch(entry: string): SavedSearch {
+  // Entries saved before filters were remembered are plain query text.
+  if (!entry.startsWith('q=')) return { q: entry, type: undefined, docs: false };
+  const params = new URLSearchParams(entry);
+  return {
+    q: params.get('q') ?? '',
+    type: optionalOneOf(params.get('type'), TYPES),
+    docs: params.get('docs') === '1',
+  };
+}
+
+function describeSearch({ q, type, docs }: SavedSearch): string {
+  return [q, type && `in ${KIND_LABELS[type]}`, docs && 'with docs'].filter(Boolean).join(' · ');
+}
+
 export default function SearchPage() {
   const [params, setParams] = useUrlState();
   const navigate = useNavigate();
@@ -64,8 +99,9 @@ export default function SearchPage() {
   const open = (id: string) => {
     const query = urlQuery.trim();
     if (query) {
+      const saved = encodeSearch({ q: query, type, docs: docstrings });
       setHistory((previous) =>
-        [query, ...previous.filter((entry) => entry !== query)].slice(0, MAX_HISTORY),
+        [saved, ...previous.filter((entry) => entry !== saved)].slice(0, MAX_HISTORY),
       );
     }
     navigate(elementLink(id));
@@ -135,15 +171,23 @@ export default function SearchPage() {
           {!hasQuery && history.length > 0 && (
             <Stack direction="row" spacing={1} alignItems="center" useFlexGap flexWrap="wrap">
               <Typography variant="body2" color="text.secondary">
-                Recent searches:
+                Recent searches (with their filters):
               </Typography>
               {history.map((entry) => (
                 <Chip
                   key={entry}
                   size="small"
                   variant="outlined"
-                  label={entry}
-                  onClick={() => setText(entry)}
+                  label={describeSearch(decodeSearch(entry))}
+                  onClick={() => {
+                    const saved = decodeSearch(entry);
+                    setText(saved.q);
+                    setParams({
+                      q: saved.q,
+                      type: saved.type ?? null,
+                      docs: saved.docs ? '1' : null,
+                    });
+                  }}
                   onDelete={() =>
                     setHistory((previous) => previous.filter((item) => item !== entry))
                   }

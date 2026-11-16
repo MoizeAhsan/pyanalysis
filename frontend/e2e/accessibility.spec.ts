@@ -77,8 +77,9 @@ test.describe('accessibility', () => {
 
   test('the skip link is the first stop and moves focus to the content', async ({ page }) => {
     await page.goto('/');
-    await page.keyboard.press('Tab');
     const skip = page.getByRole('link', { name: 'Skip to main content' });
+    await expect(skip).toBeAttached(); // the first render runs in a transition
+    await page.keyboard.press('Tab');
     await expect(skip).toBeFocused();
     await expect(skip).toBeVisible();
     await page.keyboard.press('Enter');

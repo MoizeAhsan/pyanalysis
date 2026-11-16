@@ -285,6 +285,9 @@ export function layoutOptions(
         nodeOverlap: 24,
         componentSpacing: 60,
         numIter: large ? 300 : 1000,
+        // Cools from 1000 to 1 in ~135 steps instead of ~690 (factor 0.99):
+        // similar layouts for project graphs at a fifth of the main-thread time.
+        coolingFactor: 0.95,
         ...common,
       };
   }

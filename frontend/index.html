@@ -51,79 +51,11 @@
       .safe-area-right {
         padding-right: env(safe-area-inset-right);
       }
-      /* Static shell shown until the app has loaded; it mirrors the app bar and
-         navigation so the first paint does not wait for JavaScript. React
-         replaces it when it mounts. */
-      body {
-        margin: 0;
-        background: #fff;
-        color: rgba(0, 0, 0, 0.87);
-        font-family: Roboto, 'Helvetica Neue', Arial, sans-serif;
-      }
-      .boot-bar {
-        position: fixed;
-        top: 0;
-        right: 0;
-        left: 0;
-        height: 64px;
-        display: flex;
-        align-items: center;
-        padding: 0 24px;
-        color: #fff;
-        font-size: 1.25rem;
-        font-weight: 700;
-        background: linear-gradient(135deg, #1976d2 0%, #42a5f5 50%, #64b5f6 100%);
-      }
-      .boot-nav {
-        display: none;
-      }
-      .boot-main {
-        padding: 88px 24px 24px;
-      }
-      .boot-main p {
-        margin: 0;
-        color: rgba(0, 0, 0, 0.6);
-      }
-      @media (min-width: 900px) {
-        .boot-bar {
-          left: 280px;
-        }
-        .boot-nav {
-          display: block;
-          position: fixed;
-          top: 0;
-          bottom: 0;
-          left: 0;
-          width: 279px;
-          border-right: 1px solid rgba(0, 0, 0, 0.12);
-        }
-        .boot-main {
-          margin-left: 280px;
-        }
-      }
-      @media (prefers-color-scheme: dark) {
-        body {
-          background: #121212;
-          color: #fff;
-        }
-        .boot-main p {
-          color: rgba(255, 255, 255, 0.7);
-        }
-        .boot-nav {
-          border-color: rgba(255, 255, 255, 0.12);
-        }
-      }
     </style>
   </head>
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>
-    <div id="root">
-      <div aria-busy="true">
-        <div class="boot-bar">Python Code Analyzer</div>
-        <div class="boot-nav"></div>
-        <div class="boot-main"><p>Loading the analyzer…</p></div>
-      </div>
-    </div>
+    <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

@@ -108,7 +108,8 @@ const DRAWER_WIDTH_MOBILE = 260;
 export function AppShell({ children, currentView = 'home', onViewChange }: AppShellProps) {
   const theme = useTheme();
   const { toggleMode } = useThemeToggle();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  // Read synchronously so the first render already knows which drawer to draw.
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'), { noSsr: true });
   const [mobileOpen, setMobileOpen] = useState(false);
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set(['analysis']));
   const [announcementId] = useState(() => AriaUtils.generateId('navigation-announcement'));
@@ -603,26 +604,28 @@ export function AppShell({ children, currentView = 'home', onViewChange }: AppSh
           {drawer}
         </Drawer>
 
-        {/* Desktop Drawer */}
-        <Drawer
-          variant="permanent"
-          sx={{
-            display: { xs: 'none', md: 'block' },
-            '& .MuiDrawer-paper': {
-              boxSizing: 'border-box',
-              width: DRAWER_WIDTH,
-              backgroundImage: 'none',
-              borderRight: 1,
-              borderColor: 'divider',
-            },
-          }}
-          open
-          PaperProps={{
-            'aria-labelledby': 'navigation-drawer-title',
-          }}
-        >
-          {drawer}
-        </Drawer>
+        {/* Desktop Drawer: not rendered on small screens, where it would be hidden anyway */}
+        {!isMobile && (
+          <Drawer
+            variant="permanent"
+            sx={{
+              display: { xs: 'none', md: 'block' },
+              '& .MuiDrawer-paper': {
+                boxSizing: 'border-box',
+                width: DRAWER_WIDTH,
+                backgroundImage: 'none',
+                borderRight: 1,
+                borderColor: 'divider',
+              },
+            }}
+            open
+            PaperProps={{
+              'aria-labelledby': 'navigation-drawer-title',
+            }}
+          >
+            {drawer}
+          </Drawer>
+        )}
       </Box>
 
       {/* Main Content */}

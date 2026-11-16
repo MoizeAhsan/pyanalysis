@@ -125,6 +125,34 @@ describe('SearchPage', () => {
     expect(screen.getByLabelText('Search the project')).toHaveValue('place');
   });
 
+  it('remembers the filters with the query and restores them together', async () => {
+    withAnalysis();
+    const { user, unmount } = renderApp(<SearchPage />, {
+      route: '/search?q=total&type=function&docs=1',
+    });
+    await user.click(await screen.findByRole('button', { name: /Order\.total/ }));
+    unmount();
+
+    const again = renderApp(<SearchPage />, { route: '/search' });
+    await again.user.click(
+      await screen.findByRole('button', { name: 'total · in functions · with docs' }),
+    );
+    await waitFor(() =>
+      expect(screen.getByTestId('location')).toHaveTextContent(
+        '/search?q=total&type=function&docs=1',
+      ),
+    );
+    expect(screen.getByLabelText('Search the project')).toHaveValue('total');
+  });
+
+  it('still reads searches saved before filters were remembered', async () => {
+    window.localStorage.setItem('pyanalyzer.searchHistory', JSON.stringify(['legacy']));
+    withAnalysis();
+    const { user } = renderApp(<SearchPage />, { route: '/search' });
+    await user.click(await screen.findByRole('button', { name: 'legacy' }));
+    expect(screen.getByLabelText('Search the project')).toHaveValue('legacy');
+  });
+
   it('does not search for an empty query', async () => {
     withAnalysis();
     renderApp(<SearchPage />, { route: '/search' });

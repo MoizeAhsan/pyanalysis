@@ -78,8 +78,8 @@
   - Create detail-on-demand patterns for node information
   - _Requirements: 3.3, 5.4_
 
-- [ ] 5.4 Add visualization export and sharing capabilities
-  - _Audit note: PNG export only; SVG export was removed. Shareable URLs now work through the router._
+- [x] 5.4 Add visualization export and sharing capabilities
+  - _Done (2026-11): PNG and SVG export from the graph toolbar, full-screen mode, and shareable URLs through the router (level, layout, focus, depth, and limits are in the query string)._
   - Implement export functionality (PNG, SVG formats)
   - Add fullscreen mode for detailed exploration
   - Create shareable visualization URLs with state persistence
@@ -96,10 +96,11 @@
   - Implement multiple filter criteria (file type, element type, etc.)
   - Create clear visual indicators for active filters
   - Add filter presets and saved filter combinations
+  - _Note (2026-11): recent searches are saved with their kind and documentation filters and restore all three; "Clear filters" resets them; the explorer adds a name filter. All filters live in the URL._
   - _Requirements: 8.2_
 
-- [ ] 6.3 Optimize search performance for large datasets
-  - _Audit note: The web worker was never wired up and has been removed; search runs on the server with virtualized results._
+- [x] 6.3 Optimize search performance for large datasets
+  - _Done differently (2026-11): requirement 8.4 prefers server-side search, so the heavy work runs in the backend's prebuilt index (exact, prefix, substring, path, docstring, then fuzzy tiers; 33 ms on 10,000 files) instead of a web worker, which keeps it off the UI thread just the same. Results are paginated and virtualized._
   - Implement Web Workers for heavy search computations
   - Add virtualization for search results display
   - Create efficient client-side search algorithms with indexing
@@ -170,7 +171,7 @@
   - _Requirements: 3.1_
 
 - [ ] 10.3 Accessibility audit and final adjustments
-  - _Audit note: Automated axe scans pass on five routes. Testing with real screen readers has not been done._
+  - _Status (2026-11): axe (WCAG 2.0/2.1/2.2 A and AA) passes in a real browser on all six routes in light and dark mode; that scan found and led to fixes for colour contrast (theme colours, footer, search highlight) and 10.5 px mobile text. A keyboard-only Playwright journey covers the skip link, arrow-key navigation (which was broken and is fixed), filtering, opening an element, and the shortcuts dialog; landmarks, a single h1, and the live progress region are asserted. Still open: a pass with real screen readers (NVDA, VoiceOver, Orca), which needs a person._
   - Conduct comprehensive accessibility testing
   - Fix any remaining WCAG compliance issues
   - Test with actual screen readers and keyboard navigation
