@@ -164,7 +164,7 @@
   - _Requirements: 1.1, 7.4_
 
 - [ ] 10.2 Performance audit and optimization
-  - _Audit note: No Lighthouse audit has been run. Bundles are split and the graph library loads on demand._
+  - _Status (2026-11): Lighthouse 12, median of three runs per route, on a 2013 Core i5-4300U (benchmark index ~1450) with other applications running. Desktop profile: 98-100 on all six routes. Mobile profile (4x CPU slowdown, slow 4G): search 93, findings 91, explorer 87, home 85, mind map 84, architecture 72. Accessibility, best practices, and SEO are 100 everywhere. Done: removed framer-motion and axios, MUI components split per page, lazy dialogs, route chunk preloaded before first render, first render in a transition, cheaper force layout, immutable caching of hashed assets. What keeps four mobile routes below 90 is MUI/Emotion rendering on start-up and, on the graph pages, parsing Cytoscape; closing that gap needs server-side rendering or replacing those libraries._
   - Run Lighthouse audits to achieve 90+ performance score
   - Optimize bundle sizes and loading times
   - Implement final caching strategies for static assets

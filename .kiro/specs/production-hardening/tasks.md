@@ -42,8 +42,12 @@
 - [x] 7. Documentation
   - README, architecture document, this spec; corrections to the earlier specs' task lists
 
-## Not done
+## Follow-up (branch fix/audit-followups)
 
-- [ ] Lighthouse performance audit (frontend-modernization 10.2)
-- [ ] Screen-reader testing with real assistive technology (frontend-modernization 10.3); automated axe scans pass
 - [x] Resolving calls on instances by type inference (constructors, annotations, return annotations, typed instance attributes, call results; C3 method resolution order)
+- [x] PR #2 review findings: MRO-ordered overrides, aliased bases, cross-origin state changes, Escape shortcut, pre-commit hook
+- [x] Spec gaps: SVG export, full screen, animated layout changes, summary charts, search highlighting and fuzzy tier, saved search filters, usage grouping, explorer name filter, tabbed details, offline/backend banner, skeleton loading
+- [x] Accessibility in a real browser: axe on all routes in light and dark mode, keyboard-only journey; contrast, font-size, and arrow-key navigation fixes
+- [x] knip clean and enforced; `make setup` works without ensurepip (uv fallback or clear instructions)
+- [ ] Lighthouse 90+ on the mobile profile for every route (frontend-modernization 10.2): desktop 98-100 everywhere; mobile 72-93, see that task
+- [ ] Screen-reader testing with real assistive technology (frontend-modernization 10.3): needs a person
