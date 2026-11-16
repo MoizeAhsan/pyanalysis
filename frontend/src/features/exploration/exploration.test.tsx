@@ -76,7 +76,7 @@ describe('rangeAround', () => {
 describe('ElementDetailPanel', () => {
   it('shows documentation, hierarchy, members, findings, and source for a class', async () => {
     withAnalysis();
-    renderApp(<ElementDetailPanel elementId={ORDER_DETAIL.id} />);
+    const { user } = renderApp(<ElementDetailPanel elementId={ORDER_DETAIL.id} />);
 
     expect(await screen.findByRole('heading', { name: 'Order' })).toBeInTheDocument();
     expect(screen.getByText(/Holds line items and computes totals/)).toBeInTheDocument();
@@ -89,6 +89,12 @@ describe('ElementDetailPanel', () => {
     expect(screen.getByRole('link', { name: 'GiftOrder' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Order.total' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Money' })).toBeInTheDocument();
+    // Uses and source are loaded only when their tab is opened.
+    expect(api.requests.some((entry) => entry.startsWith('GET /api/source'))).toBe(false);
+    expect(api.requests.some((entry) => entry.startsWith('GET /api/usages'))).toBe(false);
+
+    await user.click(screen.getByRole('tab', { name: 'Source' }));
+    expect(screen.getByRole('tabpanel')).toHaveAttribute('aria-labelledby', 'detail-tab-source');
     expect(await screen.findByLabelText('Source of shop/orders.py')).toHaveTextContent(
       'class Order(Entity):',
     );
@@ -108,6 +114,7 @@ describe('ElementDetailPanel', () => {
   it('lists usages with who uses the element, and filters them on the server', async () => {
     withAnalysis();
     const { user } = renderApp(<ElementDetailPanel elementId={ORDER_DETAIL.id} />);
+    await user.click(await screen.findByRole('tab', { name: 'Used by (3)' }));
 
     expect(await screen.findByText('3 uses across 2 files')).toBeInTheDocument();
     expect(screen.getByText('order = Order(items)')).toBeInTheDocument();
@@ -132,6 +139,7 @@ describe('ElementDetailPanel', () => {
   it('shows a usage in its surrounding source on request', async () => {
     withAnalysis();
     const { user } = renderApp(<ElementDetailPanel elementId={ORDER_DETAIL.id} />);
+    await user.click(await screen.findByRole('tab', { name: /^Used by/ }));
     const buttons = await screen.findAllByRole('button', { name: 'Show source' });
     await user.click(buttons[1] as HTMLElement);
 

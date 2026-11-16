@@ -103,10 +103,12 @@ test.describe('analyze and explore a project', () => {
         exact: true,
       }),
     ).toBeVisible();
-    await expect(details.getByText(/\d+ uses? across \d+ files?/)).toBeVisible();
+    await details.getByRole('tab', { name: 'Source' }).click();
     await expect(details.getByLabel(/^Source of parsers\/extractor\.py/).last()).toContainText(
       'def extract_file',
     );
+    await details.getByRole('tab', { name: /^Used by/ }).click();
+    await expect(details.getByText(/\d+ uses? across \d+ files?/)).toBeVisible();
     await shot(page, '6-explorer');
   });
 
