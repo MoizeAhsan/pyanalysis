@@ -1,0 +1,719 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Analyzer Showcase</title>
+<!--
+  Motion-graphics showcase for Python Code Analyzer.
+
+  Open this file in a browser to watch it (?w=1080&h=1350 for the 4:5 cut).
+  scripts/render_showcase.mjs renders it frame by frame to MP4.
+  data.js is real output of the analyzer run on its own source
+  (backend/pyanalyzer): the tree, the package graph, one class's usages,
+  and the findings.
+-->
+<style>
+  :root { --bg: #0a0f1e; --fg: #e6ebf5; --muted: #8a96b3; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--fg);
+    font: 14px "Ubuntu Sans", "Noto Sans", system-ui, sans-serif; }
+  body { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; }
+  canvas { max-width: calc(100vw - 32px); max-height: calc(100vh - 80px); border-radius: 8px;
+    box-shadow: 0 10px 40px rgba(0,0,0,.5); }
+  .bar { display: flex; gap: 12px; align-items: center; width: min(720px, calc(100vw - 32px)); }
+  .bar input { flex: 1; }
+  .bar button { background: #1b2340; color: var(--fg); border: 1px solid #2c375e; border-radius: 6px; padding: 4px 12px; cursor: pointer; }
+  body.export .bar { display: none; }
+  body.export canvas { max-width: none; max-height: none; border-radius: 0; box-shadow: none; }
+</style>
+</head>
+<body>
+<canvas id="c" aria-label="Animated overview of Python Code Analyzer"></canvas>
+<div class="bar"><button id="play" type="button">Pause</button><input id="seek" type="range" min="0" max="1000" value="0" aria-label="Seek"><span id="time">0.0 s</span></div>
+<script src="data.js"></script>
+<script>
+"use strict";
+const D = window.DATA;
+const FONT = '"Ubuntu Sans", "Noto Sans", system-ui, sans-serif';
+const MONO = '"Ubuntu Sans Mono", "DejaVu Sans Mono", ui-monospace, monospace';
+const C = {
+  bg: "#0a0f1e", bg2: "#111831", fg: "#e6ebf5", muted: "#8a96b3", dim: "#3a4566",
+  teal: "#5eead4", violet: "#a78bfa", amber: "#fbbf24", red: "#f87171", green: "#4ade80", blue: "#60a5fa",
+};
+const PKG_COLOR = { ".": "#e6ebf5", analysis: C.teal, analyzers: C.amber, api: C.blue, graph: "#f472b6",
+  models: C.violet, parsers: C.green, scanner: "#fb923c" };
+
+// Timeline (seconds)
+const T = { hook: [0, 4.2], scan: [4.2, 8.2], mind: [8.2, 14.2], arch: [14.2, 21.2],
+  expl: [21.2, 26.8], find: [26.8, 31.4], end: [31.4, 36] };
+const DURATION = 36;
+
+// ---------- helpers ----------
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const lerp = (a, b, k) => a + (b - a) * k;
+const prog = (t, a, b) => clamp((t - a) / (b - a));
+const easeIO = k => k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
+const easeOut = k => 1 - Math.pow(1 - k, 3);
+const easeBack = k => { const c = 1.6; return 1 + (c + 1) * Math.pow(k - 1, 3) + c * Math.pow(k - 1, 2); };
+// visible window with fades: 0 before a, ramps to 1 over fi, back to 0 over fo ending at b
+const win = (t, a, b, fi = 0.5, fo = 0.5) => Math.min(prog(t, a, a + fi), 1 - prog(t, b - fo, b));
+function rng(seed) { let s = seed >>> 0; return () => ((s = (s * 1664525 + 1013904223) >>> 0) / 4294967296); }
+const hash = str => { let h = 2166136261; for (const ch of str) h = Math.imul(h ^ ch.charCodeAt(0), 16777619); return (h >>> 0) / 4294967296; };
+const rgba = (hex, a) => { const n = parseInt(hex.slice(1), 16); return `rgba(${n >> 16},${(n >> 8) & 255},${n & 255},${a})`; };
+
+let W, H, S, L, ctx, canvas;
+
+function text(str, x, y, o = {}) {
+  ctx.save();
+  ctx.globalAlpha *= o.alpha ?? 1;
+  ctx.font = `${o.weight ?? 400} ${(o.size ?? 20) * S}px ${o.mono ? MONO : FONT}`;
+  ctx.fillStyle = o.color ?? C.fg;
+  ctx.textAlign = o.align ?? "left";
+  ctx.textBaseline = o.base ?? "alphabetic";
+  if (o.spacing) ctx.letterSpacing = `${o.spacing * S}px`;
+  ctx.fillText(str, x, y);
+  ctx.restore();
+}
+function measure(str, size, weight = 400, mono = false) {
+  ctx.save(); ctx.font = `${weight} ${size * S}px ${mono ? MONO : FONT}`;
+  const w = ctx.measureText(str).width; ctx.restore(); return w;
+}
+function wrap(str, size, weight, maxW, mono = false) {
+  const words = str.split(" "), lines = []; let cur = "";
+  for (const w of words) {
+    const next = cur ? cur + " " + w : w;
+    if (measure(next, size, weight, mono) > maxW && cur) { lines.push(cur); cur = w; } else cur = next;
+  }
+  if (cur) lines.push(cur);
+  return lines;
+}
+function rrect(x, y, w, h, r, fill, stroke, lw = 1) {
+  ctx.beginPath(); ctx.roundRect(x, y, w, h, r);
+  if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+  if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = lw; ctx.stroke(); }
+}
+function circle(x, y, r, fill, stroke, lw = 1) {
+  ctx.beginPath(); ctx.arc(x, y, Math.max(0, r), 0, Math.PI * 2);
+  if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+  if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = lw; ctx.stroke(); }
+}
+function glow(x, y, r, color, a) {
+  const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+  g.addColorStop(0, rgba(color, a)); g.addColorStop(1, rgba(color, 0));
+  ctx.fillStyle = g; ctx.fillRect(x - r, y - r, r * 2, r * 2);
+}
+
+// ---------- model built from the data ----------
+const leaves = [];   // modules: {name, path, dir, n}
+const dirs = [];     // {name, leaves:[idx]}
+for (const ch of D.tree.children) {
+  if (ch.type === "directory") {
+    const d = { name: ch.name, leaves: [] };
+    for (const m of ch.children) {
+      d.leaves.push(leaves.length);
+      leaves.push({ name: m.name, path: `${ch.name}/${m.name}.py`, dir: ch.name, n: m.n });
+    }
+    dirs.push(d);
+  } else {
+    leaves.push({ name: ch.name, path: `${ch.name}.py`, dir: null, n: ch.n ?? 0 });
+  }
+}
+const leafByPath = Object.fromEntries(leaves.map((l, i) => [l.path, i]));
+const modEdges = D.mod.edges.map(([a, b]) => [leafByPath[a], leafByPath[b]]).filter(([a, b]) => a != null && b != null);
+const pkgIds = D.pkg.nodes.map(n => n.id);
+const pkgOf = l => (l.dir && pkgIds.includes(l.dir)) ? l.dir : ".";
+const inDeg = Object.fromEntries(pkgIds.map(id => [id, new Set()]));
+for (const [a, b] of D.pkg.edges) if (a !== b) inDeg[b].add(a);
+const hub = pkgIds.reduce((best, id) => inDeg[id].size > inDeg[best].size ? id : best, pkgIds[0]);
+const maxW = Math.max(...D.pkg.edges.map(e => e[2]));
+
+// ---------- layout ----------
+function layout() {
+  S = Math.min(W, H) / 1080;
+  const wide = W / H > 1.4;
+  L = wide
+    ? { wide, capX: 120 * S, capY: H * 0.36, capW: W * 0.33, align: "left", gx: W * 0.64, gy: H * 0.5 }
+    : { wide, capX: W / 2, capY: 120 * S, capW: W - 140 * S, align: "center", gx: W / 2, gy: H * 0.5 + (H / W > 1.1 ? 95 : 60) * S };
+
+  const R1 = 120 * S, R2 = 255 * S;
+  // radial mind map: angle allocation proportional to leaf slots (top-level modules take one slot)
+  const groups = [];
+  for (const ch of D.tree.children) groups.push(ch.type === "directory" ? dirs.find(d => d.name === ch.name) : { single: leafByPath[`${ch.name}.py`] });
+  const slots = groups.reduce((s, g) => s + (g.single != null ? 1 : g.leaves.length) + 0.6, 0);
+  let a = -Math.PI / 2 - Math.PI / slots;
+  const per = (Math.PI * 2) / slots;
+  for (const g of groups) {
+    const items = g.single != null ? [g.single] : g.leaves;
+    const start = a + per * 0.3;
+    items.forEach((li, k) => { leaves[li].ang = start + per * (k + 0.5); });
+    const mid = start + per * items.length / 2;
+    if (g.single == null) { g.ang = mid; g.mx = L.gx + Math.cos(mid) * R1; g.my = L.gy + Math.sin(mid) * R1; }
+    a += per * (items.length + 0.6);
+  }
+  for (const l of leaves) { l.mx = L.gx + Math.cos(l.ang) * R2; l.my = L.gy + Math.sin(l.ang) * R2; }
+
+  // package graph: hub in the centre, the rest on a ring (order chosen to keep heavy edges short)
+  const order = ["api", ".", "scanner", "parsers", "graph", "analysis", "analyzers"].filter(id => id !== hub && pkgIds.includes(id));
+  for (const id of pkgIds) if (id !== hub && !order.includes(id)) order.push(id);
+  const RP = 285 * S;
+  window.PK = {};
+  const sizeOf = Object.fromEntries(D.pkg.nodes.map(n => [n.id, n.size]));
+  PK[hub] = { x: L.gx, y: L.gy, r: (34 + 5 * Math.sqrt(sizeOf[hub])) * S };
+  order.forEach((id, i) => {
+    const ang = -Math.PI / 2 + (i / order.length) * Math.PI * 2;
+    PK[id] = { x: L.gx + Math.cos(ang) * RP, y: L.gy + Math.sin(ang) * RP * (L.wide ? 0.92 : 1), r: (20 + 5 * Math.sqrt(sizeOf[id])) * S, ang };
+  });
+  // module dots orbit their package node
+  const byPkg = {};
+  leaves.forEach((l, i) => (byPkg[pkgOf(l)] ??= []).push(i));
+  for (const [id, list] of Object.entries(byPkg)) {
+    const p = PK[id];
+    list.forEach((li, k) => {
+      const ang = (k / list.length) * Math.PI * 2 + hash(id) * 6;
+      leaves[li].ax = p.x + Math.cos(ang) * (p.r + 12 * S);
+      leaves[li].ay = p.y + Math.sin(ang) * (p.r + 12 * S);
+    });
+  }
+  // chaos positions + noise dots
+  const r = rng(7);
+  for (const l of leaves) { l.cx = r() * W; l.cy = r() * H; l.ph = r() * 6.28; }
+  window.NOISE = Array.from({ length: 140 }, () => ({ x: r() * W, y: r() * H, ph: r() * 6.28, sz: 1 + r() * 2.2, sp: 0.3 + r() }));
+  window.NOISE_EDGES = Array.from({ length: 110 }, () => [Math.floor(r() * 140), Math.floor(r() * 140)]);
+}
+
+// ---------- scenes ----------
+function background(t) {
+  ctx.fillStyle = C.bg; ctx.fillRect(0, 0, W, H);
+  const g = ctx.createRadialGradient(L.gx, L.gy, 0, L.gx, L.gy, Math.max(W, H) * 0.7);
+  g.addColorStop(0, "rgba(40,52,100,0.35)"); g.addColorStop(1, "rgba(10,15,30,0)");
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  // faint grid
+  ctx.save(); ctx.strokeStyle = "rgba(120,140,200,0.05)"; ctx.lineWidth = 1;
+  const step = 60 * S, off = (t * 6 * S) % step;
+  ctx.beginPath();
+  for (let x = -step + off; x < W; x += step) { ctx.moveTo(x, 0); ctx.lineTo(x, H); }
+  for (let y = -step + off; y < H; y += step) { ctx.moveTo(0, y); ctx.lineTo(W, y); }
+  ctx.stroke(); ctx.restore();
+}
+
+function caption(t, [a, b], kicker, title, color = C.teal) {
+  const v = win(t, a + 0.15, b, 0.6, 0.45);
+  if (v <= 0) return;
+  const slide = (1 - easeOut(prog(t, a + 0.15, a + 0.9))) * 24 * S;
+  const size = L.wide ? 50 : 46;
+  const lines = wrap(title, size, 700, L.capW);
+  ctx.save(); ctx.globalAlpha = v;
+  let y = L.wide ? L.capY - (lines.length * size * 1.18 * S) / 2 : L.capY;
+  text(kicker, L.capX, y - 20 * S + slide, { size: 19, weight: 700, color, align: L.align, spacing: 4 });
+  y += 36 * S;
+  lines.forEach((ln, i) => text(ln, L.capX, y + slide + i * size * 1.18 * S, { size, weight: 700, align: L.align }));
+  ctx.restore();
+}
+
+function realDataTag(t, a, b) {
+  const v = win(t, a + 0.8, b, 0.6, 0.4);
+  if (v <= 0) return;
+  const s = "Real output · the analyzer mapping its own source";
+  const x = L.wide ? L.capX : W / 2, y = H - 54 * S;
+  ctx.save(); ctx.globalAlpha = v;
+  const w = measure(s, 16, 500) + 44 * S;
+  const bx = L.wide ? x : x - w / 2;
+  rrect(bx, y - 22 * S, w, 34 * S, 17 * S, "rgba(94,234,212,0.08)", "rgba(94,234,212,0.3)");
+  circle(bx + 18 * S, y - 5 * S, 4 * S, C.teal);
+  text(s, bx + 30 * S, y + 1 * S, { size: 16, weight: 500, color: C.teal });
+  ctx.restore();
+}
+
+// Scene 1 + 2: chaos, then everything gets pulled into the analyzer
+function drawChaos(t) {
+  const [, scanEnd] = T.scan;
+  const gather = easeIO(prog(t, 5.4, 7.3));
+  const vis = 1 - prog(t, 7.0, 7.6);
+  if (vis <= 0) return;
+  const tx = L.gx, ty = L.gy;
+  ctx.save(); ctx.globalAlpha = vis * (1 - 0.45 * prog(t, T.scan[0], T.scan[0] + 0.6));
+  const np = NOISE.map(n => ({
+    x: lerp(n.x + Math.sin(t * n.sp + n.ph) * 30 * S, tx, gather),
+    y: lerp(n.y + Math.cos(t * n.sp * 0.8 + n.ph) * 30 * S, ty, gather),
+  }));
+  ctx.strokeStyle = rgba(C.muted, 0.13 * (1 - gather)); ctx.lineWidth = 1 * S;
+  ctx.beginPath();
+  for (const [a, b] of NOISE_EDGES) { ctx.moveTo(np[a].x, np[a].y); ctx.lineTo(np[b].x, np[b].y); }
+  ctx.stroke();
+  NOISE.forEach((n, i) => circle(np[i].x, np[i].y, n.sz * S, rgba(C.muted, 0.5)));
+  // module edges, spaghetti
+  const lp = leaves.map(l => ({
+    x: lerp(l.cx + Math.sin(t * 0.6 + l.ph) * 40 * S, tx, gather),
+    y: lerp(l.cy + Math.cos(t * 0.5 + l.ph) * 40 * S, ty, gather),
+  }));
+  ctx.strokeStyle = rgba(C.violet, 0.28 * (1 - gather)); ctx.lineWidth = 1.2 * S;
+  ctx.beginPath();
+  for (const [a, b] of modEdges) { ctx.moveTo(lp[a].x, lp[a].y); ctx.lineTo(lp[b].x, lp[b].y); }
+  ctx.stroke();
+  leaves.forEach((l, i) => {
+    const c = PKG_COLOR[pkgOf(l)];
+    circle(lp[i].x, lp[i].y, 4 * S, c);
+    text(l.path, lp[i].x + 8 * S, lp[i].y + 5 * S, { size: 15, mono: true, color: c, alpha: 0.75 * (1 - prog(t, T.scan[0], T.scan[0] + 0.6)) });
+  });
+  ctx.restore();
+}
+
+function drawHook(t) {
+  const v = win(t, 0.2, T.hook[1], 0.7, 0.5);
+  if (v <= 0) return;
+  ctx.save(); ctx.globalAlpha = v;
+  // dark plate behind the text so it reads over the spaghetti
+  const g = ctx.createRadialGradient(W / 2, H / 2, 0, W / 2, H / 2, Math.min(W, H) * 0.55);
+  g.addColorStop(0, "rgba(10,15,30,0.92)"); g.addColorStop(1, "rgba(10,15,30,0)");
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  const s1 = (1 - easeOut(prog(t, 0.2, 1.0))) * 30 * S;
+  text("New to a large Python codebase?", W / 2, H / 2 - 30 * S + s1, { size: L.wide ? 64 : 56, weight: 800, align: "center" });
+  const v2 = prog(t, 1.2, 1.9);
+  text("Hundreds of modules. Thousands of links. No map.", W / 2, H / 2 + 40 * S, { size: L.wide ? 30 : 27, color: C.muted, align: "center", alpha: v2 });
+  ctx.restore();
+}
+
+function drawScan(t) {
+  const [a, b] = T.scan;
+  const v = win(t, a + 0.1, b - 0.2, 0.5, 0.6);
+  if (v <= 0) return;
+  const w = 640 * S, h = 210 * S, x = L.gx - w / 2, y = L.gy - h / 2;
+  const pop = easeBack(prog(t, a + 0.1, a + 0.7));
+  ctx.save(); ctx.globalAlpha = v;
+  ctx.translate(L.gx, L.gy); ctx.scale(lerp(0.9, 1, pop), lerp(0.9, 1, pop)); ctx.translate(-L.gx, -L.gy);
+  glow(L.gx, L.gy, 420 * S, C.teal, 0.10 + 0.12 * easeIO(prog(t, 5.4, 7.0)));
+  rrect(x, y, w, h, 16 * S, "rgba(13,19,40,0.96)", "rgba(138,150,179,0.35)", 1.5 * S);
+  [C.red, C.amber, C.green].forEach((c, i) => circle(x + (26 + i * 22) * S, y + 26 * S, 6 * S, rgba(c, 0.85)));
+  const cmd = "pyanalyzer serve ./pyanalyzer";
+  const typed = cmd.slice(0, Math.floor(cmd.length * prog(t, a + 0.6, a + 1.8)));
+  text("$", x + 30 * S, y + 86 * S, { size: 26, mono: true, color: C.teal });
+  text(typed + (Math.floor(t * 2.5) % 2 && typed.length < cmd.length ? "▌" : ""), x + 58 * S, y + 86 * S, { size: 26, mono: true });
+  const p = easeIO(prog(t, a + 2.0, a + 3.3));
+  if (t > a + 1.9) {
+    const files = Math.round(D.summary.total_files * p);
+    text(`Parsing ${files} / ${D.summary.total_files} files`, x + 30 * S, y + 132 * S, { size: 20, mono: true, color: C.muted });
+    rrect(x + 30 * S, y + 152 * S, w - 60 * S, 8 * S, 4 * S, "rgba(138,150,179,0.18)");
+    rrect(x + 30 * S, y + 152 * S, (w - 60 * S) * p, 8 * S, 4 * S, C.teal);
+  }
+  if (p >= 1) {
+    const s = D.summary;
+    text(`✓ ${s.total_lines.toLocaleString("en-US")} lines · ${s.classes} classes · ${s.functions} functions · ${s.usages.toLocaleString("en-US")} usages`,
+      x + 30 * S, y + 188 * S, { size: 18, mono: true, color: C.green, alpha: prog(t, a + 3.3, a + 3.6) });
+  }
+  ctx.restore();
+}
+
+// leaf position over time: chaos → (gathered at centre) → mind map → package orbit
+function leafPos(l, t) {
+  const grow = easeOut(prog(t, T.mind[0] + 0.1, T.mind[0] + 2.0));
+  const toArch = easeIO(prog(t, T.arch[0], T.arch[0] + 1.8));
+  const mx = lerp(L.gx, l.mx, grow), my = lerp(L.gy, l.my, grow);
+  return { x: lerp(mx, l.ax, toArch), y: lerp(my, l.ay, toArch) };
+}
+
+function drawMind(t) {
+  const [a] = T.mind;
+  const v = Math.min(prog(t, a, a + 0.3), 1 - prog(t, T.arch[0] + 0.6, T.arch[0] + 1.6));
+  if (v <= 0) return;
+  const grow = easeOut(prog(t, a + 0.1, a + 2.0));
+  const labels = prog(t, a + 1.4, a + 2.2) * (1 - prog(t, T.arch[0], T.arch[0] + 0.6));
+  const hl = easeIO(prog(t, a + 3.6, a + 4.4)) * (1 - prog(t, T.arch[0], T.arch[0] + 0.5));
+  const target = leafByPath[D.focus.file];
+  const targetDir = leaves[target].dir;
+  ctx.save(); ctx.globalAlpha = v;
+  const root = { x: L.gx, y: L.gy };
+  // branches
+  for (const d of dirs) {
+    const dx = lerp(root.x, d.mx, grow), dy = lerp(root.y, d.my, grow);
+    const on = d.name === targetDir ? hl : 0;
+    ctx.strokeStyle = on ? rgba(C.violet, 0.4 + 0.6 * on) : rgba(PKG_COLOR[d.name] ?? C.muted, 0.45 * (1 - hl * 0.6));
+    ctx.lineWidth = (2 + on * 2) * S;
+    ctx.beginPath(); ctx.moveTo(root.x, root.y); ctx.lineTo(dx, dy); ctx.stroke();
+    for (const li of d.leaves) {
+      const p = leafPos(leaves[li], t);
+      const lon = li === target ? hl : 0;
+      ctx.strokeStyle = lon ? rgba(C.violet, 0.4 + 0.6 * lon) : rgba(PKG_COLOR[d.name] ?? C.muted, 0.35 * (1 - hl * 0.6));
+      ctx.lineWidth = (1.3 + lon * 2) * S;
+      ctx.beginPath(); ctx.moveTo(dx, dy);
+      ctx.quadraticCurveTo(lerp(dx, p.x, 0.5) + (dx - root.x) * 0.25, lerp(dy, p.y, 0.5) + (dy - root.y) * 0.25, p.x, p.y);
+      ctx.stroke();
+    }
+  }
+  for (const l of leaves) if (!l.dir) {
+    const p = leafPos(l, t);
+    ctx.strokeStyle = rgba(C.fg, 0.3 * (1 - hl * 0.6)); ctx.lineWidth = 1.3 * S;
+    ctx.beginPath(); ctx.moveTo(root.x, root.y); ctx.lineTo(p.x, p.y); ctx.stroke();
+  }
+  // leaf nodes + radial labels
+  leaves.forEach((l, i) => {
+    const p = leafPos(l, t);
+    const c = PKG_COLOR[pkgOf(l)];
+    const dimmed = i === target ? 1 : 1 - hl * 0.65;
+    circle(p.x, p.y, (3 + Math.sqrt(l.n) * 1.3) * S, rgba(c, dimmed));
+    if (labels > 0) {
+      ctx.save(); ctx.translate(p.x, p.y);
+      const flip = Math.cos(l.ang) < 0;
+      ctx.rotate(flip ? l.ang + Math.PI : l.ang);
+      const label = l.name === "__init__" ? "__init__" : l.name;
+      text(label, flip ? -12 * S : 12 * S, 5 * S, { size: 15, mono: true, color: i === target ? C.violet : C.fg,
+        weight: i === target ? 700 : 400, align: flip ? "right" : "left", alpha: labels * (i === target ? 1 : 0.8 * dimmed) });
+      ctx.restore();
+    }
+  });
+  // directory nodes
+  for (const d of dirs) {
+    const dx = lerp(root.x, d.mx, grow), dy = lerp(root.y, d.my, grow);
+    const c = PKG_COLOR[d.name] ?? C.muted;
+    const on = d.name === targetDir ? 1 : 1 - hl * 0.6;
+    circle(dx, dy, 9 * S * grow, C.bg, rgba(c, on), 2.5 * S);
+    if (labels > 0) {
+      const w = measure(d.name, 15, 700) + 16 * S;
+      ctx.save(); ctx.globalAlpha *= labels * on;
+      rrect(dx - w / 2, dy - 34 * S, w, 22 * S, 6 * S, "rgba(10,15,30,0.85)");
+      text(d.name, dx, dy - 18 * S, { size: 15, weight: 700, color: c, align: "center" });
+      ctx.restore();
+    }
+  }
+  // root
+  const rp = easeBack(prog(t, a, a + 0.6));
+  glow(root.x, root.y, 70 * S, C.teal, 0.35);
+  circle(root.x, root.y, 30 * S * rp, C.bg2, C.teal, 2.5 * S);
+  text("py", root.x, root.y + 6 * S, { size: 19, weight: 800, color: C.teal, align: "center", alpha: rp });
+  // highlighted path label
+  if (hl > 0) {
+    const p = leafPos(leaves[target], t);
+    const s = `${D.focus.file}  →  class ${D.focus.name}`;
+    const w = measure(s, 17, 600, true) + 28 * S;
+    const bx = L.gx - w / 2, by = L.gy + 330 * S;
+    ctx.save(); ctx.globalAlpha *= hl;
+    ctx.strokeStyle = rgba(C.violet, 0.7); ctx.lineWidth = 1.5 * S; ctx.setLineDash([4 * S, 4 * S]);
+    ctx.beginPath(); ctx.moveTo(p.x, p.y + 8 * S); ctx.lineTo(L.gx, by); ctx.stroke(); ctx.setLineDash([]);
+    rrect(bx, by, w, 34 * S, 8 * S, "rgba(26,22,58,0.96)", rgba(C.violet, 0.8), 1.5 * S);
+    text(s, bx + 14 * S, by + 23 * S, { size: 17, weight: 600, mono: true, color: C.fg });
+    ctx.restore();
+  }
+  ctx.restore();
+}
+
+function curve(a, b, bend = 0.18) {
+  const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2, dx = b.x - a.x, dy = b.y - a.y;
+  return { x0: a.x, y0: a.y, cx: mx - dy * bend, cy: my + dx * bend, x1: b.x, y1: b.y };
+}
+const qpt = (q, k) => ({ x: (1 - k) ** 2 * q.x0 + 2 * (1 - k) * k * q.cx + k * k * q.x1, y: (1 - k) ** 2 * q.y0 + 2 * (1 - k) * k * q.cy + k * k * q.y1 });
+
+function drawArch(t) {
+  const [a, b] = T.arch;
+  const v = win(t, a + 0.6, T.expl[0] + 1.2, 0.8, 0.9);
+  const modV = Math.min(prog(t, a, a + 0.4), 1 - prog(t, a + 1.6, a + 2.4));
+  const leafDots = Math.min(prog(t, a, a + 0.2), 1 - prog(t, T.expl[0], T.expl[0] + 0.6));
+  // module dots travelling from the mind map to their package
+  if (leafDots > 0 && t >= a) {
+    ctx.save(); ctx.globalAlpha = leafDots * 0.9;
+    leaves.forEach(l => { const p = leafPos(l, t); circle(p.x, p.y, 3.5 * S, PKG_COLOR[pkgOf(l)]); });
+    ctx.restore();
+  }
+  if (v <= 0) return;
+  const hubOn = easeIO(prog(t, a + 4.0, a + 4.8)) * (1 - prog(t, T.expl[0], T.expl[0] + 0.5));
+  const zoomK = easeIO(prog(t, T.expl[0], T.expl[0] + 1.2));
+  ctx.save(); ctx.globalAlpha = v * (1 - zoomK * 0.8);
+  // gentle push toward the hub when the explorer opens
+  ctx.translate(PK[hub].x, PK[hub].y); ctx.scale(1 + zoomK * 0.35, 1 + zoomK * 0.35); ctx.translate(-PK[hub].x, -PK[hub].y);
+  const draw = prog(t, a + 1.3, a + 2.6);
+  D.pkg.edges.forEach(([s, d, wgt], i) => {
+    if (s === d) return;
+    const A = PK[s], B = PK[d];
+    const q = curve(A, B, 0.14);
+    const into = d === hub;
+    const ek = clamp(draw * 1.6 - (i / D.pkg.edges.length) * 0.6);
+    if (ek <= 0) return;
+    const col = into && hubOn ? C.violet : PKG_COLOR[s];
+    const alpha = (0.22 + 0.5 * (wgt / maxW)) * (hubOn && !into ? 1 - hubOn * 0.7 : 1);
+    ctx.strokeStyle = rgba(col, alpha + (into ? hubOn * 0.3 : 0));
+    ctx.lineWidth = (1.2 + 5 * Math.sqrt(wgt / maxW)) * S;
+    ctx.beginPath();
+    const steps = 24;
+    for (let k = 0; k <= steps * ek; k++) { const p = qpt(q, k / steps); k ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y); }
+    ctx.stroke();
+    // arrowhead where the curve meets the target's rim
+    if (ek >= 1) {
+      let kk = 1; while (kk > 0.5) { const p = qpt(q, kk); if (Math.hypot(p.x - B.x, p.y - B.y) > B.r + 6 * S) break; kk -= 0.01; }
+      const p = qpt(q, kk), p2 = qpt(q, kk - 0.03), ang = Math.atan2(p.y - p2.y, p.x - p2.x), al = 10 * S;
+      ctx.fillStyle = ctx.strokeStyle; ctx.beginPath();
+      ctx.moveTo(p.x, p.y); ctx.lineTo(p.x - Math.cos(ang - 0.45) * al, p.y - Math.sin(ang - 0.45) * al);
+      ctx.lineTo(p.x - Math.cos(ang + 0.45) * al, p.y - Math.sin(ang + 0.45) * al); ctx.fill();
+      // import traffic flowing along the edge
+      const n = 1 + Math.min(3, Math.floor(wgt / 25));
+      for (let j = 0; j < n; j++) {
+        const f = (t * 0.45 + j / n + hash(s + d)) % 1;
+        if (f > kk) continue;
+        const fp = qpt(q, f);
+        circle(fp.x, fp.y, 2.6 * S, rgba(col, 0.95));
+      }
+    }
+  });
+  // package nodes
+  const nodePop = easeBack(prog(t, a + 0.9, a + 1.7));
+  for (const id of pkgIds) {
+    const p = PK[id], c = PKG_COLOR[id];
+    const isHub = id === hub;
+    const dim = hubOn && !isHub ? 1 - hubOn * 0.45 : 1;
+    if (isHub) glow(p.x, p.y, p.r * 3.2, C.violet, 0.25 + 0.35 * hubOn * (0.8 + 0.2 * Math.sin(t * 5)));
+    ctx.save(); ctx.globalAlpha *= dim;
+    circle(p.x, p.y, p.r * nodePop, C.bg2, c, (isHub ? 3.5 : 2.5) * S);
+    const label = id === "." ? "top level" : id;
+    const size = D.pkg.nodes.find(n => n.id === id).size;
+    const ly = isHub ? p.y + 7 * S : p.y + p.r + 38 * S;
+    text(label, p.x, ly, { size: isHub ? 21 : 18, weight: 700, color: c, align: "center", alpha: prog(t, a + 1.3, a + 1.8) });
+    text(`${size} module${size === 1 ? "" : "s"}`, p.x, isHub ? p.y + 26 * S : ly + 20 * S, { size: 14, color: C.muted, align: "center", alpha: prog(t, a + 1.5, a + 2.0) });
+    ctx.restore();
+  }
+  // orbiting module dots once they've arrived
+  const settle = prog(t, a + 1.7, a + 2.0);
+  if (settle > 0) {
+    leaves.forEach(l => {
+      const p = PK[pkgOf(l)];
+      const base = Math.atan2(l.ay - p.y, l.ax - p.x) + t * 0.25;
+      circle(p.x + Math.cos(base) * (p.r + 12 * S), p.y + Math.sin(base) * (p.r + 12 * S), 3.5 * S, rgba(PKG_COLOR[pkgOf(l)], settle));
+    });
+  }
+  ctx.restore();
+  // hub callout
+  if (hubOn > 0 && zoomK < 1) {
+    const n = inDeg[hub].size, total = pkgIds.length - 1;
+    const s = n === total ? `Every other package imports ${hub}` : `${n} of ${total} packages import ${hub}`;
+    const w = measure(s, 19, 600) + 32 * S;
+    const bx = PK[hub].x - w / 2, by = PK[hub].y + PK[hub].r + 26 * S;
+    ctx.save(); ctx.globalAlpha = hubOn * (1 - zoomK);
+    rrect(bx, by, w, 40 * S, 10 * S, "rgba(26,22,58,0.95)", C.violet, 1.5 * S);
+    text(s, PK[hub].x, by + 27 * S, { size: 19, weight: 600, align: "center" });
+    ctx.restore();
+  }
+}
+
+function drawExplorer(t) {
+  const [a, b] = T.expl;
+  const v = win(t, a + 0.5, b, 0.6, 0.5);
+  if (v <= 0) return;
+  const F = D.focus;
+  const cw = Math.min(780 * S, W - 80 * S), ch = 210 * S;
+  const rows = F.by_file.slice(0, 6);
+  const rowH = 46 * S, gap = 34 * S;
+  const totalH = ch + gap + rows.length * rowH;
+  const x = L.gx - cw / 2, y = L.gy - totalH / 2 + (L.wide ? 10 : -50) * S;
+  const pop = easeBack(prog(t, a + 0.5, a + 1.2));
+  ctx.save(); ctx.globalAlpha = v;
+  ctx.translate(L.gx, y + ch / 2); ctx.scale(lerp(0.85, 1, pop), lerp(0.85, 1, pop)); ctx.translate(-L.gx, -(y + ch / 2));
+  glow(L.gx, y + ch / 2, 460 * S, C.violet, 0.12);
+  rrect(x, y, cw, ch, 16 * S, "rgba(17,24,49,0.97)", rgba(C.violet, 0.7), 1.5 * S);
+  rrect(x + 24 * S, y + 24 * S, 64 * S, 26 * S, 6 * S, "rgba(167,139,250,0.2)");
+  text("class", x + 56 * S, y + 43 * S, { size: 15, weight: 700, color: C.violet, align: "center" });
+  text(F.name, x + 102 * S, y + 46 * S, { size: 30, weight: 800, mono: true });
+  text(`${F.file}:75`, x + cw - 24 * S, y + 44 * S, { size: 16, mono: true, color: C.muted, align: "right" });
+  text("@dataclass(slots=True)", x + 24 * S, y + 86 * S, { size: 17, mono: true, color: C.amber });
+  const doc = "A module, class, or function (including methods and nested definitions).";
+  wrap(doc, 18, 400, cw - 48 * S).forEach((ln, i) => text(ln, x + 24 * S, y + 118 * S + i * 24 * S, { size: 18, color: C.muted }));
+  // usage tabs
+  const tabs = [["41 uses", C.fg], ["28 type hints", C.teal], ["9 imports", C.blue], ["3 calls", C.amber], ["1 reference", C.muted]];
+  let tx = x + 24 * S;
+  const tp = prog(t, a + 1.0, a + 1.8);
+  tabs.forEach(([s, c], i) => {
+    const w = measure(s, 15, 600) + 20 * S;
+    const k = clamp(tp * 5 - i);
+    ctx.save(); ctx.globalAlpha *= k;
+    rrect(tx, y + ch - 46 * S, w, 28 * S, 14 * S, rgba(c, 0.12), rgba(c, 0.5));
+    text(s, tx + w / 2, y + ch - 27 * S, { size: 15, weight: 600, color: c, align: "center" });
+    ctx.restore();
+    tx += w + 8 * S;
+  });
+  ctx.restore();
+
+  // per-file usage bars, wired to the card
+  ctx.save(); ctx.globalAlpha = v;
+  const top = y + ch + gap, maxC = rows[0].count;
+  const labelW = 350 * S, barX = x + labelW, barW = cw - labelW - 50 * S;
+  rows.forEach((r, i) => {
+    const k = easeOut(prog(t, a + 1.6 + i * 0.18, a + 2.4 + i * 0.18));
+    if (k <= 0) return;
+    const ry = top + i * rowH;
+    const pkg = r.file_path.split("/")[0];
+    const c = PKG_COLOR[pkg] ?? C.fg;
+    // connector from the card's bottom edge
+    ctx.strokeStyle = rgba(C.violet, 0.45); ctx.lineWidth = 1.5 * S;
+    ctx.beginPath(); ctx.moveTo(x + 14 * S, i ? ry - rowH / 2 - 6 * S : y + ch); ctx.lineTo(x + 14 * S, lerp(ry - rowH / 2, ry + rowH / 2 - 6 * S, k)); ctx.stroke();
+    circle(x + 14 * S, ry + rowH / 2 - 6 * S, 4.5 * S * k, c);
+    text(r.file_path, x + 28 * S, ry + rowH / 2, { size: 17, mono: true, alpha: k });
+    rrect(barX, ry + rowH / 2 - 16 * S, barW, 14 * S, 7 * S, "rgba(138,150,179,0.12)");
+    rrect(barX, ry + rowH / 2 - 16 * S, Math.max(14 * S, barW * (r.count / maxC) * k), 14 * S, 7 * S, c);
+    text(String(Math.round(r.count * k)), barX + barW + 14 * S, ry + rowH / 2 - 3 * S, { size: 18, weight: 700, mono: true, color: c });
+  });
+  const more = F.by_file.length - rows.length;
+  if (more > 0) text(`+ ${more} more file${more > 1 ? "s" : ""}, each line with its source`, x + 28 * S, top + rows.length * rowH + 14 * S,
+    { size: 15, color: C.muted, alpha: prog(t, a + 2.9, a + 3.4) });
+  ctx.restore();
+}
+
+function drawFindings(t) {
+  const [a, b] = T.find;
+  const v = win(t, a + 0.2, b, 0.5, 0.5);
+  if (v <= 0) return;
+  const iss = D.summary.issues;
+  const example = kind => (D.issues.find(i => i.kind === kind) || {}).msg || "";
+  const tiles = [
+    ["Import cycles", 0, C.green, "None found"],
+    ["Complex functions", iss.high_complexity, C.amber, example("high_complexity")],
+    ["Long functions", iss.long_function, C.amber, example("long_function")],
+    ["Too many parameters", iss.too_many_parameters, C.blue, example("too_many_parameters")],
+    ["Dead-code candidates", iss.dead_code, C.red, example("dead_code")],
+    ["Large classes", iss.large_class, C.violet, example("large_class")],
+  ];
+  const cols = L.wide ? 2 : 2, tw = 380 * S, th = 150 * S, g = 22 * S;
+  const gw = cols * tw + (cols - 1) * g, gh = Math.ceil(tiles.length / cols) * (th + g) - g;
+  const x0 = L.gx - gw / 2, y0 = L.gy - gh / 2 + 10 * S;
+  ctx.save(); ctx.globalAlpha = v;
+  tiles.forEach(([label, n, c, ex], i) => {
+    const k = easeBack(prog(t, a + 0.3 + i * 0.14, a + 0.9 + i * 0.14));
+    if (k <= 0) return;
+    const col = i % cols, row = Math.floor(i / cols);
+    const x = x0 + col * (tw + g), y = y0 + row * (th + g) + (1 - k) * 40 * S;
+    ctx.save(); ctx.globalAlpha *= clamp(k);
+    rrect(x, y, tw, th, 14 * S, "rgba(17,24,49,0.95)", rgba(c, 0.45), 1.5 * S);
+    rrect(x, y + 18 * S, 4 * S, th - 36 * S, 2 * S, c);
+    const count = Math.round(n * easeOut(prog(t, a + 0.5 + i * 0.14, a + 1.5 + i * 0.14)));
+    text(String(count), x + 26 * S, y + 66 * S, { size: 52, weight: 800, color: c });
+    text(label, x + 26 * S + measure(String(n), 52, 800) + 16 * S, y + 58 * S, { size: 20, weight: 700 });
+    const exl = wrap(ex.replace(/'/g, ""), 14, 400, tw - 52 * S, true).slice(0, 2);
+    exl.forEach((ln, j) => text(ln, x + 26 * S, y + 100 * S + j * 20 * S, { size: 14, mono: true, color: C.muted }));
+    ctx.restore();
+  });
+  ctx.restore();
+}
+
+function drawEnd(t) {
+  const [a] = T.end;
+  const v = prog(t, a, a + 0.7);
+  if (v <= 0) return;
+  ctx.save(); ctx.globalAlpha = v;
+  ctx.fillStyle = rgba(C.bg, 0.6); ctx.fillRect(0, 0, W, H);
+  const cy = H / 2 - 40 * S;
+  // logo: a tiny graph
+  const lp = easeBack(prog(t, a + 0.1, a + 0.8));
+  const nodes = [[0, -46], [-44, 20], [44, 20], [0, 0]];
+  const cols = [C.teal, C.violet, C.amber, C.fg];
+  ctx.save(); ctx.translate(W / 2, cy - 150 * S); ctx.scale(lp, lp);
+  ctx.strokeStyle = rgba(C.muted, 0.7); ctx.lineWidth = 2.5 * S;
+  ctx.beginPath(); for (let i = 0; i < 3; i++) { ctx.moveTo(0, 0); ctx.lineTo(nodes[i][0] * S, nodes[i][1] * S); } ctx.moveTo(nodes[1][0] * S, nodes[1][1] * S); ctx.lineTo(nodes[2][0] * S, nodes[2][1] * S); ctx.stroke();
+  nodes.forEach(([x, y], i) => circle(x * S, y * S, (i === 3 ? 12 : 10) * S, C.bg2, cols[i], 3 * S));
+  ctx.restore();
+  const s1 = (1 - easeOut(prog(t, a + 0.3, a + 1.0))) * 20 * S;
+  text("Python Code Analyzer", W / 2, cy + s1, { size: L.wide ? 72 : 60, weight: 800, align: "center", alpha: prog(t, a + 0.3, a + 0.9) });
+  text("See how a Python codebase fits together.", W / 2, cy + 58 * S, { size: L.wide ? 32 : 28, color: C.muted, align: "center", alpha: prog(t, a + 0.6, a + 1.2) });
+  const pills = ["Mind map", "Architecture", "Code explorer", "Findings"];
+  const pc = [C.teal, C.violet, C.blue, C.amber];
+  const pw = pills.map(p => measure(p, 17, 600) + 32 * S);
+  const total = pw.reduce((s, w) => s + w, 0) + (pills.length - 1) * 12 * S;
+  let px = W / 2 - total / 2;
+  pills.forEach((p, i) => {
+    const k = prog(t, a + 1.0 + i * 0.12, a + 1.4 + i * 0.12);
+    ctx.save(); ctx.globalAlpha *= k;
+    rrect(px, cy + 100 * S, pw[i], 38 * S, 19 * S, rgba(pc[i], 0.12), rgba(pc[i], 0.6));
+    text(p, px + pw[i] / 2, cy + 125 * S, { size: 17, weight: 600, color: pc[i], align: "center" });
+    ctx.restore();
+    px += pw[i] + 12 * S;
+  });
+  const k2 = prog(t, a + 1.7, a + 2.3);
+  text("Static analysis · runs locally · 10,100 files in 6.9 s", W / 2, cy + 196 * S, { size: 19, color: C.fg, align: "center", alpha: k2 * 0.9 });
+  const cmd = "make setup && make serve";
+  const cw = measure(cmd, 22, 500, true) + 70 * S;
+  ctx.save(); ctx.globalAlpha *= prog(t, a + 2.1, a + 2.7);
+  rrect(W / 2 - cw / 2, cy + 230 * S, cw, 52 * S, 10 * S, "rgba(13,19,40,0.95)", rgba(C.teal, 0.5), 1.5 * S);
+  text("$", W / 2 - cw / 2 + 22 * S, cy + 264 * S, { size: 22, mono: true, color: C.teal });
+  text(cmd, W / 2 - cw / 2 + 46 * S, cy + 264 * S, { size: 22, mono: true, weight: 500 });
+  ctx.restore();
+  ctx.restore();
+}
+
+function progressBar(t) {
+  const scenes = Object.values(T);
+  const w = W - 2 * 40 * S, x0 = 40 * S, y = H - 14 * S;
+  const fade = 1 - prog(t, T.end[0], T.end[0] + 0.6);
+  ctx.save(); ctx.globalAlpha = 0.9 * fade;
+  scenes.forEach(([a, b]) => {
+    const x = x0 + (a / DURATION) * w, sw = ((b - a) / DURATION) * w - 6 * S;
+    rrect(x, y, sw, 3 * S, 1.5 * S, "rgba(138,150,179,0.2)");
+    rrect(x, y, sw * prog(t, a, b), 3 * S, 1.5 * S, C.teal);
+  });
+  ctx.restore();
+}
+
+function render(t) {
+  background(t);
+  drawChaos(t);
+  drawHook(t);
+  drawScan(t);
+  caption(t, T.scan, "STEP 1 · ANALYZE", "Point it at a project. Every file is parsed, nothing is run.");
+  drawMind(t);
+  caption(t, T.mind, "MIND MAP", "The whole project as one tree: packages, modules, classes, functions.");
+  drawArch(t);
+  caption(t, T.arch, "ARCHITECTURE", "Follow the imports. See which code everything else depends on.", C.violet);
+  drawExplorer(t);
+  caption(t, T.expl, "CODE EXPLORER", "Pick any class or function and see every place it is used.", C.blue);
+  drawFindings(t);
+  caption(t, T.find, "FINDINGS", "Import cycles, dead code and code smells, found for you.", C.amber);
+  realDataTag(t, T.mind[0], T.find[1]);
+  drawEnd(t);
+  progressBar(t);
+}
+
+// ---------- boot ----------
+function setup(w, h) {
+  canvas = document.getElementById("c");
+  canvas.width = W = w; canvas.height = H = h;
+  ctx = canvas.getContext("2d");
+  layout();
+}
+window.renderFrame = t => render(t);
+window.DURATION = DURATION;
+window.setupCanvas = setup;
+
+// Encode every frame with WebCodecs (H.264) and mux to MP4. Needs window.Mp4Muxer.
+window.exportVideo = async ({ fps = 30, bitrate = 8e6 } = {}) => {
+  const { Muxer, ArrayBufferTarget } = window.Mp4Muxer;
+  const muxer = new Muxer({ target: new ArrayBufferTarget(), video: { codec: "avc", width: W, height: H }, fastStart: "in-memory" });
+  let failure = null;
+  const enc = new VideoEncoder({ output: (chunk, meta) => muxer.addVideoChunk(chunk, meta), error: e => { failure = e; } });
+  enc.configure({ codec: "avc1.640028", width: W, height: H, bitrate, framerate: fps, avc: { format: "avc" } });
+  const frames = Math.round(DURATION * fps);
+  for (let i = 0; i < frames; i++) {
+    render(i / fps);
+    const frame = new VideoFrame(canvas, { timestamp: Math.round(i * 1e6 / fps), duration: Math.round(1e6 / fps) });
+    enc.encode(frame, { keyFrame: i % (fps * 2) === 0 });
+    frame.close();
+    while (enc.encodeQueueSize > 8) await new Promise(r => setTimeout(r, 1));
+    if (failure) throw failure;
+  }
+  await enc.flush();
+  muxer.finalize();
+  const bytes = new Uint8Array(muxer.target.buffer);
+  let bin = "";
+  for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+  return btoa(bin);
+};
+
+const q = new URLSearchParams(location.search);
+setup(+q.get("w") || 1920, +q.get("h") || 1080);
+if (q.has("export")) {
+  document.body.classList.add("export");
+} else {
+  let start = performance.now(), paused = false, at = 0;
+  const seek = document.getElementById("seek"), btn = document.getElementById("play"), time = document.getElementById("time");
+  btn.onclick = () => { paused = !paused; btn.textContent = paused ? "Play" : "Pause"; start = performance.now() - at * 1000; };
+  seek.oninput = () => { at = seek.value / 1000 * DURATION; start = performance.now() - at * 1000; render(at); time.textContent = at.toFixed(1) + " s"; };
+  const loop = now => {
+    if (!paused) { at = ((now - start) / 1000) % DURATION; render(at); seek.value = at / DURATION * 1000; time.textContent = at.toFixed(1) + " s"; }
+    requestAnimationFrame(loop);
+  };
+  document.fonts.load(`20px ${FONT}`).finally(() => requestAnimationFrame(loop));
+}
+</script>
+</body>
+</html>
