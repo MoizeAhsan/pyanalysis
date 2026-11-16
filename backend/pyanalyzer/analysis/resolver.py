@@ -17,6 +17,7 @@ from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
 from typing import Final
 
+from pyanalyzer.analysis.mro import linearize
 from pyanalyzer.models.core import CodeElement, ElementType, SourceLocation, Usage, UsageType
 from pyanalyzer.models.records import FileRecord, ImportBinding, Reference, RefKind, TargetKind
 from pyanalyzer.parsers.extractor import module_id
@@ -41,6 +42,8 @@ class Resolution:
     usages: dict[str, list[Usage]] = field(default_factory=dict)
     dependencies: dict[str, list[str]] = field(default_factory=dict)
     class_bases: dict[str, list[str]] = field(default_factory=dict)
+    # Dotted text of each base expression that resolved to a project class.
+    resolved_base_names: dict[str, set[str]] = field(default_factory=dict)
     external_packages: dict[str, int] = field(default_factory=dict)
     stdlib_modules: dict[str, int] = field(default_factory=dict)
     #: ``(file, local name)`` of imports that another module reached through.
@@ -143,6 +146,8 @@ class _Resolver:
         self._usages: dict[str, list[Usage]] = defaultdict(list)
         self._dependencies: dict[str, set[str]] = defaultdict(set)
         self._class_bases: dict[str, list[str]] = defaultdict(list)
+        self._base_names: dict[str, set[str]] = defaultdict(set)
+        self._mro_cache: dict[str, list[str]] = {}
         self._externals: Counter[str] = Counter()
         self._stdlib: Counter[str] = Counter()
         self._reexported: set[tuple[str, str]] = set()
@@ -157,6 +162,8 @@ class _Resolver:
             for reference in record.references:
                 if reference.kind is RefKind.BASE:
                     self._record_reference(record, reference)
+        # Lookups made while bases were still being recorded saw a partial graph.
+        self._mro_cache.clear()
         for record in self._records:
             self._record_imports(record)
             for reference in record.references:
@@ -169,6 +176,7 @@ class _Resolver:
             usages=dict(self._usages),
             dependencies={key: sorted(value) for key, value in self._dependencies.items()},
             class_bases=dict(self._class_bases),
+            resolved_base_names=dict(self._base_names),
             external_packages=dict(self._externals.most_common()),
             stdlib_modules=dict(self._stdlib.most_common()),
             reexported=self._reexported,
@@ -247,6 +255,9 @@ class _Resolver:
         if reference.kind is RefKind.BASE:
             if self._elements[target].type is ElementType.CLASS:
                 self._class_bases[reference.scope_id].append(target)
+                self._base_names[reference.scope_id].add(
+                    ".".join((reference.name, *reference.attrs))
+                )
             else:
                 usage_type = UsageType.REFERENCE
         self._add_usage(
@@ -355,21 +366,12 @@ class _Resolver:
         return None
 
     def _class_member(self, class_id: str, name: str, *, skip_own: bool) -> str | None:
-        """Find ``name`` on a class or, breadth-first, on its resolved ancestors."""
-        seen = {class_id}
-        queue = [class_id]
-        position = 0
-        while position < len(queue):
-            current = queue[position]
-            position += 1
-            if not (skip_own and current == class_id):
-                member = self._members.get(current, {}).get(name)
-                if member is not None:
-                    return member
-            for base in self._class_bases.get(current, ()):
-                if base not in seen:
-                    seen.add(base)
-                    queue.append(base)
+        """Find ``name`` on a class or along its method resolution order."""
+        order = linearize(class_id, self._class_bases, self._mro_cache)
+        for current in order[1:] if skip_own else order:
+            member = self._members.get(current, {}).get(name)
+            if member is not None:
+                return member
         return None
 
 

@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { useDebounce } from './useDebounce';
 import { isStringArray, useLocalStorage } from './useLocalStorage';
 import { intInRange, oneOf, optionalOneOf } from './useUrlState';
+import { createCommonShortcuts, useKeyboardShortcuts } from './useKeyboardShortcuts';
 
 describe('useLocalStorage', () => {
   it('persists updates and reads them back', () => {
@@ -57,5 +58,26 @@ describe('query-string parsing', () => {
     expect(intInRange('9', 1, 5, 1)).toBe(1);
     expect(intInRange('abc', 1, 5, 2)).toBe(2);
     expect(intInRange(null, 1, 5, 2)).toBe(2);
+  });
+});
+
+describe('useKeyboardShortcuts', () => {
+  it('moves focus to the main region on Escape', () => {
+    const main = document.createElement('main');
+    main.id = 'main-content';
+    main.tabIndex = -1;
+    const button = document.createElement('button');
+    document.body.append(main, button);
+    try {
+      renderHook(() => useKeyboardShortcuts({ shortcuts: createCommonShortcuts({}) }));
+      button.focus();
+      act(() => {
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      });
+      expect(document.activeElement).toBe(main);
+    } finally {
+      main.remove();
+      button.remove();
+    }
   });
 });

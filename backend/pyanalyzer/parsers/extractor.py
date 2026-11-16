@@ -36,7 +36,7 @@ from pyanalyzer.models.records import (
 
 #: Bump whenever the shape or meaning of :class:`FileRecord` changes, so that
 #: cached records produced by an older extractor are discarded.
-EXTRACTOR_VERSION: Final = 1
+EXTRACTOR_VERSION: Final = 2
 
 _MAX_CONTEXT: Final = 200
 _MAX_EXPR_TEXT: Final = 120
@@ -404,7 +404,13 @@ class _Extractor(ast.NodeVisitor):
 
         parent_id, self._user_id = self._user_id, element_id
         self._visit_as(RefKind.DECORATOR, node.decorator_list)
-        self._visit_as(RefKind.BASE, node.bases)
+        for base in node.bases:
+            # ``Generic[User]``: only ``Generic`` is a base; ``User`` is a type use.
+            if isinstance(base, ast.Subscript):
+                self._visit_as(RefKind.BASE, [base.value])
+                self._visit_as(RefKind.ANNOTATION, [base.slice])
+            else:
+                self._visit_as(RefKind.BASE, [base])
         for keyword in node.keywords:
             self.visit(keyword.value)
 

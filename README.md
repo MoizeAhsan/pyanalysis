@@ -66,7 +66,7 @@ By default the scanner skips virtual environments, caches, build output, and any
 
 ## Security
 
-The server is a local tool with no authentication: anyone who can reach it can ask it to read Python files in any directory the server's user can read. It therefore binds to `127.0.0.1` and rejects requests whose `Host` header is not local. Do not expose it to a network without putting your own access control in front of it.
+The server is a local tool with no authentication: anyone who can reach it can ask it to read Python files in any directory the server's user can read. It therefore binds to `127.0.0.1`, rejects requests whose `Host` header is not local, and refuses state-changing requests (`POST`, `DELETE`) whose browser `Origin` is neither the server itself nor one of `PYANALYZER_CORS_ORIGINS`, so other web sites cannot start, cancel or reset an analysis. Do not expose it to a network without putting your own access control in front of it.
 
 ## What the analysis cannot see
 

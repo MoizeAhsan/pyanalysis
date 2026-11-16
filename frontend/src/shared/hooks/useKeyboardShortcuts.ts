@@ -3,7 +3,6 @@
  */
 
 import { useEffect, useCallback } from 'react';
-import { FocusManager } from '@shared/utils/accessibility';
 
 interface KeyboardShortcut {
   key: string;
@@ -117,13 +116,12 @@ export const createCommonShortcuts = (actions: {
   {
     key: 'Escape',
     action: () => {
-      // Close any open modals or focus main content
-      const focusable = FocusManager.getFocusableElements(document.body);
-      const mainContent = document.getElementById('main-content');
-      if (mainContent && focusable.includes(mainContent)) {
-        mainContent.focus();
-      }
+      // Open dialogs handle Escape themselves; otherwise return focus to the
+      // main region (tabIndex -1, so it is focusable but not in the tab order).
+      if (document.querySelector('[role="dialog"]')) return;
+      document.getElementById('main-content')?.focus();
     },
+    preventDefault: false,
     description: 'Close modals or focus main content',
   },
   {

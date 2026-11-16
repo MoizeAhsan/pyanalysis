@@ -15,6 +15,7 @@ from pyanalyzer.analysis.jobs import AnalysisManager
 from pyanalyzer.analysis.store import AnalysisStore
 from pyanalyzer.api import analysis, explore
 from pyanalyzer.api.errors import ApiError, install_error_handlers
+from pyanalyzer.api.origin import SameOriginMiddleware
 from pyanalyzer.settings import Settings
 
 
@@ -38,6 +39,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         allow_methods=["GET", "POST", "DELETE"],
         allow_headers=["Content-Type"],
     )
+    application.add_middleware(SameOriginMiddleware, trusted_origins=settings.cors_origins)
     application.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.allowed_hosts)
     install_error_handlers(application)
 

@@ -685,3 +685,31 @@ def test_built_frontend_is_served_with_client_side_routing(
         assert client.get("/%2e%2e/secret.txt").text == "<html>app</html>"
         assert client.get("/api/health").json()["status"] == "ok"
         assert client.get("/api/nope").status_code == 404
+
+
+# ---------------------------------------------------------- cross-origin guard
+
+
+def test_foreign_origin_cannot_change_state(client: TestClient) -> None:
+    """A form on another site must not be able to cancel or reset an analysis."""
+    evil = {"Origin": "https://evil.example"}
+
+    for method, path in (("POST", "/api/analysis/cancel"), ("DELETE", "/api/analysis")):
+        response = client.request(method, path, headers=evil)
+        assert response.status_code == 403
+        assert response.json()["error"]["code"] == "forbidden_origin"
+    assert (
+        client.request("POST", "/api/analysis/cancel", headers={"Origin": "null"}).status_code
+        == 403
+    )
+    # Reading is unaffected; CORS already stops foreign pages seeing the body.
+    assert client.get("/api/health", headers=evil).status_code == 200
+
+
+def test_own_and_configured_origins_may_change_state(client: TestClient) -> None:
+    same_origin = {"Origin": "http://localhost"}
+    dev_server = {"Origin": "http://localhost:5173"}
+
+    assert client.post("/api/analysis/cancel", headers=same_origin).status_code == 200
+    assert client.post("/api/analysis/cancel", headers=dev_server).status_code == 200
+    assert client.post("/api/analysis/cancel").status_code == 200  # no Origin: CLI clients

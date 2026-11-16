@@ -17,3 +17,5 @@ repos:
         entry: bash -c 'cd frontend && npx eslint --max-warnings 0 "${@#frontend/}"' --
         language: system
         files: ^frontend/src/.*\.(ts|tsx)$
+        # Generated, and ignored by .eslintrc; passing it explicitly is a warning.
+        exclude: ^frontend/src/shared/api/schema\.d\.ts$

@@ -104,6 +104,94 @@ def test_external_bases_are_listed_separately(analyze: Analyze) -> None:
     assert hierarchy.bases["class:m.py:Worker"] == ["class:m.py:Local"]
 
 
+def test_overrides_follow_the_method_resolution_order(analyze: Analyze) -> None:
+    """``C(A, B)`` with ``A(X)``: Python's MRO is C, A, X, B, so ``C.m`` overrides ``X.m``."""
+    result = analyze(
+        {
+            "m.py": """
+                class X:
+                    def m(self): ...
+                class A(X): ...
+                class B:
+                    def m(self): ...
+                class C(A, B):
+                    def m(self): ...
+                    def call(self):
+                        return super().m()
+            """
+        }
+    )
+    hierarchy = result.hierarchy
+
+    assert hierarchy.ancestors("class:m.py:C") == ["class:m.py:A", "class:m.py:X", "class:m.py:B"]
+    assert hierarchy.overrides["function:m.py:C.m"] == "function:m.py:X.m"
+    users = {usage.used_by for usage in result.resolution.usages.get("function:m.py:X.m", [])}
+    assert "function:m.py:C.call" in users
+    assert not any(
+        u.used_by == "function:m.py:C.call"
+        for u in result.resolution.usages.get("function:m.py:B.m", [])
+    )
+
+
+def test_diamond_hierarchy_uses_c3_order(analyze: Analyze) -> None:
+    hierarchy = analyze(
+        {
+            "m.py": """
+                class Base: ...
+                class Left(Base): ...
+                class Right(Base): ...
+                class Child(Left, Right): ...
+            """
+        }
+    ).hierarchy
+
+    assert hierarchy.ancestors("class:m.py:Child") == [
+        "class:m.py:Left",
+        "class:m.py:Right",
+        "class:m.py:Base",
+    ]
+
+
+def test_aliased_project_base_is_not_external(analyze: Analyze) -> None:
+    result = analyze(
+        {
+            "base.py": "class Internal: ...\n",
+            "child.py": """
+                import abc
+                from base import Internal as Parent
+
+                class Child(Parent, abc.ABC): ...
+            """,
+        }
+    )
+
+    assert result.hierarchy.bases["class:child.py:Child"] == ["class:base.py:Internal"]
+    assert result.hierarchy.external_bases == {"class:child.py:Child": ["abc.ABC"]}
+
+
+def test_generic_arguments_are_type_uses_not_bases(analyze: Analyze) -> None:
+    result = analyze(
+        {
+            "m.py": """
+                from typing import Generic, TypeVar
+
+                T = TypeVar("T")
+
+                class User: ...
+                class Repo(Generic[T]): ...
+                class UserRepo(Repo[User]): ...
+            """
+        }
+    )
+    hierarchy = result.hierarchy
+
+    assert hierarchy.bases == {"class:m.py:UserRepo": ["class:m.py:Repo"]}
+    assert "class:m.py:User" not in hierarchy.subclasses
+    assert hierarchy.external_bases == {"class:m.py:Repo": ["Generic[T]"]}
+    kinds = {u.usage_type.value for u in result.resolution.usages["class:m.py:User"]}
+    assert kinds == {"type_hint"}
+
+
 def test_inheritance_cycles_do_not_hang(analyze: Analyze) -> None:
     result = analyze(
         {
