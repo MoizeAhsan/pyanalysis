@@ -2,6 +2,10 @@
 
 Explore the structure of a Python project in your browser: what depends on what, where every class and function is used, and where the code has problems. Analysis is static (the project's code is parsed, never run) and everything stays on your machine.
 
+[![A 36-second tour: the analyzer maps its own source as a mind map, a package dependency graph, one class's usages, and its findings](docs/media/showcase-poster.png)](docs/media/showcase-16x9.mp4)
+
+*36-second tour ([video](docs/media/showcase-16x9.mp4)). Every number and name in it is the analyzer's real output for its own source. See [docs/media](docs/media/README.md) to render it again.*
+
 ## What it shows
 
 - **Mind map**: the project as a tree of directories, modules, classes, and functions that you expand as you go.
