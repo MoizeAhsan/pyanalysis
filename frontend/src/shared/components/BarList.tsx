@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { Box, Tooltip, Typography } from '@mui/material';
 import { formatCount } from '@shared/lib/format';
 
-export interface BarItem {
+interface BarItem {
   key: string;
   label: ReactNode;
   value: number;

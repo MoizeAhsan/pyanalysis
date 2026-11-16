@@ -160,5 +160,3 @@ export const colorTokens = {
     },
   },
 } as const;
-
-export type ColorToken = typeof colorTokens;

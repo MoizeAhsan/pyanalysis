@@ -74,7 +74,7 @@ function page<T>(items: T[], url: URL) {
   };
 }
 
-export const handlers = [
+const handlers = [
   http.get('*/api/health', () => HttpResponse.json({ status: 'ok', version: 'test' })),
   http.get('*/api/analysis', () => {
     const status = api.statuses.length > 1 ? api.statuses.shift() : api.statuses[0];

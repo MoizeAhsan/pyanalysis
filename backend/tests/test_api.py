@@ -460,6 +460,16 @@ def test_search_matches_paths_and_optionally_docstrings(analyzed: TestClient) ->
     assert "storage" in with_docs["items"][0]["match_text"]
 
 
+def test_search_falls_back_to_fuzzy_name_matches(analyzed: TestClient) -> None:
+    body = analyzed.get("/api/search", params={"q": "crusr"}).json()
+    assert [(r["element"]["qualified_name"], r["match_type"]) for r in body["items"]] == [
+        ("create_user", "fuzzy")
+    ]
+    # Too short, or too spread out, to be a meaningful fuzzy match.
+    assert analyzed.get("/api/search", params={"q": "cu"}).json()["total"] == 0
+    assert analyzed.get("/api/search", params={"q": "uhr"}).json()["total"] == 0
+
+
 def test_search_is_case_insensitive_and_paginated(analyzed: TestClient) -> None:
     first = analyzed.get("/api/search", params={"q": "SAVE", "limit": 1}).json()
     second = analyzed.get("/api/search", params={"q": "SAVE", "limit": 1, "offset": 1}).json()

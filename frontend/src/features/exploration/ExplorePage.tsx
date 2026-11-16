@@ -21,7 +21,7 @@ import { ElementDetailPanel } from './ElementDetailPanel';
 import { ELEMENT_ROW_HEIGHT, ElementRow } from './ElementRow';
 
 const TYPES: readonly ElementType[] = ['module', 'class', 'function'];
-export const FILTER_DEBOUNCE_MS = 250;
+const FILTER_DEBOUNCE_MS = 250;
 const TYPE_LABELS: Record<ElementType, string> = {
   module: 'Modules',
   class: 'Classes',

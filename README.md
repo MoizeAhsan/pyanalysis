@@ -24,6 +24,8 @@ make serve     # build the frontend and start the app
 
 Then open <http://localhost:8000>, enter the path of a Python project, and choose **Analyze**.
 
+Some Linux distributions ship Python without `ensurepip` (on Debian and Ubuntu it is in the `python3-venv` package). `make setup` then uses [uv](https://docs.astral.sh/uv/) if it is installed, and otherwise stops with instructions instead of a half-made virtualenv.
+
 To analyze a project straight away, or to get a summary without the browser:
 
 ```bash

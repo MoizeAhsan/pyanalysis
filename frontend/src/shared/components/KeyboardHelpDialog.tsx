@@ -2,7 +2,6 @@
  * Keyboard shortcuts help dialog
  */
 
-import { useState } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -199,25 +198,4 @@ export function KeyboardHelpDialog({ open, onClose, shortcuts }: KeyboardHelpDia
       </DialogActions>
     </Dialog>
   );
-}
-
-/**
- * Hook for managing keyboard help dialog
- */
-export function useKeyboardHelp(shortcuts: KeyboardShortcut[]) {
-  const [open, setOpen] = useState(false);
-
-  const showHelp = () => setOpen(true);
-  const hideHelp = () => setOpen(false);
-
-  const KeyboardHelpComponent = () => (
-    <KeyboardHelpDialog open={open} onClose={hideHelp} shortcuts={shortcuts} />
-  );
-
-  return {
-    showHelp,
-    hideHelp,
-    isOpen: open,
-    KeyboardHelpComponent,
-  };
 }

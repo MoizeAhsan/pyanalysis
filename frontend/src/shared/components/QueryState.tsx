@@ -62,7 +62,7 @@ export function QueryState({ isPending, error, onRetry, loadingLabel, children }
   return <>{children}</>;
 }
 
-export function NoAnalysis() {
+function NoAnalysis() {
   return (
     <Box sx={{ textAlign: 'center', p: 4 }}>
       <Typography variant="h6" component="p" gutterBottom>

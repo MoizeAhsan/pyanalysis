@@ -29,10 +29,10 @@ import type {
   UsageType,
 } from './types';
 
-export const STATUS_KEY = ['analysis-status'] as const;
+const STATUS_KEY = ['analysis-status'] as const;
 /** Prefix of every query whose data belongs to the current analysis. */
 export const DATA_KEY = ['analysis-data'] as const;
-export const STATUS_POLL_MS = 400;
+const STATUS_POLL_MS = 400;
 
 export function createQueryClient(): QueryClient {
   return new QueryClient({
@@ -50,7 +50,7 @@ export function createQueryClient(): QueryClient {
 
 // ---------------------------------------------------------------- lifecycle
 
-export const HEALTH_POLL_MS = 15_000;
+const HEALTH_POLL_MS = 15_000;
 
 /** Liveness of the backend, polled so a stopped server is noticed and recovery is too. */
 export function useBackendHealth() {

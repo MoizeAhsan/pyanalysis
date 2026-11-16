@@ -6,8 +6,3 @@ export { lightTheme } from './lightTheme';
 export { darkTheme } from './darkTheme';
 
 export type ThemeMode = 'light' | 'dark' | 'system';
-
-export interface ThemeConfig {
-  mode: ThemeMode;
-  systemPreference: 'light' | 'dark';
-}

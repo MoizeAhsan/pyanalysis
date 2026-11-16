@@ -28,11 +28,12 @@ import { ELEMENT_ROW_HEIGHT, ElementRow } from '@features/exploration/ElementRow
 const TYPES: readonly ElementType[] = ['module', 'class', 'function'];
 const HISTORY_KEY = 'pyanalyzer.searchHistory';
 const MAX_HISTORY = 8;
-export const SEARCH_DEBOUNCE_MS = 250;
+const SEARCH_DEBOUNCE_MS = 250;
 
 const MATCH_NOTES: Record<string, (result: SearchResult) => string | undefined> = {
   docstring: (result) => `Documentation: ${result.match_text}`,
   file_path: () => 'Matched the file path',
+  fuzzy: () => 'Close match: the letters appear in this order in the name',
   qualified_name: () => undefined,
   name: () => undefined,
 };

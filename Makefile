@@ -13,7 +13,7 @@ help: ## Show this help
 setup: setup-backend setup-frontend ## Install backend and frontend dependencies
 
 setup-backend: ## Create the backend virtualenv and install it with dev tools
-	test -x $(PY) || python3 -m venv $(VENV)
+	scripts/make-venv.sh $(VENV)
 	$(PY) -m pip install --upgrade pip
 	$(PY) -m pip install -e "$(BACKEND)[dev]"
 
@@ -31,7 +31,7 @@ serve: build ## Build the frontend and run the whole app on http://localhost:800
 
 lint: ## Lint and format-check backend and frontend
 	cd $(BACKEND) && .venv/bin/ruff check . && .venv/bin/ruff format --check .
-	cd $(FRONTEND) && npm run lint && npm run format:check
+	cd $(FRONTEND) && npm run lint && npm run format:check && npm run unused
 
 format: ## Auto-format backend and frontend
 	cd $(BACKEND) && .venv/bin/ruff check --fix . && .venv/bin/ruff format .

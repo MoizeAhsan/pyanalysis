@@ -13,7 +13,7 @@ function subscribe(onChange: () => void): () => void {
 }
 
 /** Whether the browser believes it has a network connection. */
-export function useOnline(): boolean {
+function useOnline(): boolean {
   return useSyncExternalStore(
     subscribe,
     () => navigator.onLine,

@@ -179,5 +179,3 @@ export const typographyTokens = {
     },
   },
 } as const;
-
-export type TypographyToken = typeof typographyTokens;

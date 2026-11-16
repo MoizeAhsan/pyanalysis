@@ -29,7 +29,7 @@ import { GraphToolbar } from './GraphToolbar';
 
 export const ROOT_ID = 'dir:';
 /** Expanding further than this would make the map unreadable and slow. */
-export const MAX_VISIBLE_NODES = 600;
+const MAX_VISIBLE_NODES = 600;
 
 interface MindMap {
   nodes: CanvasNode[];

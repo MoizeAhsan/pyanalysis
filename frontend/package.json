@@ -58,7 +58,7 @@
     "e2e": "playwright test",
     "gen:api": "openapi-typescript openapi.json -o src/shared/api/schema.d.ts",
     "unused": "knip",
-    "check": "npm run lint && npm run format:check && npm run type-check && npm run test:coverage"
+    "check": "npm run lint && npm run format:check && npm run type-check && npm run unused && npm run test:coverage"
   },
   "engines": {
     "node": ">=22"

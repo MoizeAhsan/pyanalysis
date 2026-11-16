@@ -26,6 +26,11 @@ MATCH_NAME: Final = "name"
 MATCH_QUALIFIED_NAME: Final = "qualified_name"
 MATCH_FILE_PATH: Final = "file_path"
 MATCH_DOCSTRING: Final = "docstring"
+MATCH_FUZZY: Final = "fuzzy"
+#: Shorter queries match almost everything as a subsequence, so they are not fuzzy-matched.
+_MIN_FUZZY_QUERY: Final = 3
+#: A fuzzy match's characters must lie within this many times the query's length.
+_MAX_FUZZY_SPREAD: Final = 3
 
 
 @dataclass(slots=True, frozen=True)
@@ -191,11 +196,15 @@ class AnalysisIndex:
         offset: int,
         limit: int,
     ) -> tuple[int, list[SearchHit]]:
-        """Ranked matches: exact name, name prefix, name, qualified name, path, docstring."""
+        """Ranked matches: exact name, name prefix, name, qualified name, path,
+        docstring, then fuzzy names (the query's characters in order, so
+        ``usrsvc`` finds ``UserService``), tightest first.
+        """
         needle = query.strip().lower()
         if not needle:
             return 0, []
-        ranked: list[tuple[int, int, SearchHit]] = []
+        fuzzy = len(needle) >= _MIN_FUZZY_QUERY and " " not in needle
+        ranked: list[tuple[int, int, int, SearchHit]] = []
         for position, (name, qualified, path, element) in enumerate(self._search_rows):
             if element_type is not None and element.type is not element_type:
                 continue
@@ -211,11 +220,18 @@ class AnalysisIndex:
                 rank, kind, text = 4, MATCH_FILE_PATH, element.location.file_path
             elif include_docstrings and element.docstring and needle in element.docstring.lower():
                 rank, kind, text = 5, MATCH_DOCSTRING, _snippet(element.docstring, needle)
+            elif (
+                fuzzy
+                and (span := _subsequence_span(needle, name)) is not None
+                and span <= _MAX_FUZZY_SPREAD * len(needle)
+            ):
+                ranked.append((6, span, position, SearchHit(element, MATCH_FUZZY, element.name)))
+                continue
             else:
                 continue
-            ranked.append((rank, position, SearchHit(element, kind, text)))
-        ranked.sort(key=lambda row: row[:2])
-        return len(ranked), [hit for _, _, hit in ranked[offset : offset + limit]]
+            ranked.append((rank, 0, position, SearchHit(element, kind, text)))
+        ranked.sort(key=lambda row: row[:3])
+        return len(ranked), [hit for *_, hit in ranked[offset : offset + limit]]
 
     # ------------------------------------------------------------------ graphs
 
@@ -296,6 +312,18 @@ class AnalysisIndex:
                         following.append(neighbour)
             frontier = following
         return seen
+
+
+def _subsequence_span(needle: str, text: str) -> int | None:
+    """Length of the stretch of ``text`` holding ``needle``'s characters in order."""
+    start = position = text.find(needle[0])
+    if position < 0:
+        return None
+    for character in needle[1:]:
+        position = text.find(character, position + 1)
+        if position < 0:
+            return None
+    return position - start + 1
 
 
 def _snippet(text: str, needle: str, radius: int = 60) -> str:

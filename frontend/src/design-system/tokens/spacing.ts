@@ -115,5 +115,3 @@ export const spacingTokens = {
     thick: 4,
   },
 } as const;
-
-export type SpacingToken = typeof spacingTokens;

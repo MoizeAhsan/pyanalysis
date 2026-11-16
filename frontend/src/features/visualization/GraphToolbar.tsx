@@ -18,7 +18,7 @@ interface GraphToolbarProps {
   fullscreenTarget?: RefObject<HTMLElement> | undefined;
 }
 
-export function downloadText(text: string, fileName: string, type: string): void {
+function downloadText(text: string, fileName: string, type: string): void {
   const url = URL.createObjectURL(new Blob([text], { type }));
   try {
     downloadDataUrl(url, fileName);
@@ -45,7 +45,7 @@ function useFullscreen(target: RefObject<HTMLElement> | undefined) {
   return { active, supported, toggle };
 }
 
-export function downloadDataUrl(dataUrl: string, fileName: string): void {
+function downloadDataUrl(dataUrl: string, fileName: string): void {
   const link = document.createElement('a');
   link.href = dataUrl;
   link.download = fileName;

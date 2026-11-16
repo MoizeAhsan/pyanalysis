@@ -60,6 +60,8 @@ jobs:
         run: npm run format:check
       - name: Type-check
         run: npm run type-check
+      - name: Unused files, exports, and dependencies
+        run: npm run unused
       - name: Test
         run: npm run test:coverage
       - name: Build

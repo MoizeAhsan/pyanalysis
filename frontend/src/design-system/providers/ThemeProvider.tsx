@@ -150,12 +150,6 @@ export function useTheme() {
   return context;
 }
 
-// Hook for getting theme-aware values
-export function useThemeMode() {
-  const { effectiveMode } = useTheme();
-  return effectiveMode;
-}
-
 // Hook for theme toggle functionality
 export function useThemeToggle() {
   const { mode, setMode, toggleMode } = useTheme();
