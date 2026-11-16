@@ -13,6 +13,7 @@ import {
 import { Link as RouterLink } from 'react-router-dom';
 import { useSummary } from '@shared/api/queries';
 import type { IssueKind, Summary } from '@shared/api/types';
+import { BarList } from '@shared/components/BarList';
 import { QueryState } from '@shared/components/QueryState';
 import { ISSUE_LABELS, elementLink, formatCount, formatDuration, plural } from '@shared/lib/format';
 
@@ -102,28 +103,29 @@ function SummaryBody({ summary }: { summary: Summary }) {
 
       {summary.most_imported_modules.length > 0 && (
         <Box>
-          <Typography variant="subtitle1" component="h4">
+          <Typography variant="subtitle1" component="h4" gutterBottom>
             Most depended-on modules
           </Typography>
-          <List dense disablePadding>
-            {summary.most_imported_modules.map((module) => (
-              <ListItem key={module.id} disableGutters>
-                <ListItemText
-                  primary={
-                    <Button
-                      component={RouterLink}
-                      to={elementLink(module.id)}
-                      size="small"
-                      sx={{ textTransform: 'none', p: 0, minWidth: 0 }}
-                    >
-                      {module.name}
-                    </Button>
-                  }
-                  secondary={`used by ${plural(module.imported_by, 'module')}`}
-                />
-              </ListItem>
-            ))}
-          </List>
+          <BarList
+            label="Most depended-on modules, by number of importing modules"
+            items={summary.most_imported_modules.map((module) => ({
+              key: module.id,
+              value: module.imported_by,
+              detail: `used by ${plural(module.imported_by, 'module')}`,
+              label: (
+                <Button
+                  component={RouterLink}
+                  to={elementLink(module.id)}
+                  size="small"
+                  sx={{ textTransform: 'none', p: 0, minWidth: 0, maxWidth: '100%' }}
+                >
+                  <Box component="span" sx={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {module.name}
+                  </Box>
+                </Button>
+              ),
+            }))}
+          />
         </Box>
       )}
 
@@ -132,15 +134,15 @@ function SummaryBody({ summary }: { summary: Summary }) {
           <Typography variant="subtitle1" component="h4" gutterBottom>
             Third-party packages
           </Typography>
-          <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
-            {summary.external_packages.map((entry) => (
-              <Chip
-                key={entry.name}
-                size="small"
-                label={`${entry.name} (${plural(entry.count, 'file')})`}
-              />
-            ))}
-          </Stack>
+          <BarList
+            label="Third-party packages, by number of files importing them"
+            items={summary.external_packages.map((entry) => ({
+              key: entry.name,
+              value: entry.count,
+              detail: `imported in ${plural(entry.count, 'file')}`,
+              label: <Typography variant="body2">{entry.name}</Typography>,
+            }))}
+          />
         </Box>
       )}
 

@@ -182,6 +182,7 @@ export default function ArchitecturePage() {
   const focus = params.get('focus') ?? undefined;
   const selectedId = params.get('selected');
   const canvas = useRef<GraphCanvasHandle>(null);
+  const graphFrame = useRef<HTMLDivElement>(null);
 
   const graph = useGraph({
     level,
@@ -290,7 +291,11 @@ export default function ArchitecturePage() {
           </FormControl>
         )}
         <Box sx={{ flexGrow: 1 }} />
-        <GraphToolbar canvas={canvas} exportName={`architecture-${level}`} />
+        <GraphToolbar
+          canvas={canvas}
+          exportName={`architecture-${level}`}
+          fullscreenTarget={graphFrame}
+        />
       </Stack>
 
       {focus && (
@@ -323,7 +328,16 @@ export default function ArchitecturePage() {
               </Alert>
             )}
             <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
-              <Paper variant="outlined" sx={{ flexGrow: 1, height: 560, overflow: 'hidden' }}>
+              <Paper
+                ref={graphFrame}
+                variant="outlined"
+                sx={{
+                  flexGrow: 1,
+                  height: 560,
+                  overflow: 'hidden',
+                  '&:fullscreen': { bgcolor: 'background.paper', borderRadius: 0 },
+                }}
+              >
                 <GraphCanvas
                   ref={canvas}
                   nodes={drawable.nodes}

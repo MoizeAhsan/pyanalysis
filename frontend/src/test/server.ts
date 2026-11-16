@@ -75,6 +75,7 @@ function page<T>(items: T[], url: URL) {
 }
 
 export const handlers = [
+  http.get('*/api/health', () => HttpResponse.json({ status: 'ok', version: 'test' })),
   http.get('*/api/analysis', () => {
     const status = api.statuses.length > 1 ? api.statuses.shift() : api.statuses[0];
     return HttpResponse.json(status ?? IDLE);
@@ -201,5 +202,6 @@ export const server = setupServer(...handlers);
 
 server.events.on('request:start', ({ request }) => {
   const url = new URL(request.url);
-  api.requests.push(`${request.method} ${url.pathname}${url.search}`);
+  // Logged decoded, so assertions do not depend on how the client escapes values.
+  api.requests.push(`${request.method} ${url.pathname}${decodeURIComponent(url.search)}`);
 });

@@ -122,11 +122,6 @@ code {
 /* ==================== */
 
 @media (max-width: 599px) {
-  /* Smaller font sizes on mobile */
-  html {
-    font-size: 14px;
-  }
-
   /* Full width containers on mobile */
   .mobile-full-width {
     width: 100% !important;

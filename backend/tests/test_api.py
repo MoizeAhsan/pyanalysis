@@ -686,6 +686,11 @@ def test_built_frontend_is_served_with_client_side_routing(
         assert client.get("/api/health").json()["status"] == "ok"
         assert client.get("/api/nope").status_code == 404
 
+        # Hashed build assets are cached for good; the page itself is revalidated.
+        assert "immutable" in client.get("/assets/app.js").headers["cache-control"]
+        assert client.get("/").headers["cache-control"] == "no-cache"
+        assert client.get("/explore").headers["cache-control"] == "no-cache"
+
 
 # ---------------------------------------------------------- cross-origin guard
 

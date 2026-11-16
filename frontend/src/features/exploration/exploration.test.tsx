@@ -7,6 +7,8 @@ import type { ElementDetail, Parameter } from '@shared/api/types';
 import { ElementDetailPanel, formatSignature } from './ElementDetailPanel';
 import ExplorePage from './ExplorePage';
 import { rangeAround } from './SourceSnippet';
+import { groupByFile } from './UsageList';
+import type { Usage } from '@shared/api/types';
 
 function withParameters(
   parameters: Parameter[],
@@ -52,6 +54,18 @@ describe('formatSignature', () => {
   });
 });
 
+describe('groupByFile', () => {
+  it('keeps server order and starts a group whenever the file changes', () => {
+    const at = (file_path: string, line: number) => ({ file_path, line }) as Usage;
+    const groups = groupByFile([at('a.py', 1), at('a.py', 9), at('b.py', 2), at('a.py', 20)]);
+    expect(groups.map(([path, items]) => [path, items.map((u) => u.line)])).toEqual([
+      ['a.py', [1, 9]],
+      ['b.py', [2]],
+      ['a.py', [20]],
+    ]);
+  });
+});
+
 describe('rangeAround', () => {
   it('pads a line with context without going below line 1', () => {
     expect(rangeAround('a.py', 2)).toEqual({ file: 'a.py', start: 1, end: 6 });
@@ -78,7 +92,7 @@ describe('ElementDetailPanel', () => {
     expect(await screen.findByLabelText('Source of shop/orders.py')).toHaveTextContent(
       'class Order(Entity):',
     );
-    expect(api.requests).toContain('GET /api/source?file=shop%2Forders.py&start=5&end=28');
+    expect(api.requests).toContain('GET /api/source?file=shop/orders.py&start=5&end=28');
   });
 
   it('shows the signature and override links for a method', async () => {
@@ -105,7 +119,7 @@ describe('ElementDetailPanel', () => {
     await user.click(screen.getByRole('button', { name: 'shop/jobs.py (1)' }));
     expect(await screen.findByText('1 use in shop/jobs.py')).toBeInTheDocument();
     expect(screen.queryByText('order = Order(items)')).not.toBeInTheDocument();
-    expect(api.requests.some((entry) => entry.includes('file=shop%2Fjobs.py'))).toBe(true);
+    expect(api.requests.some((entry) => entry.includes('file=shop/jobs.py'))).toBe(true);
 
     await user.click(screen.getByLabelText('Kind of use'));
     await user.click(screen.getByRole('option', { name: 'Call (2)' }));
@@ -122,7 +136,7 @@ describe('ElementDetailPanel', () => {
     await user.click(buttons[1] as HTMLElement);
 
     await waitFor(() =>
-      expect(api.requests).toContain('GET /api/source?file=shop%2Fapi.py&start=14&end=22'),
+      expect(api.requests).toContain('GET /api/source?file=shop/api.py&start=14&end=22'),
     );
     expect(screen.getByRole('button', { name: 'Hide source' })).toHaveAttribute(
       'aria-expanded',

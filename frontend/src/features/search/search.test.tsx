@@ -4,11 +4,35 @@ import { describe, expect, it } from 'vitest';
 import { ELEMENTS } from '@/test/fixtures';
 import { renderApp } from '@/test/render';
 import { api, server, withAnalysis } from '@/test/server';
+import { matchRanges } from '@shared/components/Highlight';
 import SearchPage from './SearchPage';
 
 const searches = () => api.requests.filter((entry) => entry.startsWith('GET /api/search'));
 
+describe('matchRanges', () => {
+  it('finds every case-insensitive occurrence without overlap', () => {
+    expect(matchRanges('OrderService.order', 'order')).toEqual([
+      [0, 5],
+      [13, 18],
+    ]);
+    expect(matchRanges('aaaa', 'aa')).toEqual([
+      [0, 2],
+      [2, 4],
+    ]);
+    expect(matchRanges('abc', '  ')).toEqual([]);
+  });
+});
+
 describe('SearchPage', () => {
+  it('marks the search text in each result', async () => {
+    withAnalysis();
+    renderApp(<SearchPage />, { route: '/search?q=order' });
+    await screen.findByText('3 results for “order”');
+    const marks = document.querySelectorAll('mark');
+    expect(marks.length).toBeGreaterThan(0);
+    for (const mark of marks) expect(mark.textContent?.toLowerCase()).toBe('order');
+  });
+
   it('searches once typing pauses, not on every keystroke', async () => {
     withAnalysis();
     const { user } = renderApp(<SearchPage />, { route: '/search' });

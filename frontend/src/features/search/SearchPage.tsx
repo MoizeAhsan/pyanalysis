@@ -188,6 +188,7 @@ export default function SearchPage() {
                     element={result.element}
                     onSelect={open}
                     note={MATCH_NOTES[result.match_type]?.(result)}
+                    highlight={urlQuery}
                   />
                 )}
               />

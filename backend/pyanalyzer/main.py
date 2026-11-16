@@ -57,6 +57,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     return application
 
 
+#: Vite puts a content hash in every file name under ``assets/``, so a cached
+#: copy can never be stale; everything else must be revalidated.
+_IMMUTABLE = "public, max-age=31536000, immutable"
+_REVALIDATE = "no-cache"
+
+
 def _serve_frontend(application: FastAPI, static_dir: Path) -> None:
     """Serve the built single-page app, falling back to index.html for client routes."""
     index_file = static_dir / "index.html"
@@ -67,8 +73,9 @@ def _serve_frontend(application: FastAPI, static_dir: Path) -> None:
             raise ApiError(404, "not_found", f"No such endpoint: /{path}")
         candidate = (static_dir / path).resolve()
         if path and candidate.is_file() and candidate.is_relative_to(static_dir):
-            return FileResponse(candidate)
-        return FileResponse(index_file)
+            cache = _IMMUTABLE if path.startswith("assets/") else _REVALIDATE
+            return FileResponse(candidate, headers={"Cache-Control": cache})
+        return FileResponse(index_file, headers={"Cache-Control": _REVALIDATE})
 
 
 def _default_app() -> FastAPI:

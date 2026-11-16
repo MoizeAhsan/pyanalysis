@@ -76,6 +76,7 @@ export default function MindMapPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [layout, setLayout] = useState<CanvasLayout>('breadthfirst');
   const canvas = useRef<GraphCanvasHandle>(null);
+  const graphFrame = useRef<HTMLDivElement>(null);
 
   // One cached request per expanded node: collapsing and re-expanding is instant.
   const results = useQueries({ queries: expanded.map((id) => treeQuery(id)) });
@@ -153,7 +154,7 @@ export default function MindMapPage() {
             {plural(map.nodes.length, 'node')} shown
           </Typography>
           <Box sx={{ flexGrow: 1 }} />
-          <GraphToolbar canvas={canvas} exportName="mind-map" />
+          <GraphToolbar canvas={canvas} exportName="mind-map" fullscreenTarget={graphFrame} />
         </Stack>
         {atLimit && (
           <Alert severity="info">
@@ -166,7 +167,16 @@ export default function MindMapPage() {
           spacing={2}
           sx={{ flexGrow: 1, minHeight: 0 }}
         >
-          <Paper variant="outlined" sx={{ flexGrow: 1, minHeight: 480, overflow: 'hidden' }}>
+          <Paper
+            ref={graphFrame}
+            variant="outlined"
+            sx={{
+              flexGrow: 1,
+              minHeight: 480,
+              overflow: 'hidden',
+              '&:fullscreen': { bgcolor: 'background.paper', borderRadius: 0 },
+            }}
+          >
             <GraphCanvas
               ref={canvas}
               nodes={map.nodes}

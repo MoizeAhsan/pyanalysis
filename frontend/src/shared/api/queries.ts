@@ -50,6 +50,21 @@ export function createQueryClient(): QueryClient {
 
 // ---------------------------------------------------------------- lifecycle
 
+export const HEALTH_POLL_MS = 15_000;
+
+/** Liveness of the backend, polled so a stopped server is noticed and recovery is too. */
+export function useBackendHealth() {
+  return useQuery({
+    queryKey: ['health'],
+    queryFn: ({ signal }) => request<{ status: string }>({ url: '/health', signal }),
+    staleTime: 0,
+    retry: false,
+    refetchInterval: HEALTH_POLL_MS,
+    // Keep checking while the browser reports being offline, so the banner clears.
+    networkMode: 'always',
+  });
+}
+
 export function useAnalysisStatus() {
   return useQuery({
     queryKey: STATUS_KEY,

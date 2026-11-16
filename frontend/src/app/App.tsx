@@ -3,7 +3,7 @@ import { Box, Button, CircularProgress, Container, Typography } from '@mui/mater
 import { useQueryClient } from '@tanstack/react-query';
 import { Link as RouterLink, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { DATA_KEY, useAnalysisStatus } from '@shared/api/queries';
-import { AccessibilityButton } from '@shared/components/AccessibilitySettings';
+import { AccessibilityButton } from '@shared/components/AccessibilityButton';
 import { AppShell } from './components/AppShell';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { ROUTES, pathForId, routeForPath } from './routes';
